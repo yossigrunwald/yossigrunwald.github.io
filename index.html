@@ -5,64 +5,215 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yossi Grunwald | Video Editor</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Lora:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <audio id="swoosh-sound" src="swoosh sound effect.mp3" preload="auto"></audio>
-
-  <div id="splash-screen">
-    <div class="splash-content">
-      <h1>Yossi Video Editor</h1>
-      <div class="premiere-icon">
-        <svg width="100" height="100" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="64" height="64" rx="12" ry="12" fill="#007ACC"/>
-          <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="32" font-family="Arial" font-weight="700" dy=".3em">Pr</text>
-        </svg>
-      </div>
-      <div class="light-animation"></div>
-    </div>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader"></div>
   </div>
 
-  <div id="site-content">
-    <header>
-      <h1>Yossi Grunwald</h1>
-      <nav>
-        <a href="#about">About Me</a>
-        <a href="#work">My Work</a>
-        <a href="#contact">Contact</a>
-      </nav>
-    </header>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#home" class="nav-logo">YOSSI GRUNWALD</a>
+      <div class="nav-menu">
+        <a href="#home" class="nav-link">Home</a>
+        <a href="#about" class="nav-link">About</a>
+        <a href="#work" class="nav-link">Work</a>
+        <a href="#contact" class="nav-link">Contact</a>
+      </div>
+      <div class="nav-toggle" id="mobile-menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </div>
+    </div>
+  </nav>
 
-    <main>
-      <section id="about" class="fade-section">
-        <h2>About Me</h2>
-        <div class="about-layout">
-          <img src="image 2.png" alt="Person with camera" class="illustration" />
-          <div class="about-text">
-            <p>
-              I'm a passionate and highly skilled video editor with over 4 years of hands-on experience using Adobe Premiere Pro. I bring stories to life with dynamic cuts, smooth transitions, color grading, keyframe animation, and audio sync. I'm also proficient in Photoshop and can create polished visuals that elevate video content.
-            </p>
-            <p>
-              I've spent the past 3 summers working as the lead video editor for Camp Chaburah. I'm 21 years old and currently available for freelance, contract, or full-time projects.
-            </p>
+  <!-- Hero Section -->
+  <section id="home" class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">VIDEO EDITOR</h1>
+      <p class="hero-subtitle">Creating compelling visual stories through dynamic editing</p>
+      <a href="#work" class="hero-button">View My Work</a>
+    </div>
+    <div class="hero-scroll">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- Video Gallery Section -->
+  <section id="video-gallery" class="video-gallery">
+    <div class="container">
+      <div class="video-grid">
+        <!-- Video 1 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/wlfIZ-MSCxU">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/wlfIZ-MSCxU/maxresdefault.jpg" alt="Video 1">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
           </div>
         </div>
-      </section>
-
-      <section id="work" class="fade-section">
-        <h2>My Work</h2>
-        <div class="video-container">
-          <iframe src="https://www.youtube.com/embed/wlfIZ-MSCxU" title="Video 1" allowfullscreen></iframe>
-          <iframe src="https://www.youtube.com/embed/8qOgSQZAnRg" title="Video 2" allowfullscreen></iframe>
+        <!-- Video 2 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/8qOgSQZAnRg">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/8qOgSQZAnRg/maxresdefault.jpg" alt="Video 2">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
         </div>
-        <p>More videos on my YouTube channel: <a href="https://www.youtube.com/@coolboredom" target="_blank">@coolboredom</a></p>
-      </section>
+        <!-- Add more placeholder videos -->
+        <div class="video-item placeholder">
+          <div class="video-thumbnail">
+            <div class="placeholder-content">
+              <i class="fas fa-plus"></i>
+              <p>More Coming Soon</p>
+            </div>
+          </div>
+        </div>
+        <div class="video-item placeholder">
+          <div class="video-thumbnail">
+            <div class="placeholder-content">
+              <i class="fas fa-plus"></i>
+              <p>More Coming Soon</p>
+            </div>
+          </div>
+        </div>
+        <div class="video-item placeholder">
+          <div class="video-thumbnail">
+            <div class="placeholder-content">
+              <i class="fas fa-plus"></i>
+              <p>More Coming Soon</p>
+            </div>
+          </div>
+        </div>
+        <div class="video-item placeholder">
+          <div class="video-thumbnail">
+            <div class="placeholder-content">
+              <i class="fas fa-plus"></i>
+              <p>More Coming Soon</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-      <section id="contact" class="fade-section">
-        <h2>Contact Me</h2>
-        <p>Email: <a href="mailto:grunwaldyossi@gmail.com">grunwaldyossi@gmail.com</a></p>
-      </section>
-    </main>
+  <!-- About Section -->
+  <section id="about" class="about">
+    <div class="container">
+      <div class="about-content">
+        <div class="about-image">
+          <img src="image 2.png" alt="Yossi Grunwald" />
+        </div>
+        <div class="about-text">
+          <h2>About Me</h2>
+          <p>
+            I'm a passionate and highly skilled video editor with over 4 years of hands-on experience using Adobe Premiere Pro. I bring stories to life with dynamic cuts, smooth transitions, color grading, keyframe animation, and audio sync. I'm also proficient in Photoshop and can create polished visuals that elevate video content.
+          </p>
+          <p>
+            I've spent the past 3 summers working as the lead video editor for Camp Chaburah. I'm 21 years old and currently available for freelance, contract, or full-time projects.
+          </p>
+          <div class="about-skills">
+            <div class="skill-item">
+              <i class="fab fa-adobe"></i>
+              <span>Premiere Pro</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-palette"></i>
+              <span>Color Grading</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-film"></i>
+              <span>Motion Graphics</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-music"></i>
+              <span>Audio Sync</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Work Section -->
+  <section id="work" class="work">
+    <div class="container">
+      <h2>Featured Work</h2>
+      <div class="work-grid">
+        <div class="work-item">
+          <div class="work-video">
+            <iframe src="https://www.youtube.com/embed/wlfIZ-MSCxU" title="Featured Video 1" allowfullscreen></iframe>
+          </div>
+          <div class="work-info">
+            <h3>Camp Chaburah Highlights 2023</h3>
+            <p>A dynamic montage showcasing the energy and spirit of summer camp through creative editing and color grading.</p>
+          </div>
+        </div>
+        <div class="work-item">
+          <div class="work-video">
+            <iframe src="https://www.youtube.com/embed/8qOgSQZAnRg" title="Featured Video 2" allowfullscreen></iframe>
+          </div>
+          <div class="work-info">
+            <h3>Event Recap Video</h3>
+            <p>Fast-paced event coverage with smooth transitions and perfectly synced audio to capture the excitement of the day.</p>
+          </div>
+        </div>
+      </div>
+      <div class="work-cta">
+        <p>More videos on my YouTube channel</p>
+        <a href="https://www.youtube.com/@coolboredom" target="_blank" class="youtube-link">
+          <i class="fab fa-youtube"></i> @coolboredom
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="contact">
+    <div class="container">
+      <h2>Let's Work Together</h2>
+      <p class="contact-subtitle">I'm currently available for freelance projects and collaborations</p>
+      <div class="contact-info">
+        <a href="mailto:grunwaldyossi@gmail.com" class="contact-button">
+          <i class="fas fa-envelope"></i> grunwaldyossi@gmail.com
+        </a>
+      </div>
+      <div class="social-links">
+        <a href="https://www.youtube.com/@coolboredom" target="_blank" aria-label="YouTube">
+          <i class="fab fa-youtube"></i>
+        </a>
+        <a href="#" aria-label="Instagram">
+          <i class="fab fa-instagram"></i>
+        </a>
+        <a href="#" aria-label="LinkedIn">
+          <i class="fab fa-linkedin"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2024 Yossi Grunwald. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Video Modal -->
+  <div id="video-modal" class="video-modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div class="modal-video-container">
+        <iframe id="modal-video" src="" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>
