@@ -97,7 +97,7 @@ The website uses Inter font by default. To change it, update the font import in 
 
 ## Deployment
 
-This website is designed for GitHub Pages. Simply push your changes to the repository and they will be live at `yossigrunwald.github.io`.
+This website is designed for GitHub Pages. Simply push your changes to the repository and they will be live at `yossigrunwald.com`.
 
 ## Contact
 
