@@ -13,6 +13,11 @@
   --bg-light: #f8f8f8;
   --accent-color: #007bff;
   --transition: all 0.3s ease;
+
+html {
+  scroll-behavior: smooth;
+}
+
 }
 
 body {
@@ -1159,5 +1164,56 @@ body {
   .timeline-timecode {
     font-size: 1rem;
   }
+}
+
+
+/* Enhanced section animations for smooth scroll transitions */
+section {
+  position: relative;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, opacity;
+}
+
+section.in-view {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Special transition effect for about section */
+.about {
+  position: relative;
+  overflow: hidden;
+}
+
+.about::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0,123,255,0.05) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 1;
+}
+
+.about.in-view::before {
+  transform: scale(1);
+}
+
+.about-content {
+  position: relative;
+  z-index: 2;
+  transform: translateX(-30px);
+  opacity: 0;
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s;
+}
+
+.about.in-view .about-content {
+  transform: translateX(0);
+  opacity: 1;
 }
 
