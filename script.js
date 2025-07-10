@@ -119,7 +119,37 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Fade In Animation on Scroll
+// Enhanced Scroll Transition Animation
+const enhancedObserverOptions = {
+  threshold: 0.3,
+  rootMargin: '0px 0px -50px 0px'
+};
+
+const enhancedObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in-view');
+      
+      // Special effect when about section comes into view
+      if (entry.target.id === 'about') {
+        // Add extra visual effects
+        setTimeout(() => {
+          entry.target.style.transform = 'scale(1.001)';
+          setTimeout(() => {
+            entry.target.style.transform = 'scale(1)';
+          }, 200);
+        }, 800);
+      }
+    }
+  });
+}, enhancedObserverOptions);
+
+// Observe all sections for enhanced animations
+document.querySelectorAll('section').forEach(section => {
+  enhancedObserver.observe(section);
+});
+
+// Legacy fade-in observer for backward compatibility
 const observerOptions = {
   threshold: 0.1,
   rootMargin: '0px 0px -100px 0px'
@@ -133,10 +163,9 @@ const observer = new IntersectionObserver(function(entries) {
   });
 }, observerOptions);
 
-// Observe all sections and elements with fade-in class
-document.querySelectorAll('section').forEach(section => {
-  section.classList.add('fade-in');
-  observer.observe(section);
+// Observe elements with fade-in class
+document.querySelectorAll('.fade-in').forEach(element => {
+  observer.observe(element);
 });
 
 // Active Navigation Link
@@ -162,12 +191,35 @@ window.addEventListener('scroll', () => {
   });
 });
 
-// Parallax Effect for Hero Section (optional)
+// Enhanced Parallax Effect for Smooth Section Transitions
 window.addEventListener('scroll', () => {
   const scrolled = window.pageYOffset;
+  const windowHeight = window.innerHeight;
+  
+  // Hero section parallax
   const hero = document.querySelector('.hero');
-  if (hero && scrolled < window.innerHeight) {
-    hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+  if (hero && scrolled < windowHeight) {
+    const parallaxSpeed = scrolled * 0.5;
+    hero.style.transform = `translateY(${parallaxSpeed}px)`;
+    
+    // Fade out hero content as we scroll
+    const heroContent = hero.querySelector('.hero-content');
+    if (heroContent) {
+      const opacity = Math.max(0, 1 - (scrolled / windowHeight) * 1.5);
+      heroContent.style.opacity = opacity;
+    }
+  }
+  
+  // About section entrance effect
+  const about = document.querySelector('.about');
+  if (about) {
+    const aboutTop = about.offsetTop;
+    const scrollPercent = Math.max(0, Math.min(1, (scrolled - aboutTop + windowHeight) / windowHeight));
+    
+    if (scrolled > aboutTop - windowHeight && scrolled < aboutTop + about.offsetHeight) {
+      // Subtle parallax for about section
+      about.style.transform = `translateY(${(scrollPercent - 1) * 30}px)`;
+    }
   }
 });
 
