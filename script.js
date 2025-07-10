@@ -2,6 +2,19 @@
 
 // Loading Screen
 window.addEventListener('load', () => {
+  // Play swoosh sound effect for intro
+  const swooshSound = new Audio('swoosh sound effect.mp3');
+  swooshSound.volume = 0.3;
+  swooshSound.play().catch(() => {
+    // Ignore if autoplay is blocked
+  });
+  
+  // Hide intro animation after 2.5 seconds
+  setTimeout(() => {
+    document.getElementById('intro-animation').style.display = 'none';
+  }, 2500);
+  
+  // Hide loading screen
   setTimeout(() => {
     document.getElementById('loading-screen').classList.add('hidden');
   }, 500);
@@ -28,9 +41,14 @@ mobileMenu.addEventListener('click', () => {
   });
 });
 
-// Smooth Scrolling for Navigation Links
+// Smooth Scrolling for Navigation Links (Updated)
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', function (e) {
+    // Skip if it's skills or resume link
+    if (this.id === 'skills-link' || this.id === 'resume-link') {
+      return;
+    }
+    
     e.preventDefault();
     const target = document.querySelector(this.getAttribute('href'));
     if (target) {
@@ -151,5 +169,117 @@ window.addEventListener('scroll', () => {
   if (hero && scrolled < window.innerHeight) {
     hero.style.transform = `translateY(${scrolled * 0.5}px)`;
   }
+});
+
+// Skills Modal
+const skillsLink = document.getElementById('skills-link');
+const skillsModal = document.getElementById('skills-modal');
+const resumeLink = document.getElementById('resume-link');
+const resumeModal = document.getElementById('resume-modal');
+
+skillsLink.addEventListener('click', function(e) {
+  e.preventDefault();
+  skillsModal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+});
+
+resumeLink.addEventListener('click', function(e) {
+  e.preventDefault();
+  resumeModal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+});
+
+// Close modals
+document.querySelectorAll('.modal .close-modal').forEach(closeBtn => {
+  closeBtn.addEventListener('click', function() {
+    this.closest('.modal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+  });
+});
+
+// Close modal on outside click
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+  });
+});
+
+// Escape key to close any modal
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal').forEach(modal => {
+      if (modal.style.display === 'block') {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+});
+
+// Timeline Transition Animation
+let isTransitioning = false;
+const timelineTransition = document.getElementById('timeline-transition');
+let lastSection = 'home';
+
+// Update timecode animation
+function updateTimecode() {
+  const timecode = document.querySelector('.timeline-timecode');
+  if (timecode) {
+    let frame = 0;
+    setInterval(() => {
+      frame = (frame + 1) % 30;
+      const seconds = Math.floor(frame / 30) % 60;
+      const minutes = Math.floor(frame / 1800) % 60;
+      const hours = Math.floor(frame / 108000) % 24;
+      const frameStr = String(frame % 30).padStart(2, '0');
+      const secondsStr = String(seconds).padStart(2, '0');
+      const minutesStr = String(minutes).padStart(2, '0');
+      const hoursStr = String(hours).padStart(2, '0');
+      timecode.textContent = `${hoursStr}:${minutesStr}:${secondsStr}:${frameStr}`;
+    }, 33); // ~30fps
+  }
+}
+updateTimecode();
+
+// Detect section transitions
+window.addEventListener('scroll', () => {
+  const scrollPosition = window.pageYOffset + window.innerHeight / 2;
+  
+  // Find current section
+  let currentSection = 'home';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    const sectionBottom = sectionTop + section.offsetHeight;
+    
+    if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+      currentSection = section.id;
+    }
+  });
+  
+  // Trigger transition animation when moving from home to about
+  if (lastSection === 'home' && currentSection === 'about' && !isTransitioning) {
+    isTransitioning = true;
+    timelineTransition.classList.add('active');
+    
+    // Reset and play animation
+    const clips = timelineTransition.querySelectorAll('.timeline-clip');
+    clips.forEach((clip, index) => {
+      clip.style.animation = 'none';
+      setTimeout(() => {
+        clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
+      }, 10);
+    });
+    
+    // Hide transition after animation
+    setTimeout(() => {
+      timelineTransition.classList.remove('active');
+      isTransitioning = false;
+    }, 2000);
+  }
+  
+  lastSection = currentSection;
 });
 
