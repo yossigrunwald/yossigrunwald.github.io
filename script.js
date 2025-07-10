@@ -1,7 +1,12 @@
 
 
-// Loading Screen
+// Premiere Pro Intro
 window.addEventListener('load', () => {
+  const premiereIntro = document.getElementById('premiere-intro');
+  
+  // Disable scrolling during transition
+  document.body.style.overflow = 'hidden';
+  
   // Play swoosh sound effect for intro
   const swooshSound = new Audio('swoosh sound effect.mp3');
   swooshSound.volume = 0.3;
@@ -9,16 +14,97 @@ window.addEventListener('load', () => {
     // Ignore if autoplay is blocked
   });
   
-  // Hide intro animation after 2.5 seconds
+  // Initialize typing animation
+  initializeTypingAnimation();
+  
+  // Initialize timecode counter
+  initializeTimecodeCounter();
+  
+  // Initialize progress bar
+  initializeProgressBar();
+  
+  // Hide intro after 2.5 seconds (starts fading at 1.5s via CSS)
   setTimeout(() => {
-    document.getElementById('intro-animation').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
   }, 2500);
   
-  // Hide loading screen
+  // Remove from DOM after fade out completes
   setTimeout(() => {
-    document.getElementById('loading-screen').classList.add('hidden');
-  }, 500);
+    if (premiereIntro) {
+      premiereIntro.remove();
+    }
+  }, 3000);
 });
+
+// Initialize typing animation for subtitle
+function initializeTypingAnimation() {
+  const typedWords = document.querySelectorAll('.typed-word');
+  let currentWordIndex = 0;
+  
+  function showNextWord() {
+    // Hide all words
+    typedWords.forEach(word => word.classList.remove('active'));
+    
+    // Show current word
+    if (typedWords[currentWordIndex]) {
+      typedWords[currentWordIndex].classList.add('active');
+    }
+    
+    // Move to next word
+    currentWordIndex = (currentWordIndex + 1) % typedWords.length;
+  }
+  
+  // Start immediately and repeat every 800ms
+  showNextWord();
+  setInterval(showNextWord, 800);
+}
+
+// Initialize timecode counter
+function initializeTimecodeCounter() {
+  const timecodeElement = document.querySelector('.timecode');
+  if (!timecodeElement) return;
+  
+  let frames = 0;
+  const interval = setInterval(() => {
+    frames++;
+    const totalFrames = frames;
+    const frameNumber = totalFrames % 30;
+    const seconds = Math.floor(totalFrames / 30) % 60;
+    const minutes = Math.floor(totalFrames / 1800) % 60;
+    const hours = Math.floor(totalFrames / 108000);
+    
+    const timecode = 
+      String(hours).padStart(2, '0') + ':' +
+      String(minutes).padStart(2, '0') + ':' +
+      String(seconds).padStart(2, '0') + ':' +
+      String(frameNumber).padStart(2, '0');
+    
+    timecodeElement.textContent = timecode;
+    
+    // Stop after 2.5 seconds (75 frames at 30fps)
+    if (frames >= 75) {
+      clearInterval(interval);
+    }
+  }, 33); // ~30fps
+}
+
+// Initialize progress bar
+function initializeProgressBar() {
+  const progressPercentage = document.querySelector('.progress-percentage');
+  if (!progressPercentage) return;
+  
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 4; // Increment by 4% each time
+    if (progress > 100) progress = 100;
+    
+    progressPercentage.textContent = progress + '%';
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+    }
+  }, 80); // Update every 80ms for smooth progression over 2 seconds
+}
 
 // Mobile Menu Toggle
 const mobileMenu = document.getElementById('mobile-menu');
@@ -219,69 +305,7 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Timeline Transition Animation
-let isTransitioning = false;
-const timelineTransition = document.getElementById('timeline-transition');
-let lastSection = 'home';
 
-// Update timecode animation
-function updateTimecode() {
-  const timecode = document.querySelector('.timeline-timecode');
-  if (timecode) {
-    let frame = 0;
-    setInterval(() => {
-      frame = (frame + 1) % 30;
-      const seconds = Math.floor(frame / 30) % 60;
-      const minutes = Math.floor(frame / 1800) % 60;
-      const hours = Math.floor(frame / 108000) % 24;
-      const frameStr = String(frame % 30).padStart(2, '0');
-      const secondsStr = String(seconds).padStart(2, '0');
-      const minutesStr = String(minutes).padStart(2, '0');
-      const hoursStr = String(hours).padStart(2, '0');
-      timecode.textContent = `${hoursStr}:${minutesStr}:${secondsStr}:${frameStr}`;
-    }, 33); // ~30fps
-  }
-}
-updateTimecode();
-
-// Detect section transitions
-window.addEventListener('scroll', () => {
-  const scrollPosition = window.pageYOffset + window.innerHeight / 2;
-  
-  // Find current section
-  let currentSection = 'home';
-  sections.forEach(section => {
-    const sectionTop = section.offsetTop;
-    const sectionBottom = sectionTop + section.offsetHeight;
-    
-    if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
-      currentSection = section.id;
-    }
-  });
-  
-  // Trigger transition animation when moving from home to about
-  if (lastSection === 'home' && currentSection === 'about' && !isTransitioning) {
-    isTransitioning = true;
-    timelineTransition.classList.add('active');
-    
-    // Reset and play animation
-    const clips = timelineTransition.querySelectorAll('.timeline-clip');
-    clips.forEach((clip, index) => {
-      clip.style.animation = 'none';
-      setTimeout(() => {
-        clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
-      }, 10);
-    });
-    
-    // Hide transition after animation
-    setTimeout(() => {
-      timelineTransition.classList.remove('active');
-      isTransitioning = false;
-    }, 2000);
-  }
-  
-  lastSection = currentSection;
-});
 
 
 // Enhanced Scroll Transition Animation for smooth transitions

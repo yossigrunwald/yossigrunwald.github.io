@@ -15,25 +15,107 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <!-- Intro Animation -->
-  <div id="intro-animation">
-    <div class="intro-content">
-      <div class="timeline-bars">
-        <div class="timeline-bar" style="--delay: 0s;"></div>
-        <div class="timeline-bar" style="--delay: 0.1s;"></div>
-        <div class="timeline-bar" style="--delay: 0.2s;"></div>
-        <div class="timeline-bar" style="--delay: 0.3s;"></div>
-        <div class="timeline-bar" style="--delay: 0.4s;"></div>
+  <!-- Premiere Pro Timeline Intro -->
+  <div id="premiere-intro">
+    <div class="premiere-overlay">
+      <!-- Timeline Interface -->
+      <div class="timeline-interface">
+        <div class="timeline-header">
+          <div class="timeline-tools">
+            <div class="tool-icon"><i class="fas fa-cut"></i></div>
+            <div class="tool-icon"><i class="fas fa-play"></i></div>
+            <div class="tool-icon"><i class="fas fa-pause"></i></div>
+            <div class="tool-icon"><i class="fas fa-stop"></i></div>
+          </div>
+          <div class="timeline-controls">
+            <span class="timecode">00:00:00:00</span>
+          </div>
+        </div>
+        
+        <div class="timeline-tracks">
+          <!-- Video Track -->
+          <div class="track video-track">
+            <div class="track-label">V1</div>
+            <div class="track-content">
+              <div class="video-clip clip-1">
+                <div class="clip-text">INTRO.MP4</div>
+              </div>
+              <div class="video-clip clip-2">
+                <div class="clip-text">PORTFOLIO.MP4</div>
+              </div>
+              <div class="video-clip clip-3">
+                <div class="clip-text">ABOUT.MP4</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Audio Track -->
+          <div class="track audio-track">
+            <div class="track-label">A1</div>
+            <div class="track-content">
+              <div class="audio-clip">
+                <div class="audio-waveform">
+                  <div class="wave-bar" style="--height: 60%;"></div>
+                  <div class="wave-bar" style="--height: 80%;"></div>
+                  <div class="wave-bar" style="--height: 45%;"></div>
+                  <div class="wave-bar" style="--height: 90%;"></div>
+                  <div class="wave-bar" style="--height: 70%;"></div>
+                  <div class="wave-bar" style="--height: 55%;"></div>
+                  <div class="wave-bar" style="--height: 85%;"></div>
+                  <div class="wave-bar" style="--height: 40%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Playhead -->
+        <div class="timeline-playhead-container">
+          <div class="timeline-playhead">
+            <div class="playhead-line"></div>
+            <div class="playhead-handle"></div>
+          </div>
+        </div>
       </div>
-      <div class="playhead"></div>
-      <h1 class="intro-text" data-text="YOSSI GRUNWALD">YOSSI GRUNWALD</h1>
-      <p class="intro-subtitle">VIDEO EDITOR</p>
+      
+      <!-- Main Text Content -->
+      <div class="intro-main-content">
+        <div class="editor-badge">
+          <i class="fas fa-film"></i>
+          <span>PROFESSIONAL VIDEO EDITOR</span>
+        </div>
+        <h1 class="main-title">
+          <span class="name-part">YOSSI</span>
+          <span class="name-part">GRUNWALD</span>
+        </h1>
+        <div class="subtitle-container">
+          <div class="typing-text">
+            <span class="typed-word">Video Editor</span>
+            <span class="typed-word">Videographer</span>
+            <span class="typed-word">Storyteller</span>
+          </div>
+          <div class="cursor-blink">|</div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="render-progress">
+          <div class="progress-label">Rendering Portfolio...</div>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+          <div class="progress-percentage">0%</div>
+        </div>
+      </div>
+      
+      <!-- Floating Elements -->
+      <div class="floating-elements">
+        <div class="floating-icon icon-1"><i class="fas fa-video"></i></div>
+        <div class="floating-icon icon-2"><i class="fas fa-cut"></i></div>
+        <div class="floating-icon icon-3"><i class="fas fa-palette"></i></div>
+        <div class="floating-icon icon-4"><i class="fas fa-music"></i></div>
+        <div class="floating-icon icon-5"><i class="fas fa-magic"></i></div>
+      </div>
     </div>
-  </div>
-
-  <!-- Loading Screen -->
-  <div id="loading-screen">
-    <div class="loader"></div>
   </div>
 
   <!-- Navigation -->
@@ -56,20 +138,7 @@
     </div>
   </nav>
 
-  <!-- Timeline Transition -->
-  <div id="timeline-transition" class="timeline-transition">
-    <div class="timeline-container">
-      <div class="timeline-track">
-        <div class="timeline-clip" style="--clip-index: 0"></div>
-        <div class="timeline-clip" style="--clip-index: 1"></div>
-        <div class="timeline-clip" style="--clip-index: 2"></div>
-        <div class="timeline-clip" style="--clip-index: 3"></div>
-        <div class="timeline-clip" style="--clip-index: 4"></div>
-      </div>
-      <div class="timeline-playhead"></div>
-      <div class="timeline-timecode">00:00:00:00</div>
-    </div>
-  </div>
+
 
   <!-- Hero Section -->
   <section id="home" class="hero">
