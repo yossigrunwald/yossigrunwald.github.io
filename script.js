@@ -9,9 +9,13 @@ window.addEventListener('load', () => {
     // Ignore if autoplay is blocked
   });
   
-  // Hide intro animation after 2.5 seconds
+  // Prevent scrolling during intro animation
+  document.body.style.overflow = 'hidden';
+  
+  // Hide intro animation after 2.5 seconds and re-enable scrolling
   setTimeout(() => {
     document.getElementById('intro-animation').style.display = 'none';
+    document.body.style.overflow = 'auto';
   }, 2500);
   
   // Hide loading screen
