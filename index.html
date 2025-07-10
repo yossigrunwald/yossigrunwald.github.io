@@ -15,19 +15,61 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <!-- Intro Animation -->
-  <div id="intro-animation">
-    <div class="intro-content">
-      <div class="timeline-bars">
-        <div class="timeline-bar" style="--delay: 0s;"></div>
-        <div class="timeline-bar" style="--delay: 0.1s;"></div>
-        <div class="timeline-bar" style="--delay: 0.2s;"></div>
-        <div class="timeline-bar" style="--delay: 0.3s;"></div>
-        <div class="timeline-bar" style="--delay: 0.4s;"></div>
+  <!-- Premiere Pro Timeline Intro -->
+  <div id="premiere-intro">
+    <div class="premiere-timeline">
+      <div class="timeline-header">
+        <div class="timeline-track-info">
+          <div class="track-label">V1</div>
+          <div class="track-label">V2</div>
+          <div class="track-label">V3</div>
+          <div class="track-label">A1</div>
+          <div class="track-label">A2</div>
+        </div>
+        <div class="timeline-ruler">
+          <div class="time-marker">00:00</div>
+          <div class="time-marker">00:01</div>
+          <div class="time-marker">00:02</div>
+          <div class="time-marker">00:03</div>
+        </div>
       </div>
-      <div class="playhead"></div>
-      <h1 class="intro-text" data-text="YOSSI GRUNWALD">YOSSI GRUNWALD</h1>
-      <p class="intro-subtitle">VIDEO EDITOR</p>
+      <div class="timeline-tracks">
+        <div class="video-track">
+          <div class="clip clip-1" data-clip="Introduction.mp4"></div>
+          <div class="clip clip-2" data-clip="Portfolio.mp4"></div>
+        </div>
+        <div class="video-track">
+          <div class="clip clip-3" data-clip="Skills.mp4"></div>
+        </div>
+        <div class="video-track">
+          <div class="clip clip-4" data-clip="Experience.mp4"></div>
+        </div>
+        <div class="audio-track">
+          <div class="audio-clip" data-clip="Background_Music.wav"></div>
+        </div>
+        <div class="audio-track">
+          <div class="audio-clip" data-clip="Narration.wav"></div>
+        </div>
+      </div>
+      <div class="playhead-line"></div>
+      <div class="timeline-cursor"></div>
+    </div>
+    <div class="premiere-ui">
+      <div class="program-monitor">
+        <div class="monitor-content">
+          <div class="editor-title">
+            <h1>YOSSI GRUNWALD</h1>
+            <p>VIDEO EDITOR & VIDEOGRAPHER</p>
+          </div>
+          <div class="timeline-overlay"></div>
+        </div>
+        <div class="monitor-controls">
+          <div class="control-button play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="timecode">00:00:00:00</div>
+        </div>
+      </div>
     </div>
   </div>
 

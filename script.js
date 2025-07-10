@@ -2,6 +2,9 @@
 
 // Loading Screen
 window.addEventListener('load', () => {
+  // Disable scrolling during intro
+  document.body.style.overflow = 'hidden';
+  
   // Play swoosh sound effect for intro
   const swooshSound = new Audio('swoosh sound effect.mp3');
   swooshSound.volume = 0.3;
@@ -9,9 +12,31 @@ window.addEventListener('load', () => {
     // Ignore if autoplay is blocked
   });
   
+  // Animate timecode counter
+  const timecodeElement = document.querySelector('.timecode');
+  if (timecodeElement) {
+    let frames = 0;
+    const timecodeInterval = setInterval(() => {
+      frames++;
+      const totalFrames = frames;
+      const seconds = Math.floor(totalFrames / 24) % 60;
+      const minutes = Math.floor(totalFrames / 1440) % 60;
+      const hours = Math.floor(totalFrames / 86400) % 24;
+      const frameNum = totalFrames % 24;
+      
+      const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${frameNum.toString().padStart(2, '0')}`;
+      timecodeElement.textContent = formattedTime;
+      
+      if (frames >= 60) { // Stop after 2.5 seconds (60 frames at 24fps)
+        clearInterval(timecodeInterval);
+      }
+    }, 1000 / 24); // 24fps
+  }
+  
   // Hide intro animation after 2.5 seconds
   setTimeout(() => {
-    document.getElementById('intro-animation').style.display = 'none';
+    document.getElementById('premiere-intro').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
   }, 2500);
   
   // Hide loading screen

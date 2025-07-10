@@ -668,140 +668,422 @@ body {
   }
 }
 
-/* Intro Animation */
-#intro-animation {
+/* Premiere Pro Timeline Intro */
+#premiere-intro {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, #111 0%, #000 100%);
+  background: #1a1a1a;
   z-index: 10001;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  animation: fadeOutIntro 0.5s ease 2s forwards;
+  flex-direction: column;
   overflow: hidden;
+  animation: fadeOutPremiereIntro 1s ease 1.5s forwards;
 }
 
-@keyframes fadeOutIntro {
+@keyframes fadeOutPremiereIntro {
   to {
     opacity: 0;
     pointer-events: none;
   }
 }
 
-.intro-content {
-  text-align: center;
+.premiere-timeline {
+  position: relative;
+  background: #2d2d2d;
+  border-top: 1px solid #404040;
+  padding: 10px;
+  margin-top: auto;
+  height: 200px;
+  overflow: hidden;
+}
+
+.timeline-header {
+  display: flex;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #404040;
+  padding-bottom: 5px;
+}
+
+.timeline-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 50px;
+  padding-right: 10px;
+}
+
+.track-label {
+  height: 24px;
+  background: #404040;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-family: monospace;
+}
+
+.timeline-ruler {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  color: #ccc;
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.time-marker {
   position: relative;
 }
 
-.timeline-bars {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 40px;
-}
-
-.timeline-bar {
-  width: 60px;
-  height: 4px;
-  background: #fff;
-  opacity: 0;
-  animation: slideInBar 0.5s ease var(--delay) forwards;
-}
-
-@keyframes slideInBar {
-  from {
-    transform: translateX(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.playhead {
+.time-marker::after {
+  content: '';
   position: absolute;
+  bottom: -5px;
   left: 50%;
-  top: 0;
-  width: 2px;
-  height: 50px;
-  background: #ff0000;
+  width: 1px;
+  height: 5px;
+  background: #666;
   transform: translateX(-50%);
-  animation: playheadMove 1.5s ease 0.5s forwards;
+}
+
+.timeline-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.video-track,
+.audio-track {
+  height: 24px;
+  background: #333;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.clip {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  font-size: 9px;
+  color: #fff;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  font-family: monospace;
+}
+
+.clip-1 {
+  left: 0;
+  width: 25%;
+  background: linear-gradient(135deg, #4a90e2, #357abd);
+  animation: clipAppear 0.6s ease 0.3s forwards;
+}
+
+.clip-2 {
+  left: 25%;
+  width: 35%;
+  background: linear-gradient(135deg, #e24a90, #bd357a);
+  animation: clipAppear 0.6s ease 0.6s forwards;
+}
+
+.clip-3 {
+  left: 10%;
+  width: 40%;
+  background: linear-gradient(135deg, #4ae290, #35bd6a);
+  animation: clipAppear 0.6s ease 0.9s forwards;
+}
+
+.clip-4 {
+  left: 15%;
+  width: 30%;
+  background: linear-gradient(135deg, #e2a14a, #bd8535);
+  animation: clipAppear 0.6s ease 1.2s forwards;
+}
+
+.audio-clip {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(135deg, #9e4ae2, #7935bd);
+  border-radius: 2px;
+  left: 0;
+  width: 60%;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: clipAppear 0.6s ease 1.5s forwards;
+}
+
+.audio-track .audio-clip {
+  background: linear-gradient(135deg, #666, #444);
+  position: relative;
+}
+
+.audio-track .audio-clip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    #888 0px,
+    #888 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+@keyframes clipAppear {
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.playhead-line {
+  position: absolute;
+  top: 0;
+  left: 60px;
+  width: 2px;
+  height: 100%;
+  background: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+  z-index: 10;
+  animation: playheadMove 2s ease 0.5s forwards;
+}
+
+.playhead-line::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 8px solid #ff4444;
 }
 
 @keyframes playheadMove {
   from {
-    left: 0%;
+    left: 60px;
   }
   to {
-    left: 100%;
+    left: calc(100% - 60px);
   }
 }
 
-.intro-text {
-  color: #fff;
-  font-size: 3rem;
-  font-weight: 300;
-  letter-spacing: 0.5rem;
-  opacity: 0;
-  animation: fadeInUp 0.8s ease 0.8s forwards, glitch 2s ease-in-out 1.5s;
-  margin-bottom: 10px;
+.timeline-cursor {
+  position: absolute;
+  top: 0;
+  left: 60px;
+  width: 1px;
+  height: 100%;
+  background: #fff;
+  opacity: 0.7;
+  animation: cursorMove 2s ease 0.5s forwards;
+}
+
+@keyframes cursorMove {
+  from {
+    left: 60px;
+  }
+  to {
+    left: calc(100% - 60px);
+  }
+}
+
+.premiere-ui {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;
   position: relative;
 }
 
-.intro-text::before,
-.intro-text::after {
-  content: attr(data-text);
+.program-monitor {
+  width: 500px;
+  height: 300px;
+  background: #000;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.monitor-content {
+  width: 100%;
+  height: calc(100% - 40px);
+  background: #111;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-title {
+  text-align: center;
+  z-index: 2;
+  position: relative;
+  opacity: 0;
+  animation: titleAppear 1s ease 0.8s forwards;
+}
+
+.editor-title h1 {
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 300;
+  letter-spacing: 0.3rem;
+  margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.editor-title p {
+  color: #4a90e2;
+  font-size: 1rem;
+  letter-spacing: 0.2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+@keyframes titleAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.timeline-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  background: linear-gradient(45deg, transparent 49%, rgba(255, 255, 255, 0.1) 50%, transparent 51%);
+  background-size: 20px 20px;
   opacity: 0;
+  animation: overlayPulse 2s ease-in-out infinite;
 }
 
-.intro-text::before {
-  animation: glitch-1 0.5s ease 1.5s;
-  color: #ff0000;
-  z-index: -1;
-}
-
-.intro-text::after {
-  animation: glitch-2 0.5s ease 1.5s;
-  color: #00ff00;
-  z-index: -2;
-}
-
-@keyframes glitch {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-}
-
-@keyframes glitch-1 {
+@keyframes overlayPulse {
   0%, 100% { opacity: 0; }
-  33% { opacity: 1; transform: translate(2px, -1px); }
-  66% { opacity: 1; transform: translate(-1px, 2px); }
+  50% { opacity: 0.3; }
 }
 
-@keyframes glitch-2 {
-  0%, 100% { opacity: 0; }
-  33% { opacity: 1; transform: translate(-2px, 1px); }
-  66% { opacity: 1; transform: translate(1px, -2px); }
+.monitor-controls {
+  height: 40px;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  border-top: 1px solid #404040;
 }
 
-.intro-subtitle {
-  color: #999;
-  font-size: 1.2rem;
-  letter-spacing: 0.3rem;
-  opacity: 0;
-  animation: fadeInUp 0.8s ease 1s forwards;
+.control-button {
+  width: 30px;
+  height: 30px;
+  background: #4a90e2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: buttonPulse 1s ease 1s infinite;
+}
+
+@keyframes buttonPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.control-button:hover {
+  background: #357abd;
+  transform: scale(1.1);
+}
+
+.timecode {
+  font-family: monospace;
+  color: #ccc;
+  font-size: 12px;
+  letter-spacing: 1px;
+  animation: timecodeCount 2s ease 0.5s forwards;
+}
+
+@keyframes timecodeCount {
+  0% { color: #ccc; }
+  50% { color: #4a90e2; }
+  100% { color: #ccc; }
+}
+
+.clip::after {
+  content: attr(data-clip);
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+.audio-clip::after {
+  content: attr(data-clip);
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .program-monitor {
+    width: 90%;
+    height: 250px;
+  }
+  
+  .editor-title h1 {
+    font-size: 2rem;
+    letter-spacing: 0.2rem;
+  }
+  
+  .editor-title p {
+    font-size: 0.9rem;
+  }
+  
+  .timeline-ruler {
+    padding: 0 5px;
+  }
+  
+  .clip::after,
+  .audio-clip::after {
+    font-size: 6px;
+  }
 }
 
 /* Timeline Transition */
@@ -1129,23 +1411,19 @@ body {
     gap: 10px;
   }
   
-  /* Intro animation mobile */
-  .intro-text {
-    font-size: 2rem;
-    letter-spacing: 0.2rem;
+  /* Premiere Pro intro mobile */
+  .premiere-timeline {
+    height: 150px;
+    padding: 5px;
   }
   
-  .intro-subtitle {
-    font-size: 1rem;
+  .timeline-track-info {
+    width: 30px;
   }
   
-  .timeline-bars {
-    gap: 5px;
-  }
-  
-  .timeline-bar {
-    width: 40px;
-    height: 3px;
+  .track-label {
+    height: 18px;
+    font-size: 8px;
   }
   
   /* Timeline transition mobile */
