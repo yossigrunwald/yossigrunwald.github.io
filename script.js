@@ -9,15 +9,6 @@ window.addEventListener('load', () => {
     // Ignore if autoplay is blocked
   });
   
-  // Prevent scrolling during intro animation
-  document.body.style.overflow = 'hidden';
-  
-  // Hide intro animation after 2.5 seconds and re-enable scrolling
-  setTimeout(() => {
-    document.getElementById('intro-animation').style.display = 'none';
-    document.body.style.overflow = 'auto';
-  }, 2500);
-  
   // Hide loading screen
   setTimeout(() => {
     document.getElementById('loading-screen').classList.add('hidden');
@@ -123,6 +114,10 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// Scroll Timeline Transition
+const scrollTimeline = document.getElementById('scroll-timeline');
+let timelineActivated = false;
+
 // Fade In Animation on Scroll
 const observerOptions = {
   threshold: 0.1,
@@ -141,6 +136,34 @@ const observer = new IntersectionObserver(function(entries) {
 document.querySelectorAll('section').forEach(section => {
   section.classList.add('fade-in');
   observer.observe(section);
+});
+
+// Scroll detection for timeline transition
+window.addEventListener('scroll', () => {
+  const aboutSection = document.getElementById('about');
+  const videoSection = document.getElementById('video-gallery');
+  
+  if (aboutSection && videoSection && scrollTimeline) {
+    const aboutBottom = aboutSection.offsetTop + aboutSection.offsetHeight;
+    const videoTop = videoSection.offsetTop;
+    const scrollPosition = window.pageYOffset + window.innerHeight / 2;
+    
+    // Activate timeline when scrolling between about and video sections
+    if (scrollPosition > aboutBottom && scrollPosition < videoTop && !timelineActivated) {
+      scrollTimeline.classList.add('active');
+      timelineActivated = true;
+      
+      // Play swoosh sound when timeline appears
+      const swooshSound = new Audio('swoosh sound effect.mp3');
+      swooshSound.volume = 0.2;
+      swooshSound.play().catch(() => {
+        // Ignore if autoplay is blocked
+      });
+    } else if (scrollPosition < aboutBottom || scrollPosition > videoTop) {
+      scrollTimeline.classList.remove('active');
+      timelineActivated = false;
+    }
+  }
 });
 
 // Active Navigation Link

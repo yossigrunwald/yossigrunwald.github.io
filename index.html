@@ -15,88 +15,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <!-- Intro Animation -->
-  <div id="intro-animation">
-    <div class="intro-overlay"></div>
-    <div class="premiere-timeline">
-      <div class="timeline-header">
-        <div class="timeline-title">YOSSI GRUNWALD</div>
-        <div class="timeline-subtitle">VIDEO EDITOR & VIDEographer</div>
-      </div>
-      
-      <div class="timeline-tracks">
-        <div class="track video-track">
-          <div class="track-label">VIDEO</div>
-          <div class="track-content">
-            <div class="video-clip" style="--delay: 0.2s">
-              <div class="clip-thumbnail"></div>
-              <div class="clip-name">Camp Chaburah</div>
-            </div>
-            <div class="video-clip" style="--delay: 0.4s">
-              <div class="clip-thumbnail"></div>
-              <div class="clip-name">Event Coverage</div>
-            </div>
-            <div class="video-clip" style="--delay: 0.6s">
-              <div class="clip-thumbnail"></div>
-              <div class="clip-name">Promotional</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="track audio-track">
-          <div class="track-label">AUDIO</div>
-          <div class="track-content">
-            <div class="audio-waveform" style="--delay: 0.3s">
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-              <div class="wave-bar"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="track effects-track">
-          <div class="track-label">EFFECTS</div>
-          <div class="track-content">
-            <div class="effect-clip" style="--delay: 0.5s">
-              <div class="effect-icon">🎨</div>
-              <div class="effect-name">Color Grade</div>
-            </div>
-            <div class="effect-clip" style="--delay: 0.7s">
-              <div class="effect-icon">✨</div>
-              <div class="effect-name">Transitions</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="timeline-playhead"></div>
-      <div class="timeline-timecode">00:00:02:15</div>
-      
-      <div class="editor-info">
-        <div class="info-item">
-          <i class="fas fa-video"></i>
-          <span>4+ Years Experience</span>
-        </div>
-        <div class="info-item">
-          <i class="fab fa-adobe"></i>
-          <span>Premiere Pro Expert</span>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-palette"></i>
-          <span>Color Grading</span>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-music"></i>
-          <span>Audio Sync</span>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Loading Screen -->
   <div id="loading-screen">
@@ -150,6 +69,200 @@
       <div class="scroll-line"></div>
     </div>
   </section>
+
+  <!-- Scroll Timeline Transition -->
+  <div id="scroll-timeline" class="scroll-timeline">
+    <div class="timeline-background">
+      <div class="timeline-grid"></div>
+    </div>
+    <div class="timeline-container">
+      <div class="timeline-header">
+        <div class="timeline-title">YOSSI GRUNWALD</div>
+        <div class="timeline-subtitle">VIDEO EDITOR & VIDEographer</div>
+        <div class="timeline-status">PROJECT: PORTFOLIO</div>
+      </div>
+      
+      <div class="timeline-workspace">
+        <div class="timeline-panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <div class="tab active">Project</div>
+              <div class="tab">Media</div>
+              <div class="tab">Effects</div>
+            </div>
+          </div>
+          <div class="panel-content">
+            <div class="project-files">
+              <div class="file-item">
+                <i class="fas fa-video"></i>
+                <span>Camp_Chaburah_2023.mp4</span>
+              </div>
+              <div class="file-item">
+                <i class="fas fa-video"></i>
+                <span>Event_Coverage.mp4</span>
+              </div>
+              <div class="file-item">
+                <i class="fas fa-video"></i>
+                <span>Promotional_Reel.mp4</span>
+              </div>
+              <div class="file-item">
+                <i class="fas fa-music"></i>
+                <span>Background_Music.wav</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="timeline-main">
+          <div class="timeline-toolbar">
+            <div class="tool-button">
+              <i class="fas fa-play"></i>
+            </div>
+            <div class="tool-button">
+              <i class="fas fa-pause"></i>
+            </div>
+            <div class="tool-button">
+              <i class="fas fa-cut"></i>
+            </div>
+            <div class="tool-button">
+              <i class="fas fa-layer-group"></i>
+            </div>
+          </div>
+          
+          <div class="timeline-tracks">
+            <div class="track video-track">
+              <div class="track-header">
+                <div class="track-label">V1</div>
+                <div class="track-controls">
+                  <i class="fas fa-eye"></i>
+                  <i class="fas fa-lock"></i>
+                </div>
+              </div>
+              <div class="track-content">
+                <div class="video-clip" style="--clip-color: #4a90e2">
+                  <div class="clip-thumbnail">
+                    <div class="clip-preview"></div>
+                  </div>
+                  <div class="clip-info">
+                    <div class="clip-name">Camp Chaburah</div>
+                    <div class="clip-duration">00:02:15</div>
+                  </div>
+                  <div class="clip-handles">
+                    <div class="handle left"></div>
+                    <div class="handle right"></div>
+                  </div>
+                </div>
+                <div class="video-clip" style="--clip-color: #e24a4a">
+                  <div class="clip-thumbnail">
+                    <div class="clip-preview"></div>
+                  </div>
+                  <div class="clip-info">
+                    <div class="clip-name">Event Coverage</div>
+                    <div class="clip-duration">00:01:45</div>
+                  </div>
+                  <div class="clip-handles">
+                    <div class="handle left"></div>
+                    <div class="handle right"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="track audio-track">
+              <div class="track-header">
+                <div class="track-label">A1</div>
+                <div class="track-controls">
+                  <i class="fas fa-volume-up"></i>
+                  <i class="fas fa-lock"></i>
+                </div>
+              </div>
+              <div class="track-content">
+                <div class="audio-clip">
+                  <div class="audio-waveform">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                  </div>
+                  <div class="clip-info">
+                    <div class="clip-name">Background Music</div>
+                    <div class="clip-duration">00:04:30</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="track effects-track">
+              <div class="track-header">
+                <div class="track-label">FX</div>
+                <div class="track-controls">
+                  <i class="fas fa-magic"></i>
+                  <i class="fas fa-lock"></i>
+                </div>
+              </div>
+              <div class="track-content">
+                <div class="effect-clip">
+                  <div class="effect-icon">🎨</div>
+                  <div class="effect-name">Color Grade</div>
+                </div>
+                <div class="effect-clip">
+                  <div class="effect-icon">✨</div>
+                  <div class="effect-name">Cross Dissolve</div>
+                </div>
+                <div class="effect-clip">
+                  <div class="effect-icon">📊</div>
+                  <div class="effect-name">Lumetri</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="timeline-ruler">
+            <div class="ruler-marks">
+              <div class="mark">0:00</div>
+              <div class="mark">0:30</div>
+              <div class="mark">1:00</div>
+              <div class="mark">1:30</div>
+              <div class="mark">2:00</div>
+              <div class="mark">2:30</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="timeline-playhead"></div>
+      <div class="timeline-timecode">00:00:02:15</div>
+      
+      <div class="timeline-footer">
+        <div class="footer-info">
+          <div class="info-item">
+            <i class="fas fa-video"></i>
+            <span>4+ Years Experience</span>
+          </div>
+          <div class="info-item">
+            <i class="fab fa-adobe"></i>
+            <span>Premiere Pro Expert</span>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-palette"></i>
+            <span>Color Grading</span>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-music"></i>
+            <span>Audio Sync</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Video Gallery Section -->
   <section id="video-gallery" class="video-gallery">
