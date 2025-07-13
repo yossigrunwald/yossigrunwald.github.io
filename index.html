@@ -56,23 +56,22 @@
     </div>
   </nav>
 
-  <!-- Timeline Transition -->
-  <div id="timeline-transition" class="timeline-transition">
-    <div class="timeline-video-container">
-      <video id="transition-video" class="transition-video" muted>
-        <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
-      </video>
-    </div>
-    <div class="timeline-container">
-      <div class="timeline-track">
-        <div class="timeline-clip" style="--clip-index: 0"></div>
-        <div class="timeline-clip" style="--clip-index: 1"></div>
-        <div class="timeline-clip" style="--clip-index: 2"></div>
-        <div class="timeline-clip" style="--clip-index: 3"></div>
-        <div class="timeline-clip" style="--clip-index: 4"></div>
+  <!-- Scroll Transition Overlay -->
+  <div id="scroll-transition" class="scroll-transition">
+    <div class="transition-background">
+      <div class="timeline-grid">
+        <div class="timeline-track" data-track="1"></div>
+        <div class="timeline-track" data-track="2"></div>
+        <div class="timeline-track" data-track="3"></div>
+        <div class="timeline-track" data-track="4"></div>
+        <div class="timeline-track" data-track="5"></div>
       </div>
-      <div class="timeline-playhead"></div>
-      <div class="timeline-timecode">00:00:00:00</div>
+      <div class="playhead-line"></div>
+      <div class="transition-video-container">
+        <video id="transition-video" class="transition-video" muted>
+          <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
+        </video>
+      </div>
     </div>
   </div>
 

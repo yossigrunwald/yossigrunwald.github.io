@@ -219,34 +219,64 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Timeline Transition Animation
+// Scroll Transition Animation (Inspired by ravenDAO)
 let isTransitioning = false;
-const timelineTransition = document.getElementById('timeline-transition');
+const scrollTransition = document.getElementById('scroll-transition');
 const transitionVideo = document.getElementById('transition-video');
 const workBgVideo = document.getElementById('work-bg-video');
 let lastSection = 'home';
 
-// Update timecode animation
-function updateTimecode() {
-  const timecode = document.querySelector('.timeline-timecode');
-  if (timecode) {
-    let frame = 0;
-    setInterval(() => {
-      frame = (frame + 1) % 30;
-      const seconds = Math.floor(frame / 30) % 60;
-      const minutes = Math.floor(frame / 1800) % 60;
-      const hours = Math.floor(frame / 108000) % 24;
-      const frameStr = String(frame % 30).padStart(2, '0');
-      const secondsStr = String(seconds).padStart(2, '0');
-      const minutesStr = String(minutes).padStart(2, '0');
-      const hoursStr = String(hours).padStart(2, '0');
-      timecode.textContent = `${hoursStr}:${minutesStr}:${secondsStr}:${frameStr}`;
-    }, 33); // ~30fps
-  }
+// Smooth scroll transition function
+function triggerScrollTransition() {
+  if (isTransitioning) return;
+  isTransitioning = true;
+  
+  // Show transition overlay
+  scrollTransition.classList.add('active');
+  
+  // Start video after a short delay
+  setTimeout(() => {
+    if (transitionVideo) {
+      transitionVideo.currentTime = 0;
+      transitionVideo.play().catch(() => {
+        // Continue if video fails to play
+      });
+    }
+  }, 500);
+  
+  // Animate timeline tracks sequentially
+  const tracks = scrollTransition.querySelectorAll('.timeline-track');
+  tracks.forEach((track, index) => {
+    setTimeout(() => {
+      track.classList.add('reveal');
+    }, 800 + (index * 200));
+  });
+  
+  // Complete transition after animation
+  setTimeout(() => {
+    // Activate work background
+    if (workBgVideo) {
+      workBgVideo.currentTime = 0;
+      workBgVideo.play().then(() => {
+        setTimeout(() => {
+          workBgVideo.pause();
+          workBgVideo.classList.add('active', 'paused');
+        }, 500);
+      }).catch(() => {
+        workBgVideo.classList.add('active', 'paused');
+      });
+    }
+    
+    // Hide transition
+    setTimeout(() => {
+      scrollTransition.classList.remove('active');
+      tracks.forEach(track => track.classList.remove('reveal'));
+      isTransitioning = false;
+    }, 500);
+  }, 3000);
 }
-updateTimecode();
 
-// Detect section transitions
+// Enhanced scroll detection with smooth transitions
 window.addEventListener('scroll', () => {
   const scrollPosition = window.pageYOffset + window.innerHeight / 2;
   
@@ -261,65 +291,15 @@ window.addEventListener('scroll', () => {
     }
   });
   
-  // Trigger transition animation when moving from about to work
+  // Trigger transition when moving from about to work
   if (lastSection === 'about' && currentSection === 'work' && !isTransitioning) {
-    isTransitioning = true;
-    
-    // Show transition overlay immediately
-    timelineTransition.classList.add('active');
-    
-    // Reset and play timeline animation
-    const clips = timelineTransition.querySelectorAll('.timeline-clip');
-    clips.forEach((clip, index) => {
-      clip.style.animation = 'none';
-      setTimeout(() => {
-        clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
-      }, 10);
-    });
-    
-    // Start playing transition video after 1 second
-    setTimeout(() => {
-      if (transitionVideo) {
-        transitionVideo.currentTime = 0;
-        transitionVideo.play().catch(() => {
-          // If video fails to play, continue with transition
-        });
-        
-        // Pause transition video after it plays for a bit
-        setTimeout(() => {
-          if (transitionVideo) {
-            transitionVideo.pause();
-          }
-        }, 2500);
-      }
-    }, 1000);
-    
-    // After transition completes, activate work background and pause video
-    setTimeout(() => {
-      if (workBgVideo) {
-        workBgVideo.currentTime = 0;
-        workBgVideo.play().then(() => {
-                  // Pause the video after a short delay to keep it as static background
-        setTimeout(() => {
-          workBgVideo.pause();
-          workBgVideo.classList.add('active', 'paused');
-        }, 500);
-        }).catch(() => {
-          workBgVideo.classList.add('active');
-        });
-      }
-      
-      // Hide transition overlay
-      timelineTransition.classList.remove('active');
-      isTransitioning = false;
-    }, 3000);
+    triggerScrollTransition();
   }
   
   // Handle work section background video
   if (currentSection === 'work' && workBgVideo && !workBgVideo.classList.contains('active')) {
     workBgVideo.currentTime = 0;
     workBgVideo.play().then(() => {
-      // Pause the video to keep it as static background
       setTimeout(() => {
         workBgVideo.pause();
         workBgVideo.classList.add('active', 'paused');
