@@ -219,87 +219,87 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Scroll Transition Animation (Inspired by ravenDAO)
-let isTransitioning = false;
-const scrollTransition = document.getElementById('scroll-transition');
-const transitionVideo = document.getElementById('transition-video');
+// Background Transition Effect (Inspired by ravenDAO)
+const backgroundTransition = document.getElementById('background-transition');
+const backgroundVideo = document.getElementById('background-video');
 const workBgVideo = document.getElementById('work-bg-video');
 let lastSection = 'home';
 
-// Smooth scroll transition function
-function triggerScrollTransition() {
-  if (isTransitioning) return;
-  isTransitioning = true;
-  
-  // Show transition overlay
-  scrollTransition.classList.add('active');
-  
-  // Start video after a short delay
-  setTimeout(() => {
-    if (transitionVideo) {
-      transitionVideo.currentTime = 0;
-      transitionVideo.play().catch(() => {
-        // Continue if video fails to play
-      });
-    }
-  }, 500);
-  
-  // Animate timeline tracks sequentially
-  const tracks = scrollTransition.querySelectorAll('.timeline-track');
-  tracks.forEach((track, index) => {
-    setTimeout(() => {
-      track.classList.add('reveal');
-    }, 800 + (index * 200));
+// Initialize background video
+if (backgroundVideo) {
+  backgroundVideo.play().catch(() => {
+    // Video autoplay failed, continue without video
   });
-  
-  // Complete transition after animation
-  setTimeout(() => {
-    // Activate work background
-    if (workBgVideo) {
-      workBgVideo.currentTime = 0;
-      workBgVideo.play().then(() => {
-        setTimeout(() => {
-          workBgVideo.pause();
-          workBgVideo.classList.add('active', 'paused');
-        }, 500);
-      }).catch(() => {
-        workBgVideo.classList.add('active', 'paused');
-      });
-    }
-    
-    // Hide transition
-    setTimeout(() => {
-      scrollTransition.classList.remove('active');
-      tracks.forEach(track => track.classList.remove('reveal'));
-      isTransitioning = false;
-    }, 500);
-  }, 3000);
 }
 
-// Enhanced scroll detection with smooth transitions
+// Detect scroll position and trigger background effects
 window.addEventListener('scroll', () => {
-  const scrollPosition = window.pageYOffset + window.innerHeight / 2;
+  const scrollPosition = window.scrollY;
+  const windowHeight = window.innerHeight;
   
-  // Find current section
+  // Determine current section based on scroll position
   let currentSection = 'home';
-  sections.forEach(section => {
-    const sectionTop = section.offsetTop;
-    const sectionBottom = sectionTop + section.offsetHeight;
-    
-    if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
-      currentSection = section.id;
-    }
-  });
+  const aboutSection = document.getElementById('about');
+  const workSection = document.getElementById('work');
   
-  // Trigger transition when moving from about to work
-  if (lastSection === 'about' && currentSection === 'work' && !isTransitioning) {
-    triggerScrollTransition();
+  if (aboutSection && workSection) {
+    const aboutTop = aboutSection.offsetTop;
+    const workTop = workSection.offsetTop;
+    
+    if (scrollPosition < aboutTop - windowHeight * 0.3) {
+      currentSection = 'home';
+    } else if (scrollPosition < workTop - windowHeight * 0.3) {
+      currentSection = 'about';
+    } else {
+      currentSection = 'work';
+    }
+  }
+  
+  // Activate background transition when moving from about to work
+  if (lastSection === 'about' && currentSection === 'work') {
+    if (backgroundTransition) {
+      backgroundTransition.classList.add('active');
+      
+      // Animate timeline lines
+      const lines = backgroundTransition.querySelectorAll('.timeline-line');
+      lines.forEach((line, index) => {
+        setTimeout(() => {
+          line.classList.add('active');
+        }, index * 150);
+      });
+      
+      // Activate playhead
+      const playhead = backgroundTransition.querySelector('.playhead-indicator');
+      if (playhead) {
+        setTimeout(() => {
+          playhead.classList.add('active');
+        }, 800);
+      }
+    }
+  }
+  
+  // Deactivate background transition when moving away from work section
+  if (lastSection === 'work' && currentSection !== 'work') {
+    if (backgroundTransition) {
+      backgroundTransition.classList.remove('active');
+      
+      // Reset timeline lines
+      const lines = backgroundTransition.querySelectorAll('.timeline-line');
+      lines.forEach(line => line.classList.remove('active'));
+      
+      // Reset playhead
+      const playhead = backgroundTransition.querySelector('.playhead-indicator');
+      if (playhead) {
+        playhead.classList.remove('active');
+      }
+    }
   }
   
   // Handle work section background video
   if (currentSection === 'work' && workBgVideo && !workBgVideo.classList.contains('active')) {
     workBgVideo.currentTime = 0;
     workBgVideo.play().then(() => {
+      // Pause the video to keep it as static background
       setTimeout(() => {
         workBgVideo.pause();
         workBgVideo.classList.add('active', 'paused');
