@@ -222,6 +222,8 @@ document.addEventListener('keydown', function(e) {
 // Timeline Transition Animation
 let isTransitioning = false;
 const timelineTransition = document.getElementById('timeline-transition');
+const transitionVideo = document.getElementById('transition-video');
+const workBgVideo = document.getElementById('work-bg-video');
 let lastSection = 'home';
 
 // Update timecode animation
@@ -259,25 +261,53 @@ window.addEventListener('scroll', () => {
     }
   });
   
-  // Trigger transition animation when moving from home to about
-  if (lastSection === 'home' && currentSection === 'about' && !isTransitioning) {
+  // Trigger transition animation when moving from about to work
+  if (lastSection === 'about' && currentSection === 'work' && !isTransitioning) {
     isTransitioning = true;
-    timelineTransition.classList.add('active');
     
-    // Reset and play animation
-    const clips = timelineTransition.querySelectorAll('.timeline-clip');
-    clips.forEach((clip, index) => {
-      clip.style.animation = 'none';
-      setTimeout(() => {
-        clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
-      }, 10);
-    });
-    
-    // Hide transition after animation
-    setTimeout(() => {
-      timelineTransition.classList.remove('active');
-      isTransitioning = false;
-    }, 2000);
+    // Play transition video
+    if (transitionVideo) {
+      transitionVideo.currentTime = 0;
+      transitionVideo.play().then(() => {
+        timelineTransition.classList.add('active');
+        
+        // Reset and play timeline animation
+        const clips = timelineTransition.querySelectorAll('.timeline-clip');
+        clips.forEach((clip, index) => {
+          clip.style.animation = 'none';
+          setTimeout(() => {
+            clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
+          }, 10);
+        });
+        
+        // After transition video plays, activate work background
+        setTimeout(() => {
+          if (workBgVideo) {
+            workBgVideo.play();
+            workBgVideo.classList.add('active');
+          }
+          
+          // Hide transition after animation
+          setTimeout(() => {
+            timelineTransition.classList.remove('active');
+            isTransitioning = false;
+          }, 1000);
+        }, 2000);
+      }).catch(() => {
+        // If video fails to play, still show transition
+        timelineTransition.classList.add('active');
+        setTimeout(() => {
+          timelineTransition.classList.remove('active');
+          isTransitioning = false;
+        }, 2000);
+      });
+    }
+  }
+  
+  // Handle work section background video
+  if (currentSection === 'work' && workBgVideo && !workBgVideo.classList.contains('active')) {
+    workBgVideo.play();
+    workBgVideo.classList.add('active');
   }
   
   lastSection = currentSection;

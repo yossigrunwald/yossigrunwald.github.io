@@ -391,6 +391,34 @@ body {
 .work {
   padding: 100px 0;
   background: var(--bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.work-background-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.work-bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+.work-bg-video.active {
+  opacity: 0.15;
+}
+
+.work .container {
+  position: relative;
+  z-index: 1;
 }
 
 .work h2 {
@@ -807,26 +835,58 @@ body {
 /* Timeline Transition */
 .timeline-transition {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  max-width: 800px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
   pointer-events: none;
   z-index: 999;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.8s ease;
+  background: rgba(0, 0, 0, 0.9);
 }
 
 .timeline-transition.active {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.timeline-video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.transition-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.1);
+  transition: opacity 1s ease, transform 1.5s ease;
+}
+
+.timeline-transition.active .transition-video {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .timeline-container {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.9);
   padding: 40px;
   border-radius: 10px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
 }
 
 .timeline-track {
@@ -1150,19 +1210,25 @@ body {
   
   /* Timeline transition mobile */
   .timeline-transition {
-    width: 90%;
+    width: 100%;
   }
   
   .timeline-container {
     padding: 20px;
+    bottom: 20px;
+    width: 90%;
   }
   
   .timeline-clip {
-    height: 40px;
+    height: 30px;
   }
   
   .timeline-timecode {
-    font-size: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .work-bg-video.active {
+    opacity: 0.1;
   }
 }
 
