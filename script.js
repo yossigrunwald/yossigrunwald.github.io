@@ -259,8 +259,8 @@ window.addEventListener('scroll', () => {
     }
   });
   
-  // Trigger transition animation when moving from home to about
-  if (lastSection === 'home' && currentSection === 'about' && !isTransitioning) {
+  // Trigger transition animation when moving from about to work
+  if (lastSection === 'about' && currentSection === 'work' && !isTransitioning) {
     isTransitioning = true;
     timelineTransition.classList.add('active');
     
@@ -273,11 +273,24 @@ window.addEventListener('scroll', () => {
       }, 10);
     });
     
-    // Hide transition after animation
+    // Keep transition visible as background in work section
     setTimeout(() => {
-      timelineTransition.classList.remove('active');
+      timelineTransition.classList.add('background-mode');
+      // Position timeline relative to work section
+      const workSection = document.getElementById('work');
+      if (workSection) {
+        workSection.appendChild(timelineTransition);
+      }
       isTransitioning = false;
-    }, 2000);
+    }, 1500);
+  }
+  
+  // Hide transition when leaving work section
+  if (lastSection === 'work' && currentSection !== 'work') {
+    timelineTransition.classList.remove('active');
+    timelineTransition.classList.remove('background-mode');
+    // Move timeline back to its original position
+    document.body.appendChild(timelineTransition);
   }
   
   lastSection = currentSection;

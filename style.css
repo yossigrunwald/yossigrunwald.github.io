@@ -391,6 +391,8 @@ body {
 .work {
   padding: 100px 0;
   background: var(--bg-color);
+  position: relative;
+  overflow: hidden;
 }
 
 .work h2 {
@@ -815,11 +817,41 @@ body {
   opacity: 0;
   pointer-events: none;
   z-index: 999;
-  transition: opacity 0.5s ease;
+  transition: all 0.5s ease;
 }
 
 .timeline-transition.active {
   opacity: 1;
+}
+
+.timeline-transition.background-mode {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1000px;
+  opacity: 0.6;
+  z-index: 1;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+.timeline-transition.background-mode:hover {
+  opacity: 0.9;
+  transform: translateX(-50%) scale(1.05);
+}
+
+.timeline-transition.background-mode .timeline-container {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-transition.background-mode .timeline-timecode {
+  font-size: 1rem;
+  margin-top: 15px;
 }
 
 .timeline-container {
