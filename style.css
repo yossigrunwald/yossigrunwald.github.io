@@ -410,9 +410,17 @@ body {
   object-fit: cover;
   opacity: 0;
   transition: opacity 2s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .work-bg-video.active {
+  opacity: 0.15;
+}
+
+/* When video is paused, it acts as a static background image */
+.work-bg-video.paused {
   opacity: 0.15;
 }
 
