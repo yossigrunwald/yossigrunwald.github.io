@@ -877,7 +877,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  opacity: 0.3;
+  opacity: 0.6;
 }
 
 .timeline-line {
@@ -897,7 +897,7 @@ body {
 
 .timeline-line.active {
   transform: scaleX(1);
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .playhead-indicator {
@@ -905,8 +905,8 @@ body {
   top: 50%;
   left: 0;
   width: 100%;
-  height: 1px;
-  background: rgba(255, 0, 0, 0.4);
+  height: 2px;
+  background: rgba(255, 0, 0, 0.8);
   transform: translateY(-50%);
   opacity: 0;
   transition: opacity 0.8s ease;
@@ -941,7 +941,7 @@ body {
 }
 
 .background-transition.active .background-video {
-  opacity: 0.08;
+  opacity: 0.15;
   transform: scale(1);
 }
 

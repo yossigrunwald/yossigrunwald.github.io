@@ -257,6 +257,7 @@ window.addEventListener('scroll', () => {
   
   // Activate background transition when moving from about to work
   if (lastSection === 'about' && currentSection === 'work') {
+    console.log('Activating background transition!');
     if (backgroundTransition) {
       backgroundTransition.classList.add('active');
       
@@ -309,6 +310,7 @@ window.addEventListener('scroll', () => {
     });
   }
   
+  console.log('Current section:', currentSection, 'Last section:', lastSection);
   lastSection = currentSection;
 });
 
