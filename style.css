@@ -1281,3 +1281,85 @@ section.in-view {
   opacity: 1;
 }
 
+/* Resume PDF Modal Styles */
+.resume-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #0056b3, #004494);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+}
+
+.download-btn i {
+  font-size: 16px;
+}
+
+.resume-pdf-container {
+  margin-top: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #f8f9fa;
+}
+
+.resume-pdf-container embed {
+  display: block;
+  border: none;
+  background: white;
+}
+
+.pdf-fallback {
+  display: none;
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.pdf-fallback a {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.pdf-fallback a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile responsive for resume modal */
+@media (max-width: 768px) {
+  .resume-pdf-container embed {
+    height: 500px;
+  }
+  
+  .resume-content {
+    padding: 20px;
+  }
+  
+  .download-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}
+
