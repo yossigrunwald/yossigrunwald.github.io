@@ -18,6 +18,17 @@ window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('loading-screen').classList.add('hidden');
   }, 500);
+  
+  // Handle hero video to pause on last frame
+  const heroVideo = document.querySelector('.hero-video');
+  if (heroVideo) {
+    heroVideo.addEventListener('ended', function() {
+      // Video has ended, it will stay on the last frame
+      this.pause();
+      // Ensure we're at the end
+      this.currentTime = this.duration;
+    });
+  }
 });
 
 // Mobile Menu Toggle
