@@ -391,42 +391,6 @@ body {
 .work {
   padding: 100px 0;
   background: var(--bg-color);
-  position: relative;
-  overflow: hidden;
-}
-
-.work-background-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
-
-.work-bg-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 2s ease;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.work-bg-video.active {
-  opacity: 0.15;
-}
-
-/* When video is paused, it acts as a static background image */
-.work-bg-video.paused {
-  opacity: 0.15;
-}
-
-.work .container {
-  position: relative;
-  z-index: 1;
 }
 
 .work h2 {
@@ -840,110 +804,7 @@ body {
   animation: fadeInUp 0.8s ease 1s forwards;
 }
 
-/* Background Transition Effect (Inspired by ravenDAO) */
-.background-transition {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 1s ease;
-}
 
-.background-transition.active {
-  opacity: 1;
-}
-
-.timeline-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-}
-
-.timeline-lines {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 1400px;
-  height: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  opacity: 0.6;
-}
-
-.timeline-line {
-  height: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 1px;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.6s ease, background 0.6s ease;
-}
-
-.timeline-line[data-line="1"] { background: rgba(74, 144, 226, 0.2); }
-.timeline-line[data-line="2"] { background: rgba(226, 74, 74, 0.2); }
-.timeline-line[data-line="3"] { background: rgba(74, 226, 144, 0.2); }
-.timeline-line[data-line="4"] { background: rgba(226, 161, 74, 0.2); }
-.timeline-line[data-line="5"] { background: rgba(158, 74, 226, 0.2); }
-
-.timeline-line.active {
-  transform: scaleX(1);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.playhead-indicator {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: rgba(255, 0, 0, 0.8);
-  transform: translateY(-50%);
-  opacity: 0;
-  transition: opacity 0.8s ease;
-}
-
-.playhead-indicator.active {
-  opacity: 1;
-  animation: playheadPulse 3s ease-in-out infinite;
-}
-
-@keyframes playheadPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-.background-video-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.background-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transform: scale(1.05);
-  transition: opacity 2s ease, transform 3s ease;
-}
-
-.background-transition.active .background-video {
-  opacity: 0.15;
-  transform: scale(1);
-}
 
 /* Modals */
 .modal {
@@ -1206,80 +1067,11 @@ body {
     height: 3px;
   }
   
-  /* Background transition mobile */
-  .background-transition {
-    width: 100%;
-  }
-  
-  .timeline-lines {
-    width: 95%;
-    height: 150px;
-    gap: 10px;
-  }
-  
-  .timeline-line {
-    height: 1px;
-  }
-  
-  .background-transition.active .background-video {
-    opacity: 0.05;
-  }
-  
-  .work-bg-video.active {
-    opacity: 0.1;
-  }
+
 }
 
 
-/* Enhanced section animations for smooth scroll transitions */
-section {
-  position: relative;
-  transform: translateY(60px);
-  opacity: 0;
-  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  will-change: transform, opacity;
-}
 
-section.in-view {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* Special transition effect for about section */
-.about {
-  position: relative;
-  overflow: hidden;
-}
-
-.about::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(0,123,255,0.05) 0%, transparent 70%);
-  transform: scale(0);
-  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  z-index: 1;
-}
-
-.about.in-view::before {
-  transform: scale(1);
-}
-
-.about-content {
-  position: relative;
-  z-index: 2;
-  transform: translateX(-30px);
-  opacity: 0;
-  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s;
-}
-
-.about.in-view .about-content {
-  transform: translateX(0);
-  opacity: 1;
-}
 
 /* Resume PDF Modal Styles */
 .resume-actions {
