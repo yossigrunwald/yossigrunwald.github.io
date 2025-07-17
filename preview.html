@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallax Preview - Yossi Grunwald</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        .preview-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .preview-title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .changes-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .change-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .demo-text {
+            font-size: 1.5em;
+            margin: 20px 0;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease forwards;
+        }
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1 class="preview-title">🎬 Parallax Website Preview</h1>
+        
+        <div class="instructions">
+            <h3>📋 How to View Your New Website:</h3>
+            <p><strong>Option 1:</strong> Copy and paste this in your browser address bar:</p>
+            <code>file:///workspace/index.html</code>
+            
+            <p><strong>Option 2:</strong> Navigate to your workspace folder and double-click <code>index.html</code></p>
+            
+            <p><strong>Option 3:</strong> If you're using a remote environment, you might need to download the files to view locally</p>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-text" style="animation-delay: 0.2s;">✨ Smooth Parallax Scrolling</div>
+            <div class="demo-text" style="animation-delay: 0.4s;">🎥 Video Background Effects</div>
+            <div class="demo-text" style="animation-delay: 0.6s;">📱 Mobile Responsive Design</div>
+        </div>
+
+        <div class="changes-list">
+            <h3>🚀 What's New in Your Website:</h3>
+            
+            <div class="change-item">
+                <strong>Hero Section:</strong> Added parallax video background with smooth text animations
+            </div>
+            
+            <div class="change-item">
+                <strong>Video Gallery:</strong> Staggered animations and hover effects for video thumbnails
+            </div>
+            
+            <div class="change-item">
+                <strong>About Section:</strong> Image slides in from left, text from right with parallax movement
+            </div>
+            
+            <div class="change-item">
+                <strong>Work Stats:</strong> New section with animated statistics and dark video background
+            </div>
+            
+            <div class="change-item">
+                <strong>Contact Section:</strong> Redesigned with animated contact cards
+            </div>
+            
+            <div class="change-item">
+                <strong>Performance:</strong> Optimized for 60fps with GPU acceleration and mobile support
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="index.html" class="button">🎬 View Full Website</a>
+            <a href="file:///workspace/index.html" class="button">📁 Open File Direct</a>
+        </div>
+
+        <div class="instructions">
+            <h3>🔍 Testing the Parallax Effects:</h3>
+            <ul>
+                <li>Scroll slowly to see elements move at different speeds</li>
+                <li>Hover over video thumbnails and skill cards</li>
+                <li>Click video thumbnails to test the modal</li>
+                <li>Resize browser window to test mobile responsiveness</li>
+                <li>Try smooth scrolling navigation links</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
