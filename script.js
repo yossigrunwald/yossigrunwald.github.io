@@ -1,11 +1,60 @@
 
 
 // Loading Screen
-window.addEventListener('load', () => {
-  // Hide loading screen
-  setTimeout(() => {
+let resourcesLoaded = false;
+let minimumTimeElapsed = false;
+
+// Check if all critical resources are loaded
+function checkResourcesLoaded() {
+  const heroVideo = document.getElementById('hero-bg-video');
+  const workVideo = document.getElementById('work-bg-video');
+  const profileImage = document.querySelector('img[src="image 2.png"]');
+  
+  // Check if videos are ready to play
+  const heroVideoReady = !heroVideo || heroVideo.readyState >= 3;
+  const workVideoReady = !workVideo || workVideo.readyState >= 3;
+  const profileImageReady = !profileImage || profileImage.complete;
+  
+  return heroVideoReady && workVideoReady && profileImageReady;
+}
+
+// Hide loading screen when everything is ready
+function hideLoadingScreen() {
+  if (resourcesLoaded && minimumTimeElapsed) {
     document.getElementById('loading-screen').classList.add('hidden');
-  }, 500);
+  }
+}
+
+// Set a minimum time of 200ms to prevent flashing
+setTimeout(() => {
+  minimumTimeElapsed = true;
+  hideLoadingScreen();
+}, 200);
+
+// Check resources on load
+window.addEventListener('load', () => {
+  resourcesLoaded = checkResourcesLoaded();
+  
+  if (!resourcesLoaded) {
+    // If not all resources are loaded, keep checking
+    const checkInterval = setInterval(() => {
+      if (checkResourcesLoaded()) {
+        resourcesLoaded = true;
+        hideLoadingScreen();
+        clearInterval(checkInterval);
+      }
+    }, 100);
+    
+    // Maximum wait time of 3 seconds
+    setTimeout(() => {
+      resourcesLoaded = true;
+      hideLoadingScreen();
+      clearInterval(checkInterval);
+    }, 3000);
+  } else {
+    // Everything is already loaded
+    hideLoadingScreen();
+  }
 });
 
 // Mobile Menu Toggle
@@ -278,18 +327,41 @@ window.addEventListener('scroll', () => {
 // Hero Background Video
 document.addEventListener('DOMContentLoaded', function() {
   const heroVideo = document.getElementById('hero-bg-video');
+  const workVideo = document.getElementById('work-bg-video');
   
+  // Function to play video when ready
+  function playVideoWhenReady(video) {
+    if (video) {
+      if (video.readyState >= 3) {
+        // Video is ready, play it
+        video.play().catch(() => {
+          console.log('Video autoplay was blocked');
+        });
+      } else {
+        // Wait for video to be ready
+        video.addEventListener('canplay', function() {
+          video.play().catch(() => {
+            console.log('Video autoplay was blocked');
+          });
+        }, { once: true });
+      }
+    }
+  }
+  
+  // Initialize hero video
   if (heroVideo) {
-    // Start playing the video when page loads
-    heroVideo.play().catch(() => {
-      // Handle autoplay blocked by browser
-      console.log('Video autoplay was blocked');
-    });
+    playVideoWhenReady(heroVideo);
     
     // When video ends, keep it on the last frame (don't restart)
     heroVideo.addEventListener('ended', function() {
       // Video will naturally stay on last frame since loop is not set
       heroVideo.pause();
     });
+  }
+  
+  // Initialize work video (if it should autoplay)
+  if (workVideo) {
+    // Work video has loop attribute in HTML, so just ensure it plays
+    playVideoWhenReady(workVideo);
   }
 });
