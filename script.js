@@ -287,3 +287,21 @@ window.addEventListener('scroll', () => {
   lastScrollY = scrolled;
 });
 
+// Hero Background Video
+document.addEventListener('DOMContentLoaded', function() {
+  const heroVideo = document.getElementById('hero-bg-video');
+  
+  if (heroVideo) {
+    // Start playing the video when page loads
+    heroVideo.play().catch(() => {
+      // Handle autoplay blocked by browser
+      console.log('Video autoplay was blocked');
+    });
+    
+    // When video ends, keep it on the last frame (don't restart)
+    heroVideo.addEventListener('ended', function() {
+      // Video will naturally stay on last frame since loop is not set
+      heroVideo.pause();
+    });
+  }
+});

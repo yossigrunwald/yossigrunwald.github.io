@@ -157,9 +157,30 @@ body {
   background: var(--bg-light);
 }
 
+.hero-background-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero-bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .hero-content {
   text-align: center;
   animation: fadeInUp 1s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-title {
@@ -199,6 +220,7 @@ body {
   align-items: center;
   gap: 10px;
   animation: bounce 2s infinite;
+  z-index: 1;
 }
 
 .hero-scroll span {
