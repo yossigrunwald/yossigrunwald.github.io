@@ -212,8 +212,67 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// Enhanced Scroll Transition Animation for smooth transitions
+const enhancedObserverOptions = {
+  threshold: 0.3,
+  rootMargin: '0px 0px -50px 0px'
+};
 
+const enhancedObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in-view');
+      
+      // Special effect when about section comes into view
+      if (entry.target.id === 'about') {
+        // Add extra visual effects
+        setTimeout(() => {
+          entry.target.style.transform = 'scale(1.001)';
+          setTimeout(() => {
+            entry.target.style.transform = 'scale(1)';
+          }, 200);
+        }, 800);
+      }
+    }
+  });
+}, enhancedObserverOptions);
 
+// Observe all sections for enhanced animations
+document.querySelectorAll('section').forEach(section => {
+  enhancedObserver.observe(section);
+});
 
-
-
+// Enhanced Parallax Effect for Smooth Section Transitions
+let lastScrollY = 0;
+window.addEventListener('scroll', () => {
+  const scrolled = window.pageYOffset;
+  const windowHeight = window.innerHeight;
+  
+  // Hero section parallax with fade out
+  const hero = document.querySelector('.hero');
+  if (hero && scrolled < windowHeight) {
+    const parallaxSpeed = scrolled * 0.5;
+    hero.style.transform = `translateY(${parallaxSpeed}px)`;
+    
+    // Fade out hero content as we scroll
+    const heroContent = hero.querySelector('.hero-content');
+    if (heroContent) {
+      const opacity = Math.max(0, 1 - (scrolled / windowHeight) * 1.5);
+      heroContent.style.opacity = opacity;
+    }
+  }
+  
+  // About section entrance effect
+  const about = document.querySelector('.about');
+  if (about) {
+    const aboutTop = about.offsetTop;
+    const scrollPercent = Math.max(0, Math.min(1, (scrolled - aboutTop + windowHeight) / windowHeight));
+    
+    if (scrolled > aboutTop - windowHeight && scrolled < aboutTop + about.offsetHeight) {
+      // Subtle parallax for about section
+      about.style.transform = `translateY(${(scrollPercent - 1) * 30}px)`;
+    }
+  }
+  
+  lastScrollY = scrolled;
+});
