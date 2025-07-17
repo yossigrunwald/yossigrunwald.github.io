@@ -22,6 +22,8 @@ function checkResourcesLoaded() {
 function hideLoadingScreen() {
   if (resourcesLoaded && minimumTimeElapsed) {
     document.getElementById('loading-screen').classList.add('hidden');
+    // Start parallax effects after loading
+    initParallax();
   }
 }
 
@@ -52,191 +54,529 @@ window.addEventListener('load', () => {
       clearInterval(checkInterval);
     }, 3000);
   } else {
-    // Everything is already loaded
     hideLoadingScreen();
   }
 });
 
-// Mobile Menu Toggle
-const mobileMenu = document.getElementById('mobile-menu');
-const navMenu = document.querySelector('.nav-menu');
-
-mobileMenu.addEventListener('click', () => {
-  navMenu.classList.toggle('active');
+// Parallax Scrolling System
+class ParallaxController {
+  constructor() {
+    this.elements = [];
+    this.isScrolling = false;
+    this.lastScrollY = 0;
+    this.ticking = false;
+    
+    this.init();
+  }
   
-  // Animate hamburger menu
-  const bars = mobileMenu.querySelectorAll('.bar');
-  bars.forEach((bar, index) => {
-    if (navMenu.classList.contains('active')) {
-      if (index === 0) bar.style.transform = 'rotate(45deg) translate(5px, 5px)';
-      if (index === 1) bar.style.opacity = '0';
-      if (index === 2) bar.style.transform = 'rotate(-45deg) translate(7px, -6px)';
-    } else {
-      bar.style.transform = 'none';
-      bar.style.opacity = '1';
-    }
-  });
-});
-
-// Smooth Scrolling for Navigation Links (Updated)
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function (e) {
-    // Skip if it's skills or resume link
-    if (this.id === 'skills-link' || this.id === 'resume-link') {
-      return;
+  init() {
+    this.setupElements();
+    this.bindEvents();
+    this.update();
+  }
+  
+  setupElements() {
+    // Hero section parallax
+    const heroVideo = document.querySelector('.hero-bg-video');
+    const heroContent = document.querySelector('.hero-content');
+    
+    if (heroVideo) {
+      this.elements.push({
+        element: heroVideo,
+        speed: 0.5,
+        type: 'background'
+      });
     }
     
-    e.preventDefault();
-    const target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      target.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-      // Close mobile menu if open
-      navMenu.classList.remove('active');
-      document.querySelectorAll('.bar').forEach(bar => {
-        bar.style.transform = 'none';
-        bar.style.opacity = '1';
+    if (heroContent) {
+      this.elements.push({
+        element: heroContent,
+        speed: 0.8,
+        type: 'content'
       });
     }
-  });
-});
-
-// Navbar Scroll Effect
-let lastScroll = 0;
-const navbar = document.querySelector('.navbar');
-
-window.addEventListener('scroll', () => {
-  const currentScroll = window.pageYOffset;
+    
+    // Video gallery parallax
+    const videoItems = document.querySelectorAll('.video-item');
+    videoItems.forEach((item, index) => {
+      this.elements.push({
+        element: item,
+        speed: 0.9 + (index % 3) * 0.05,
+        type: 'item'
+      });
+    });
+    
+    // About section parallax
+    const aboutImage = document.querySelector('.about-image');
+    const aboutText = document.querySelector('.about-text');
+    
+    if (aboutImage) {
+      this.elements.push({
+        element: aboutImage,
+        speed: 0.7,
+        type: 'image'
+      });
+    }
+    
+    if (aboutText) {
+      this.elements.push({
+        element: aboutText,
+        speed: 0.9,
+        type: 'text'
+      });
+    }
+    
+    // Work section background
+    const workBg = document.querySelector('.work::before');
+    const workVideo = document.querySelector('.work-bg-video');
+    
+    if (workVideo) {
+      this.elements.push({
+        element: workVideo,
+        speed: 0.3,
+        type: 'background'
+      });
+    }
+    
+    // Skill items staggered animation
+    const skillItems = document.querySelectorAll('.skill-item');
+    skillItems.forEach((item, index) => {
+      this.elements.push({
+        element: item,
+        speed: 0.95,
+        type: 'skill',
+        delay: index * 0.1
+      });
+    });
+  }
   
-  if (currentScroll > 100) {
+  bindEvents() {
+    window.addEventListener('scroll', this.onScroll.bind(this), { passive: true });
+    window.addEventListener('resize', this.onResize.bind(this));
+  }
+  
+  onScroll() {
+    this.lastScrollY = window.pageYOffset;
+    this.requestTick();
+  }
+  
+  onResize() {
+    this.setupElements();
+  }
+  
+  requestTick() {
+    if (!this.ticking) {
+      requestAnimationFrame(this.update.bind(this));
+      this.ticking = true;
+    }
+  }
+  
+  update() {
+    const scrollY = this.lastScrollY;
+    const windowHeight = window.innerHeight;
+    
+    this.elements.forEach(item => {
+      const { element, speed, type, delay = 0 } = item;
+      const rect = element.getBoundingClientRect();
+      const elementTop = rect.top + scrollY;
+      const elementHeight = rect.height;
+      
+      // Check if element is in viewport
+      if (rect.bottom >= 0 && rect.top <= windowHeight) {
+        const yPos = -(scrollY - elementTop) * speed;
+        
+        // Apply different transforms based on type
+        switch (type) {
+          case 'background':
+            element.style.transform = `translateY(${yPos}px) scale(1.1)`;
+            break;
+          case 'content':
+            element.style.transform = `translateY(${yPos * 0.3}px)`;
+            break;
+          case 'item':
+            element.style.transform = `translateY(${yPos * 0.1}px)`;
+            break;
+          case 'image':
+            element.style.transform = `translateY(${yPos * 0.2}px) scale(1.02)`;
+            break;
+          case 'text':
+            element.style.transform = `translateY(${yPos * 0.1}px)`;
+            break;
+          case 'skill':
+            const skillOffset = yPos * 0.05;
+            element.style.transform = `translateY(${skillOffset}px)`;
+            element.style.transitionDelay = `${delay}s`;
+            break;
+        }
+      }
+    });
+    
+    this.ticking = false;
+  }
+}
+
+// Intersection Observer for animations
+class ScrollAnimations {
+  constructor() {
+    this.animatedElements = [];
+    this.init();
+  }
+  
+  init() {
+    this.setupObserver();
+    this.setupElements();
+  }
+  
+  setupObserver() {
+    const options = {
+      root: null,
+      rootMargin: '-10% 0px -10% 0px',
+      threshold: 0.1
+    };
+    
+    this.observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          this.observer.unobserve(entry.target);
+        }
+      });
+    }, options);
+  }
+  
+  setupElements() {
+    // Add fade-in animations
+    const fadeElements = document.querySelectorAll('.about-text h2, .about-text p, .work h2, .contact h2');
+    fadeElements.forEach(el => {
+      el.classList.add('fade-in');
+      this.observer.observe(el);
+    });
+    
+    // Add slide-in animations
+    const slideLeftElements = document.querySelectorAll('.about-image');
+    slideLeftElements.forEach(el => {
+      el.classList.add('slide-in-left');
+      this.observer.observe(el);
+    });
+    
+    const slideRightElements = document.querySelectorAll('.about-text');
+    slideRightElements.forEach(el => {
+      el.classList.add('slide-in-right');
+      this.observer.observe(el);
+    });
+    
+    // Add scale-in animations
+    const scaleElements = document.querySelectorAll('.video-item, .skill-item, .stat-item, .contact-item');
+    scaleElements.forEach((el, index) => {
+      el.classList.add('scale-in');
+      el.style.transitionDelay = `${index * 0.1}s`;
+      this.observer.observe(el);
+    });
+  }
+}
+
+// Smooth scroll enhancement
+class SmoothScroll {
+  constructor() {
+    this.init();
+  }
+  
+  init() {
+    const links = document.querySelectorAll('a[href^="#"]');
+    links.forEach(link => {
+      link.addEventListener('click', this.handleClick.bind(this));
+    });
+  }
+  
+  handleClick(e) {
+    e.preventDefault();
+    const href = e.currentTarget.getAttribute('href');
+    const target = document.querySelector(href);
+    
+    if (target) {
+      const offsetTop = target.offsetTop - 80; // Account for fixed navbar
+      
+      window.scrollTo({
+        top: offsetTop,
+        behavior: 'smooth'
+      });
+    }
+  }
+}
+
+// Video background controller
+class VideoController {
+  constructor() {
+    this.videos = [];
+    this.init();
+  }
+  
+  init() {
+    this.setupVideos();
+    this.bindEvents();
+  }
+  
+  setupVideos() {
+    const heroVideo = document.getElementById('hero-bg-video');
+    const workVideo = document.getElementById('work-bg-video');
+    
+    if (heroVideo) {
+      this.videos.push({
+        element: heroVideo,
+        section: 'hero',
+        autoplay: true
+      });
+    }
+    
+    if (workVideo) {
+      this.videos.push({
+        element: workVideo,
+        section: 'work',
+        autoplay: false
+      });
+    }
+    
+    this.videos.forEach(video => {
+      video.element.addEventListener('loadeddata', () => {
+        if (video.autoplay) {
+          video.element.play().catch(e => console.log('Autoplay prevented:', e));
+        }
+      });
+    });
+  }
+  
+  bindEvents() {
+    window.addEventListener('scroll', this.onScroll.bind(this), { passive: true });
+  }
+  
+  onScroll() {
+    const scrollY = window.pageYOffset;
+    const windowHeight = window.innerHeight;
+    
+    this.videos.forEach(video => {
+      const section = document.querySelector(`.${video.section}`);
+      if (section) {
+        const rect = section.getBoundingClientRect();
+        const isVisible = rect.top < windowHeight && rect.bottom > 0;
+        
+        if (isVisible && video.element.paused) {
+          video.element.play().catch(e => console.log('Video play failed:', e));
+        } else if (!isVisible && !video.element.paused) {
+          video.element.pause();
+        }
+      }
+    });
+  }
+}
+
+// Mouse parallax effect
+class MouseParallax {
+  constructor() {
+    this.mouseX = 0;
+    this.mouseY = 0;
+    this.init();
+  }
+  
+  init() {
+    document.addEventListener('mousemove', this.onMouseMove.bind(this));
+    this.setupElements();
+  }
+  
+  onMouseMove(e) {
+    this.mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+    
+    requestAnimationFrame(this.update.bind(this));
+  }
+  
+  setupElements() {
+    this.parallaxElements = document.querySelectorAll('.video-gallery::before, .work::before');
+  }
+  
+  update() {
+    this.parallaxElements.forEach(element => {
+      const speed = 0.05;
+      const x = this.mouseX * speed * 50;
+      const y = this.mouseY * speed * 50;
+      
+      element.style.transform = `translate(${x}px, ${y}px)`;
+    });
+  }
+}
+
+// Performance monitoring
+class PerformanceMonitor {
+  constructor() {
+    this.fps = 0;
+    this.lastTime = performance.now();
+    this.frameCount = 0;
+    this.init();
+  }
+  
+  init() {
+    this.measureFPS();
+    this.optimizeBasedOnPerformance();
+  }
+  
+  measureFPS() {
+    const now = performance.now();
+    this.frameCount++;
+    
+    if (now - this.lastTime >= 1000) {
+      this.fps = this.frameCount;
+      this.frameCount = 0;
+      this.lastTime = now;
+      
+      // Adjust effects based on FPS
+      if (this.fps < 30) {
+        this.reduceEffects();
+      }
+    }
+    
+    requestAnimationFrame(this.measureFPS.bind(this));
+  }
+  
+  optimizeBasedOnPerformance() {
+    // Reduce motion for users who prefer it
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.body.classList.add('reduced-motion');
+    }
+    
+    // Optimize for mobile devices
+    if (window.innerWidth < 768) {
+      document.body.classList.add('mobile-optimized');
+    }
+  }
+  
+  reduceEffects() {
+    // Reduce parallax intensity for better performance
+    const parallaxElements = document.querySelectorAll('.parallax-element');
+    parallaxElements.forEach(el => {
+      el.style.willChange = 'auto';
+    });
+  }
+}
+
+// Initialize all systems
+function initParallax() {
+  // Check for reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  
+  if (!prefersReducedMotion) {
+    new ParallaxController();
+    new MouseParallax();
+  }
+  
+  new ScrollAnimations();
+  new SmoothScroll();
+  new VideoController();
+  new PerformanceMonitor();
+}
+
+// Navigation functionality
+const navbar = document.querySelector('.navbar');
+const navToggle = document.querySelector('.nav-toggle');
+const navMenu = document.querySelector('.nav-menu');
+
+// Navbar scroll effect
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
     navbar.classList.add('scrolled');
   } else {
     navbar.classList.remove('scrolled');
   }
-  
-  lastScroll = currentScroll;
 });
 
-// Video Modal
-const videoModal = document.getElementById('video-modal');
-const modalVideo = document.getElementById('modal-video');
-const closeModal = document.querySelector('.close-modal');
-
-// Open modal when video thumbnail is clicked
-document.querySelectorAll('.video-item:not(.placeholder)').forEach(item => {
-  item.addEventListener('click', function() {
-    const videoUrl = this.getAttribute('data-video');
-    modalVideo.src = videoUrl + '?autoplay=1';
-    videoModal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+// Mobile menu toggle
+if (navToggle) {
+  navToggle.addEventListener('click', () => {
+    navMenu.classList.toggle('active');
+    navToggle.classList.toggle('active');
   });
-});
-
-// Close modal
-function closeVideoModal() {
-  videoModal.style.display = 'none';
-  modalVideo.src = '';
-  document.body.style.overflow = 'auto';
 }
 
-closeModal.addEventListener('click', closeVideoModal);
-
-videoModal.addEventListener('click', function(e) {
-  if (e.target === videoModal) {
-    closeVideoModal();
-  }
-});
-
-// Escape key to close modal
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape' && videoModal.style.display === 'block') {
-    closeVideoModal();
-  }
-});
-
-// Fade In Animation on Scroll
-const observerOptions = {
-  threshold: 0.1,
-  rootMargin: '0px 0px -100px 0px'
-};
-
-const observer = new IntersectionObserver(function(entries) {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
+// Close mobile menu when clicking on links
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    navMenu.classList.remove('active');
+    navToggle.classList.remove('active');
   });
-}, observerOptions);
-
-// Observe all sections and elements with fade-in class
-document.querySelectorAll('section').forEach(section => {
-  section.classList.add('fade-in');
-  observer.observe(section);
 });
 
-// Active Navigation Link
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.nav-link');
+// Video modal functionality
+const videoModal = document.querySelector('.video-modal');
+const videoModalContent = document.querySelector('.video-modal-content');
+const closeModal = document.querySelector('.close-modal');
 
-window.addEventListener('scroll', () => {
-  let current = '';
-  
-  sections.forEach(section => {
-    const sectionTop = section.offsetTop;
-    const sectionHeight = section.clientHeight;
-    if (window.pageYOffset >= (sectionTop - 200)) {
-      current = section.getAttribute('id');
-    }
-  });
-  
-  navLinks.forEach(link => {
-    link.classList.remove('active');
-    if (link.getAttribute('href').slice(1) === current) {
-      link.classList.add('active');
+// Open video modal
+document.querySelectorAll('.video-item:not(.placeholder)').forEach(item => {
+  item.addEventListener('click', () => {
+    const videoUrl = item.dataset.video;
+    if (videoUrl) {
+      videoModalContent.innerHTML = `<iframe src="${videoUrl}?autoplay=1" frameborder="0" allowfullscreen></iframe>`;
+      videoModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
     }
   });
 });
 
-// Parallax Effect for Hero Section (optional)
-window.addEventListener('scroll', () => {
-  const scrolled = window.pageYOffset;
-  const hero = document.querySelector('.hero');
-  if (hero && scrolled < window.innerHeight) {
-    hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-  }
-});
+// Close video modal
+if (closeModal) {
+  closeModal.addEventListener('click', () => {
+    videoModal.style.display = 'none';
+    videoModalContent.innerHTML = '';
+    document.body.style.overflow = 'auto';
+  });
+}
 
-// Skills Modal
+// Close modal when clicking outside
+if (videoModal) {
+  videoModal.addEventListener('click', (e) => {
+    if (e.target === videoModal) {
+      videoModal.style.display = 'none';
+      videoModalContent.innerHTML = '';
+      document.body.style.overflow = 'auto';
+    }
+  });
+}
+
+// Skills and Resume modal functionality
+const skillsModal = document.querySelector('.skills-modal');
+const resumeModal = document.querySelector('.resume-modal');
 const skillsLink = document.getElementById('skills-link');
-const skillsModal = document.getElementById('skills-modal');
 const resumeLink = document.getElementById('resume-link');
-const resumeModal = document.getElementById('resume-modal');
 
-skillsLink.addEventListener('click', function(e) {
-  e.preventDefault();
-  skillsModal.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-});
+// Open skills modal
+if (skillsLink) {
+  skillsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    skillsModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  });
+}
 
-resumeLink.addEventListener('click', function(e) {
-  e.preventDefault();
-  resumeModal.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-});
+// Open resume modal
+if (resumeLink) {
+  resumeLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    resumeModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  });
+}
 
 // Close modals
-document.querySelectorAll('.modal .close-modal').forEach(closeBtn => {
-  closeBtn.addEventListener('click', function() {
-    this.closest('.modal').style.display = 'none';
+document.querySelectorAll('.modal-close').forEach(closeBtn => {
+  closeBtn.addEventListener('click', () => {
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.style.display = 'none';
+    });
     document.body.style.overflow = 'auto';
   });
 });
 
-// Close modal on outside click
+// Close modals when clicking outside
 document.querySelectorAll('.modal').forEach(modal => {
-  modal.addEventListener('click', function(e) {
+  modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
@@ -244,124 +584,97 @@ document.querySelectorAll('.modal').forEach(modal => {
   });
 });
 
-// Escape key to close any modal
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal').forEach(modal => {
-      if (modal.style.display === 'block') {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-      }
-    });
+// Typing effect for hero title
+function typeWriter(element, text, speed = 100) {
+  let i = 0;
+  element.innerHTML = '';
+  
+  function type() {
+    if (i < text.length) {
+      element.innerHTML += text.charAt(i);
+      i++;
+      setTimeout(type, speed);
+    }
+  }
+  
+  type();
+}
+
+// Initialize typing effect after page load
+window.addEventListener('load', () => {
+  const heroTitle = document.querySelector('.hero-title');
+  if (heroTitle) {
+    const originalText = heroTitle.textContent;
+    setTimeout(() => {
+      typeWriter(heroTitle, originalText, 150);
+    }, 1000);
   }
 });
 
+// Add sound effect to interactions (optional)
+function playSound(soundFile) {
+  const audio = new Audio(soundFile);
+  audio.volume = 0.3;
+  audio.play().catch(e => console.log('Sound play failed:', e));
+}
 
+// Add sound to button clicks
+document.querySelectorAll('.hero-button, .nav-link, .video-item').forEach(element => {
+  element.addEventListener('click', () => {
+    // Uncomment the line below to add sound effects
+    // playSound('swoosh sound effect.mp3');
+  });
+});
 
-
-// Enhanced Scroll Transition Animation for smooth transitions
-const enhancedObserverOptions = {
-  threshold: 0.3,
-  rootMargin: '0px 0px -50px 0px'
-};
-
-const enhancedObserver = new IntersectionObserver(function(entries) {
+// Lazy loading for images
+const imageObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
-      entry.target.classList.add('in-view');
-      
-      // Special effect when about section comes into view
-      if (entry.target.id === 'about') {
-        // Add extra visual effects
-        setTimeout(() => {
-          entry.target.style.transform = 'scale(1.001)';
-          setTimeout(() => {
-            entry.target.style.transform = 'scale(1)';
-          }, 200);
-        }, 800);
-      }
+      const img = entry.target;
+      img.src = img.dataset.src;
+      img.classList.remove('lazy');
+      imageObserver.unobserve(img);
     }
   });
-}, enhancedObserverOptions);
-
-// Observe all sections for enhanced animations
-document.querySelectorAll('section').forEach(section => {
-  enhancedObserver.observe(section);
 });
 
-// Enhanced Parallax Effect for Smooth Section Transitions
-let lastScrollY = 0;
-window.addEventListener('scroll', () => {
-  const scrolled = window.pageYOffset;
+document.querySelectorAll('img[data-src]').forEach(img => {
+  imageObserver.observe(img);
+});
+
+// Preload critical resources
+function preloadResources() {
+  const resources = [
+    'image 2.png',
+    '488741_Colorful Communication Multicolor Cyber_By_Jmg-visuals_Artlist_HD.mp4'
+  ];
+  
+  resources.forEach(resource => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.href = resource;
+    link.as = resource.includes('.mp4') ? 'video' : 'image';
+    document.head.appendChild(link);
+  });
+}
+
+// Initialize preloading
+preloadResources();
+
+// Add CSS custom properties for dynamic effects
+function updateCSSVariables() {
+  const scrollY = window.pageYOffset;
   const windowHeight = window.innerHeight;
   
-  // Hero section parallax with fade out
-  const hero = document.querySelector('.hero');
-  if (hero && scrolled < windowHeight) {
-    const parallaxSpeed = scrolled * 0.5;
-    hero.style.transform = `translateY(${parallaxSpeed}px)`;
-    
-    // Fade out hero content as we scroll
-    const heroContent = hero.querySelector('.hero-content');
-    if (heroContent) {
-      const opacity = Math.max(0, 1 - (scrolled / windowHeight) * 1.5);
-      heroContent.style.opacity = opacity;
-    }
-  }
-  
-  // About section entrance effect
-  const about = document.querySelector('.about');
-  if (about) {
-    const aboutTop = about.offsetTop;
-    const scrollPercent = Math.max(0, Math.min(1, (scrolled - aboutTop + windowHeight) / windowHeight));
-    
-    if (scrolled > aboutTop - windowHeight && scrolled < aboutTop + about.offsetHeight) {
-      // Subtle parallax for about section
-      about.style.transform = `translateY(${(scrollPercent - 1) * 30}px)`;
-    }
-  }
-  
-  lastScrollY = scrolled;
-});
+  document.documentElement.style.setProperty('--scroll-y', `${scrollY}px`);
+  document.documentElement.style.setProperty('--window-height', `${windowHeight}px`);
+  document.documentElement.style.setProperty('--parallax-offset-slow', `${scrollY * 0.5}px`);
+  document.documentElement.style.setProperty('--parallax-offset-medium', `${scrollY * 0.3}px`);
+  document.documentElement.style.setProperty('--parallax-offset-fast', `${scrollY * 0.1}px`);
+}
 
-// Hero Background Video
-document.addEventListener('DOMContentLoaded', function() {
-  const heroVideo = document.getElementById('hero-bg-video');
-  const workVideo = document.getElementById('work-bg-video');
-  
-  // Function to play video when ready
-  function playVideoWhenReady(video) {
-    if (video) {
-      if (video.readyState >= 3) {
-        // Video is ready, play it
-        video.play().catch(() => {
-          console.log('Video autoplay was blocked');
-        });
-      } else {
-        // Wait for video to be ready
-        video.addEventListener('canplay', function() {
-          video.play().catch(() => {
-            console.log('Video autoplay was blocked');
-          });
-        }, { once: true });
-      }
-    }
-  }
-  
-  // Initialize hero video
-  if (heroVideo) {
-    playVideoWhenReady(heroVideo);
-    
-    // When video ends, keep it on the last frame (don't restart)
-    heroVideo.addEventListener('ended', function() {
-      // Video will naturally stay on last frame since loop is not set
-      heroVideo.pause();
-    });
-  }
-  
-  // Initialize work video (if it should autoplay)
-  if (workVideo) {
-    // Work video has loop attribute in HTML, so just ensure it plays
-    playVideoWhenReady(workVideo);
-  }
-});
+window.addEventListener('scroll', updateCSSVariables, { passive: true });
+window.addEventListener('resize', updateCSSVariables);
+
+// Initialize on page load
+updateCSSVariables();
