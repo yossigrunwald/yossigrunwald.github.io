@@ -2,18 +2,6 @@
 
 // Loading Screen
 window.addEventListener('load', () => {
-  // Play swoosh sound effect for intro
-  const swooshSound = new Audio('swoosh sound effect.mp3');
-  swooshSound.volume = 0.3;
-  swooshSound.play().catch(() => {
-    // Ignore if autoplay is blocked
-  });
-  
-  // Hide intro animation after 2.5 seconds
-  setTimeout(() => {
-    document.getElementById('intro-animation').style.display = 'none';
-  }, 2500);
-  
   // Hide loading screen
   setTimeout(() => {
     document.getElementById('loading-screen').classList.add('hidden');
