@@ -20,6 +20,11 @@
     <div class="loader"></div>
   </div>
 
+  <!-- Scroll Progress Bar -->
+  <div class="scroll-progress">
+    <div class="scroll-progress-bar"></div>
+  </div>
+
   <!-- Navigation -->
   <nav class="navbar">
     <div class="nav-container">
@@ -31,6 +36,7 @@
         <a href="#" class="nav-link" id="skills-link">Skills</a>
         <a href="#" class="nav-link" id="resume-link">Resume</a>
         <a href="#contact" class="nav-link">Contact</a>
+        <a href="parallax-demo.html" class="nav-link" style="color: #667eea;">Parallax Demo</a>
       </div>
       <div class="nav-toggle" id="mobile-menu">
         <span class="bar"></span>
@@ -40,32 +46,31 @@
     </div>
   </nav>
 
-
-
-  <!-- Hero Section -->
-  <section id="home" class="hero">
-    <div class="hero-background-video">
+  <!-- Hero Section with Parallax -->
+  <section id="home" class="hero parallax-container">
+    <div class="hero-background-video parallax-layer" data-speed="0.5">
       <video id="hero-bg-video" class="hero-bg-video" muted>
         <source src="488741_Colorful Communication Multicolor Cyber_By_Jmg-visuals_Artlist_HD.mp4" type="video/mp4">
       </video>
     </div>
-    <div class="hero-content">
-      <h1 class="hero-title">VIDEO EDITOR</h1>
-      <p class="hero-subtitle">Creating compelling visual stories through dynamic editing</p>
-      <a href="#work" class="hero-button">View My Work</a>
+    <div class="hero-content parallax-layer" data-speed="0.8">
+      <h1 class="hero-title fade-in-up" data-delay="0.2">VIDEO EDITOR</h1>
+      <p class="hero-subtitle fade-in-up" data-delay="0.4">Creating compelling visual stories through dynamic editing</p>
+      <a href="#work" class="hero-button fade-in-up" data-delay="0.6">View My Work</a>
     </div>
-    <div class="hero-scroll">
+    <div class="hero-scroll fade-in" data-delay="1">
       <span>Scroll</span>
       <div class="scroll-line"></div>
     </div>
   </section>
 
-  <!-- Video Gallery Section -->
-  <section id="video-gallery" class="video-gallery">
+  <!-- Video Gallery Section with Parallax -->
+  <section id="video-gallery" class="video-gallery parallax-section">
     <div class="container">
+      <h2 class="section-title fade-in-up">Recent Projects</h2>
       <div class="video-grid">
         <!-- Video 1 -->
-        <div class="video-item" data-video="https://www.youtube.com/embed/wlfIZ-MSCxU">
+        <div class="video-item parallax-element fade-in-up" data-delay="0.1" data-video="https://www.youtube.com/embed/wlfIZ-MSCxU">
           <div class="video-thumbnail">
             <img src="https://img.youtube.com/vi/wlfIZ-MSCxU/maxresdefault.jpg" alt="Video 1">
             <div class="play-overlay">
@@ -74,7 +79,7 @@
           </div>
         </div>
         <!-- Video 2 -->
-        <div class="video-item" data-video="https://www.youtube.com/embed/8qOgSQZAnRg">
+        <div class="video-item parallax-element fade-in-up" data-delay="0.2" data-video="https://www.youtube.com/embed/8qOgSQZAnRg">
           <div class="video-thumbnail">
             <img src="https://img.youtube.com/vi/8qOgSQZAnRg/maxresdefault.jpg" alt="Video 2">
             <div class="play-overlay">
@@ -83,7 +88,7 @@
           </div>
         </div>
         <!-- Add more placeholder videos -->
-        <div class="video-item placeholder">
+        <div class="video-item placeholder parallax-element fade-in-up" data-delay="0.3">
           <div class="video-thumbnail">
             <div class="placeholder-content">
               <i class="fas fa-plus"></i>
@@ -91,7 +96,7 @@
             </div>
           </div>
         </div>
-        <div class="video-item placeholder">
+        <div class="video-item placeholder parallax-element fade-in-up" data-delay="0.4">
           <div class="video-thumbnail">
             <div class="placeholder-content">
               <i class="fas fa-plus"></i>
@@ -99,7 +104,7 @@
             </div>
           </div>
         </div>
-        <div class="video-item placeholder">
+        <div class="video-item placeholder parallax-element fade-in-up" data-delay="0.5">
           <div class="video-thumbnail">
             <div class="placeholder-content">
               <i class="fas fa-plus"></i>
@@ -107,7 +112,7 @@
             </div>
           </div>
         </div>
-        <div class="video-item placeholder">
+        <div class="video-item placeholder parallax-element fade-in-up" data-delay="0.6">
           <div class="video-thumbnail">
             <div class="placeholder-content">
               <i class="fas fa-plus"></i>
@@ -119,22 +124,22 @@
     </div>
   </section>
 
-  <!-- About Section -->
-  <section id="about" class="about">
+  <!-- About Section with Parallax -->
+  <section id="about" class="about parallax-section">
     <div class="container">
       <div class="about-content">
-        <div class="about-image">
-          <img src="image 2.png" alt="Yossi Grunwald" />
+        <div class="about-image parallax-element" data-speed="0.9">
+          <img src="image 2.png" alt="Yossi Grunwald" class="fade-in-left" />
         </div>
         <div class="about-text">
-          <h2>About Me</h2>
-          <p>
+          <h2 class="fade-in-up" data-delay="0.2">About Me</h2>
+          <p class="fade-in-up" data-delay="0.3">
             I'm a passionate and highly skilled video editor with over 4 years of hands-on experience using Adobe Premiere Pro. I bring stories to life with dynamic cuts, smooth transitions, color grading, keyframe animation, and audio sync. I'm also proficient in Photoshop and can create polished visuals that elevate video content.
           </p>
-          <p>
+          <p class="fade-in-up" data-delay="0.4">
             I've spent the past 3 summers working as the lead video editor for Camp Chaburah. I'm 21 years old and currently available for freelance, contract, or full-time projects.
           </p>
-          <div class="about-skills">
+          <div class="about-skills fade-in-up" data-delay="0.5">
             <div class="skill-item">
               <i class="fab fa-adobe"></i>
               <span>Premiere Pro</span>
@@ -157,17 +162,17 @@
     </div>
   </section>
 
-  <!-- Work Section -->
-  <section id="work" class="work">
-    <div class="work-background-video">
+  <!-- Work Section with Parallax -->
+  <section id="work" class="work parallax-container">
+    <div class="work-background-video parallax-layer" data-speed="0.3">
       <video id="work-bg-video" class="work-bg-video" muted loop>
         <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
       </video>
     </div>
     <div class="container">
-      <h2>Featured Work</h2>
+      <h2 class="fade-in-up">Featured Work</h2>
       <div class="work-grid">
-        <div class="work-item">
+        <div class="work-item parallax-element fade-in-up" data-delay="0.2">
           <div class="work-video">
             <iframe src="https://www.youtube.com/embed/wlfIZ-MSCxU" title="Featured Video 1" allowfullscreen></iframe>
           </div>
@@ -176,7 +181,7 @@
             <p>Fast-paced promo with smooth transitions, visually dynamic keyframing, and creative editing.</p>
           </div>
         </div>
-        <div class="work-item">
+        <div class="work-item parallax-element fade-in-up" data-delay="0.4">
           <div class="work-video">
             <iframe src="https://www.youtube.com/embed/8qOgSQZAnRg" title="Featured Video 2" allowfullscreen></iframe>
           </div>
@@ -186,7 +191,7 @@
           </div>
         </div>
       </div>
-      <div class="work-cta">
+      <div class="work-cta fade-in-up" data-delay="0.6">
         <p>More videos on my YouTube channel</p>
         <a href="https://www.youtube.com/@coolboredom" target="_blank" class="youtube-link">
           <i class="fab fa-youtube"></i> @coolboredom
@@ -195,17 +200,17 @@
     </div>
   </section>
 
-  <!-- Contact Section -->
-  <section id="contact" class="contact">
+  <!-- Contact Section with Parallax -->
+  <section id="contact" class="contact parallax-section">
     <div class="container">
-      <h2>Let's Work Together</h2>
-      <p class="contact-subtitle">I'm currently available for freelance projects and collaborations</p>
-      <div class="contact-info">
+      <h2 class="fade-in-up">Let's Work Together</h2>
+      <p class="contact-subtitle fade-in-up" data-delay="0.2">I'm currently available for freelance projects and collaborations</p>
+      <div class="contact-info fade-in-up" data-delay="0.4">
         <a href="mailto:grunwaldyossi@gmail.com" class="contact-button">
           <i class="fas fa-envelope"></i> grunwaldyossi@gmail.com
         </a>
       </div>
-      <div class="social-links">
+      <div class="social-links fade-in-up" data-delay="0.6">
         <a href="https://www.youtube.com/@coolboredom" target="_blank" aria-label="YouTube">
           <i class="fab fa-youtube"></i>
         </a>

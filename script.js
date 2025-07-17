@@ -365,3 +365,176 @@ document.addEventListener('DOMContentLoaded', function() {
     playVideoWhenReady(workVideo);
   }
 });
+
+// Parallax Scrolling Effect
+function initParallax() {
+  const parallaxElements = document.querySelectorAll('.parallax-layer, .parallax-element');
+  
+  window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    
+    parallaxElements.forEach(element => {
+      const speed = element.dataset.speed || 0.5;
+      const yPos = -(scrolled * speed);
+      
+      if (element.classList.contains('parallax-layer')) {
+        element.style.transform = `translateY(${yPos}px)`;
+      } else if (element.classList.contains('parallax-element')) {
+        const rect = element.getBoundingClientRect();
+        const elementTop = rect.top + scrolled;
+        const elementVisible = scrolled + window.innerHeight - elementTop;
+        
+        if (elementVisible > 0) {
+          const elementParallax = elementVisible * 0.1;
+          element.style.transform = `translateY(${-elementParallax}px)`;
+        }
+      }
+    });
+  });
+}
+
+// Intersection Observer for Fade-in Animations
+function initScrollAnimations() {
+  const animatedElements = document.querySelectorAll('.fade-in, .fade-in-up, .fade-in-left, .fade-in-right');
+  
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const delay = entry.target.dataset.delay || 0;
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, delay * 1000);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+  
+  animatedElements.forEach(element => {
+    observer.observe(element);
+  });
+}
+
+// Smooth Scroll Progress Bar
+function initScrollProgress() {
+  const progressBar = document.querySelector('.scroll-progress-bar');
+  
+  window.addEventListener('scroll', () => {
+    const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (window.pageYOffset / windowHeight) * 100;
+    progressBar.style.width = scrolled + '%';
+  });
+}
+
+// Enhanced Smooth Scrolling for Navigation Links
+function initSmoothScroll() {
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      
+      if (target) {
+        const headerOffset = 80;
+        const elementPosition = target.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
+}
+
+// Video Background Play Control
+function initVideoBackgrounds() {
+  const videos = document.querySelectorAll('.hero-bg-video, .work-bg-video');
+  
+  videos.forEach(video => {
+    // Play video when it's in viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          video.play().catch(e => console.log('Video play failed:', e));
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.25 });
+    
+    observer.observe(video);
+  });
+}
+
+// Dynamic Navigation Background
+function initDynamicNav() {
+  const navbar = document.querySelector('.navbar');
+  let lastScroll = 0;
+  
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.pageYOffset;
+    
+    // Add/remove scrolled class
+    if (currentScroll > 50) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
+    }
+    
+    // Hide/show navbar on scroll
+    if (currentScroll > lastScroll && currentScroll > 100) {
+      navbar.style.transform = 'translateY(-100%)';
+    } else {
+      navbar.style.transform = 'translateY(0)';
+    }
+    
+    lastScroll = currentScroll;
+  });
+}
+
+// Initialize all effects when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  initParallax();
+  initScrollAnimations();
+  initScrollProgress();
+  initSmoothScroll();
+  initVideoBackgrounds();
+  initDynamicNav();
+  
+  // Re-initialize on window resize for responsive behavior
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      initParallax();
+    }, 250);
+  });
+});
+
+// Add swoosh sound effect on scroll (optional)
+function initScrollSound() {
+  const audio = new Audio('swoosh sound effect.mp3');
+  audio.volume = 0.1;
+  let canPlaySound = true;
+  
+  window.addEventListener('scroll', () => {
+    if (canPlaySound) {
+      const scrollPercentage = (window.pageYOffset / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+      
+      // Play sound at certain scroll points
+      if (scrollPercentage > 25 && scrollPercentage < 26) {
+        audio.play().catch(e => console.log('Audio play failed:', e));
+        canPlaySound = false;
+        setTimeout(() => canPlaySound = true, 2000);
+      }
+    }
+  });
+}
+
+// Optional: Initialize scroll sound (commented out by default)
+// initScrollSound();
