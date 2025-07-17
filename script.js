@@ -219,81 +219,101 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Background Transition Effect (Inspired by ravenDAO)
-const backgroundTransition = document.getElementById('background-transition');
-const backgroundVideo = document.getElementById('background-video');
+// Timeline Transition Animation
+let isTransitioning = false;
+const timelineTransition = document.getElementById('timeline-transition');
+const transitionVideo = document.getElementById('transition-video');
 const workBgVideo = document.getElementById('work-bg-video');
 let lastSection = 'home';
 
-// Initialize background video
-if (backgroundVideo) {
-  backgroundVideo.play().catch(() => {
-    // Video autoplay failed, continue without video
-  });
+// Update timecode animation
+function updateTimecode() {
+  const timecode = document.querySelector('.timeline-timecode');
+  if (timecode) {
+    let frame = 0;
+    setInterval(() => {
+      frame = (frame + 1) % 30;
+      const seconds = Math.floor(frame / 30) % 60;
+      const minutes = Math.floor(frame / 1800) % 60;
+      const hours = Math.floor(frame / 108000) % 24;
+      const frameStr = String(frame % 30).padStart(2, '0');
+      const secondsStr = String(seconds).padStart(2, '0');
+      const minutesStr = String(minutes).padStart(2, '0');
+      const hoursStr = String(hours).padStart(2, '0');
+      timecode.textContent = `${hoursStr}:${minutesStr}:${secondsStr}:${frameStr}`;
+    }, 33); // ~30fps
+  }
 }
+updateTimecode();
 
-// Detect scroll position and trigger background effects
+// Detect section transitions
 window.addEventListener('scroll', () => {
-  const scrollPosition = window.scrollY;
-  const windowHeight = window.innerHeight;
+  const scrollPosition = window.pageYOffset + window.innerHeight / 2;
+  const sections = document.querySelectorAll('section[id]');
   
-  // Determine current section based on scroll position
+  // Find current section
   let currentSection = 'home';
-  const aboutSection = document.getElementById('about');
-  const workSection = document.getElementById('work');
-  
-  if (aboutSection && workSection) {
-    const aboutTop = aboutSection.offsetTop;
-    const workTop = workSection.offsetTop;
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    const sectionBottom = sectionTop + section.offsetHeight;
     
-    if (scrollPosition < aboutTop - windowHeight * 0.3) {
-      currentSection = 'home';
-    } else if (scrollPosition < workTop - windowHeight * 0.3) {
-      currentSection = 'about';
-    } else {
-      currentSection = 'work';
+    if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+      currentSection = section.id;
     }
-  }
+  });
   
-  // Activate background transition when moving from about to work
-  if (lastSection === 'about' && currentSection === 'work') {
-    console.log('Activating background transition!');
-    if (backgroundTransition) {
-      backgroundTransition.classList.add('active');
-      
-      // Animate timeline lines
-      const lines = backgroundTransition.querySelectorAll('.timeline-line');
-      lines.forEach((line, index) => {
+  // Trigger transition animation when moving from about to work
+  if (lastSection === 'about' && currentSection === 'work' && !isTransitioning) {
+    isTransitioning = true;
+    
+    // Show transition overlay immediately
+    timelineTransition.classList.add('active');
+    
+    // Reset and play timeline animation
+    const clips = timelineTransition.querySelectorAll('.timeline-clip');
+    clips.forEach((clip, index) => {
+      clip.style.animation = 'none';
+      setTimeout(() => {
+        clip.style.animation = `clipReveal 0.3s ease ${index * 0.1}s forwards`;
+      }, 10);
+    });
+    
+    // Start playing transition video after 1 second
+    setTimeout(() => {
+      if (transitionVideo) {
+        transitionVideo.currentTime = 0;
+        transitionVideo.play().catch(() => {
+          // If video fails to play, continue with transition
+        });
+        
+        // Pause transition video after it plays for a bit
         setTimeout(() => {
-          line.classList.add('active');
-        }, index * 150);
-      });
-      
-      // Activate playhead
-      const playhead = backgroundTransition.querySelector('.playhead-indicator');
-      if (playhead) {
-        setTimeout(() => {
-          playhead.classList.add('active');
-        }, 800);
+          if (transitionVideo) {
+            transitionVideo.pause();
+          }
+        }, 2500);
       }
-    }
-  }
-  
-  // Deactivate background transition when moving away from work section
-  if (lastSection === 'work' && currentSection !== 'work') {
-    if (backgroundTransition) {
-      backgroundTransition.classList.remove('active');
-      
-      // Reset timeline lines
-      const lines = backgroundTransition.querySelectorAll('.timeline-line');
-      lines.forEach(line => line.classList.remove('active'));
-      
-      // Reset playhead
-      const playhead = backgroundTransition.querySelector('.playhead-indicator');
-      if (playhead) {
-        playhead.classList.remove('active');
+    }, 1000);
+    
+    // After transition completes, activate work background and pause video
+    setTimeout(() => {
+      if (workBgVideo) {
+        workBgVideo.currentTime = 0;
+        workBgVideo.play().then(() => {
+          // Pause the video after a short delay to keep it as static background
+          setTimeout(() => {
+            workBgVideo.pause();
+            workBgVideo.classList.add('active', 'paused');
+          }, 500);
+        }).catch(() => {
+          workBgVideo.classList.add('active');
+        });
       }
-    }
+      
+      // Hide transition overlay
+      timelineTransition.classList.remove('active');
+      isTransitioning = false;
+    }, 3000);
   }
   
   // Handle work section background video
@@ -310,7 +330,6 @@ window.addEventListener('scroll', () => {
     });
   }
   
-  console.log('Current section:', currentSection, 'Last section:', lastSection);
   lastSection = currentSection;
 });
 

@@ -840,109 +840,119 @@ body {
   animation: fadeInUp 0.8s ease 1s forwards;
 }
 
-/* Background Transition Effect (Inspired by ravenDAO) */
-.background-transition {
+/* Timeline Transition Animation */
+.timeline-transition {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  opacity: 0;
   pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 1s ease;
-}
-
-.background-transition.active {
-  opacity: 1;
-}
-
-.timeline-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-}
-
-.timeline-lines {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 1400px;
-  height: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  opacity: 0.6;
-}
-
-.timeline-line {
-  height: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 1px;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.6s ease, background 0.6s ease;
-}
-
-.timeline-line[data-line="1"] { background: rgba(74, 144, 226, 0.2); }
-.timeline-line[data-line="2"] { background: rgba(226, 74, 74, 0.2); }
-.timeline-line[data-line="3"] { background: rgba(74, 226, 144, 0.2); }
-.timeline-line[data-line="4"] { background: rgba(226, 161, 74, 0.2); }
-.timeline-line[data-line="5"] { background: rgba(158, 74, 226, 0.2); }
-
-.timeline-line.active {
-  transform: scaleX(1);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.playhead-indicator {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: rgba(255, 0, 0, 0.8);
-  transform: translateY(-50%);
-  opacity: 0;
+  z-index: 999;
   transition: opacity 0.8s ease;
+  background: rgba(0, 0, 0, 0.9);
 }
 
-.playhead-indicator.active {
+.timeline-transition.active {
   opacity: 1;
-  animation: playheadPulse 3s ease-in-out infinite;
+  pointer-events: auto;
 }
 
-@keyframes playheadPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-.background-video-container {
+.timeline-video-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
 }
 
-.background-video {
+.transition-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transform: scale(1.05);
-  transition: opacity 2s ease, transform 3s ease;
+  transform: scale(1.1);
+  transition: opacity 1s ease, transform 1.5s ease;
 }
 
-.background-transition.active .background-video {
-  opacity: 0.15;
+.timeline-transition.active .transition-video {
+  opacity: 1;
   transform: scale(1);
+}
+
+.timeline-container {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.timeline-track {
+  display: flex;
+  gap: 5px;
+  background: #222;
+  padding: 10px;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-clip {
+  flex: 1;
+  height: 60px;
+  background: linear-gradient(135deg, #4a90e2, #357abd);
+  border-radius: 3px;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: clipReveal 0.3s ease calc(var(--clip-index) * 0.1s) forwards;
+}
+
+@keyframes clipReveal {
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.timeline-clip:nth-child(2) { background: linear-gradient(135deg, #e24a4a, #bd3535); }
+.timeline-clip:nth-child(3) { background: linear-gradient(135deg, #4ae290, #35bd6a); }
+.timeline-clip:nth-child(4) { background: linear-gradient(135deg, #e2a14a, #bd8535); }
+.timeline-clip:nth-child(5) { background: linear-gradient(135deg, #9e4ae2, #7935bd); }
+
+.timeline-playhead {
+  position: absolute;
+  width: 2px;
+  height: 80px;
+  background: #ff0000;
+  top: 0;
+  left: 0;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  animation: timelinePlayhead 1.5s ease infinite;
+}
+
+@keyframes timelinePlayhead {
+  from { left: 0; }
+  to { left: calc(100% - 2px); }
+}
+
+.timeline-timecode {
+  text-align: center;
+  color: #fff;
+  font-family: monospace;
+  font-size: 1.2rem;
+  margin-top: 20px;
+  letter-spacing: 2px;
 }
 
 /* Modals */
@@ -1206,23 +1216,23 @@ body {
     height: 3px;
   }
   
-  /* Background transition mobile */
-  .background-transition {
+  /* Timeline transition mobile */
+  .timeline-transition {
     width: 100%;
   }
   
-  .timeline-lines {
-    width: 95%;
-    height: 150px;
-    gap: 10px;
+  .timeline-container {
+    padding: 20px;
+    bottom: 20px;
+    width: 90%;
   }
   
-  .timeline-line {
-    height: 1px;
+  .timeline-clip {
+    height: 30px;
   }
   
-  .background-transition.active .background-video {
-    opacity: 0.05;
+  .timeline-timecode {
+    font-size: 0.9rem;
   }
   
   .work-bg-video.active {

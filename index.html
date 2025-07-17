@@ -56,22 +56,23 @@
     </div>
   </nav>
 
-  <!-- Background Transition Effect -->
-  <div id="background-transition" class="background-transition">
-    <div class="timeline-background">
-      <div class="timeline-lines">
-        <div class="timeline-line" data-line="1"></div>
-        <div class="timeline-line" data-line="2"></div>
-        <div class="timeline-line" data-line="3"></div>
-        <div class="timeline-line" data-line="4"></div>
-        <div class="timeline-line" data-line="5"></div>
-      </div>
-      <div class="playhead-indicator"></div>
-    </div>
-    <div class="background-video-container">
-      <video id="background-video" class="background-video" muted loop>
+  <!-- Timeline Transition -->
+  <div id="timeline-transition" class="timeline-transition">
+    <div class="timeline-video-container">
+      <video id="transition-video" class="transition-video" muted>
         <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
       </video>
+    </div>
+    <div class="timeline-container">
+      <div class="timeline-track">
+        <div class="timeline-clip" style="--clip-index: 0"></div>
+        <div class="timeline-clip" style="--clip-index: 1"></div>
+        <div class="timeline-clip" style="--clip-index: 2"></div>
+        <div class="timeline-clip" style="--clip-index: 3"></div>
+        <div class="timeline-clip" style="--clip-index: 4"></div>
+      </div>
+      <div class="timeline-playhead"></div>
+      <div class="timeline-timecode">00:00:00:00</div>
     </div>
   </div>
 
