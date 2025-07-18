@@ -1111,3 +1111,11 @@ section.in-view {
   }
 }
 
+.resume-pdf-container img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: none;
+  background: white;
+}
+
