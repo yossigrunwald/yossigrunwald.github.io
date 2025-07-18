@@ -1124,3 +1124,66 @@ section.in-view {
   will-change: transform;
 }
 
+/* === Featured Work Slides === */
+.work-title {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: 300;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.work-slides {
+  scroll-snap-type: y mandatory;
+}
+
+.work-slide {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: start;
+  padding: 40px 20px;
+}
+
+.work-slide .work-video iframe {
+  width: 80vw;
+  height: 70vh;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.work-slide .work-info {
+  max-width: 700px;
+  text-align: center;
+}
+
+/* Initial hidden state */
+.video-slide .work-video,
+.text-slide .work-info {
+  opacity: 0;
+  transition: transform 0.8s ease, opacity 0.8s ease;
+}
+
+/* Directional offsets */
+.video-slide.from-left .work-video {
+  transform: translateX(-50vw);
+}
+
+.video-slide.from-right .work-video {
+  transform: translateX(50vw);
+}
+
+.text-slide .work-info {
+  transform: translateY(50vh);
+}
+
+/* When slide is in view */
+.work-slide.in-view .work-video,
+.work-slide.in-view .work-info {
+  transform: translateX(0) translateY(0);
+  opacity: 1;
+}
+

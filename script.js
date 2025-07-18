@@ -381,3 +381,17 @@ function updateParallax() {
 // Initial call and event listener
 window.addEventListener('scroll', updateParallax);
 window.addEventListener('load', updateParallax);
+
+// Featured Work slide reveal
+const workSlides = document.querySelectorAll('.work-slide');
+const slideObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in-view');
+    } else {
+      entry.target.classList.remove('in-view');
+    }
+  });
+}, { threshold: 0.6 });
+
+workSlides.forEach(slide => slideObserver.observe(slide));
