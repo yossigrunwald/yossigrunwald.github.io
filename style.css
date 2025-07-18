@@ -1119,3 +1119,8 @@ section.in-view {
   background: white;
 }
 
+/* Parallax Layers */
+[data-speed] {
+  will-change: transform;
+}
+

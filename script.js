@@ -365,3 +365,19 @@ document.addEventListener('DOMContentLoaded', function() {
     playVideoWhenReady(workVideo);
   }
 });
+
+// Generic Parallax Handler for elements with data-speed attribute
+const parallaxElements = document.querySelectorAll('[data-speed]');
+
+function updateParallax() {
+  const scrollY = window.pageYOffset;
+  parallaxElements.forEach(el => {
+    const speed = parseFloat(el.getAttribute('data-speed')) || 0;
+    const offset = (scrollY - el.offsetTop) * speed;
+    el.style.transform = `translateY(${offset}px)`;
+  });
+}
+
+// Initial call and event listener
+window.addEventListener('scroll', updateParallax);
+window.addEventListener('load', updateParallax);
