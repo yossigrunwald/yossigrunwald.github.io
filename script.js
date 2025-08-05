@@ -128,7 +128,9 @@ const closeModal = document.querySelector('.close-modal');
 document.querySelectorAll('.video-item:not(.placeholder)').forEach(item => {
   item.addEventListener('click', function() {
     const videoUrl = this.getAttribute('data-video');
-    modalVideo.src = videoUrl + '?autoplay=1';
+    // Add iOS-compatible parameters for YouTube
+    const iosCompatibleUrl = videoUrl + (videoUrl.includes('?') ? '&' : '?') + 'autoplay=1&playsinline=1&enablejsapi=1';
+    modalVideo.src = iosCompatibleUrl;
     videoModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
   });
@@ -329,27 +331,130 @@ document.addEventListener('DOMContentLoaded', function() {
   const heroVideo = document.getElementById('hero-bg-video');
   const workVideo = document.getElementById('work-bg-video');
   
-  // Function to play video when ready
+  // iOS Safari detection
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+  const isFirefox = /Firefox/.test(navigator.userAgent);
+  
+  console.log('Browser detection:', { isIOS, isSafari, isAndroid, isChrome, isFirefox });
+  
+  // Function to play video when ready with iOS fallbacks
   function playVideoWhenReady(video) {
     if (video) {
       if (video.readyState >= 3) {
-        // Video is ready, play it
-        video.play().catch(() => {
-          console.log('Video autoplay was blocked');
-        });
+        // Video is ready, try to play it
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            console.log('Video autoplay was blocked - this is normal on iOS');
+            // On iOS, add click-to-play fallback
+            if (isIOS || (isSafari && !isChrome)) {
+              addClickToPlayFallback(video);
+            }
+          });
+        }
       } else {
         // Wait for video to be ready
         video.addEventListener('canplay', function() {
-          video.play().catch(() => {
-            console.log('Video autoplay was blocked');
-          });
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              console.log('Video autoplay was blocked - this is normal on iOS');
+              // On iOS, add click-to-play fallback
+              if (isIOS || (isSafari && !isChrome)) {
+                addClickToPlayFallback(video);
+              }
+            });
+          }
         }, { once: true });
+      }
+    }
+  }
+  
+  // Function to add click-to-play fallback for iOS
+  function addClickToPlayFallback(video) {
+    if (video.id === 'hero-bg-video') {
+      const heroSection = document.querySelector('.hero');
+      if (heroSection && !heroSection.querySelector('.video-play-prompt')) {
+        const playPrompt = document.createElement('div');
+        playPrompt.className = 'video-play-prompt';
+        playPrompt.innerHTML = '<button class="video-play-btn">Tap to enable background video</button>';
+        playPrompt.style.cssText = `
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 10;
+          text-align: center;
+          pointer-events: auto;
+        `;
+        
+        const playBtn = playPrompt.querySelector('.video-play-btn');
+        playBtn.style.cssText = `
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 25px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        `;
+        
+        playBtn.addEventListener('click', () => {
+          video.play().then(() => {
+            heroSection.removeChild(playPrompt);
+          }).catch(() => {
+            console.log('Video play failed even after user interaction');
+            // Remove the prompt anyway to avoid clutter
+            heroSection.removeChild(playPrompt);
+          });
+        });
+        
+        heroSection.appendChild(playPrompt);
+        
+        // Auto-remove the prompt after 10 seconds to avoid clutter
+        setTimeout(() => {
+          if (heroSection.contains(playPrompt)) {
+            heroSection.removeChild(playPrompt);
+          }
+        }, 10000);
       }
     }
   }
   
   // Initialize hero video
   if (heroVideo) {
+    // iOS Safari specific attributes - only apply to iOS/Safari
+    if (isIOS || (isSafari && !isChrome)) {
+      heroVideo.setAttribute('webkit-playsinline', '');
+      heroVideo.setAttribute('playsinline', '');
+      heroVideo.muted = true;
+      console.log('Applied iOS Safari specific video attributes');
+    } else {
+      // For other browsers, ensure basic attributes are set
+      heroVideo.setAttribute('playsinline', '');
+      heroVideo.muted = true;
+      console.log('Applied standard video attributes for non-iOS browser');
+    }
+    
+    // Add error handling for all browsers
+    heroVideo.addEventListener('error', function(e) {
+      console.log('Hero video failed to load:', e);
+      // Hide the video container if it fails to load
+      const videoContainer = heroVideo.closest('.hero-background-video');
+      if (videoContainer) {
+        videoContainer.style.display = 'none';
+      }
+    });
+    
+    // Add loadeddata event to confirm video is working
+    heroVideo.addEventListener('loadeddata', function() {
+      console.log('Hero video loaded successfully');
+    });
+    
     playVideoWhenReady(heroVideo);
     
     // When video ends, keep it on the last frame (don't restart)
@@ -361,6 +466,19 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize work video (if it should autoplay)
   if (workVideo) {
+    // iOS Safari specific attributes - only apply to iOS/Safari
+    if (isIOS || (isSafari && !isChrome)) {
+      workVideo.setAttribute('webkit-playsinline', '');
+      workVideo.setAttribute('playsinline', '');
+      workVideo.muted = true;
+      console.log('Applied iOS Safari specific work video attributes');
+    } else {
+      // For other browsers, ensure basic attributes are set
+      workVideo.setAttribute('playsinline', '');
+      workVideo.muted = true;
+      console.log('Applied standard work video attributes for non-iOS browser');
+    }
+    
     // Work video has loop attribute in HTML, so just ensure it plays
     playVideoWhenReady(workVideo);
   }

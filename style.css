@@ -16,6 +16,10 @@
 
 html {
   scroll-behavior: smooth;
+  /* iOS Safari optimizations */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 }
@@ -26,6 +30,13 @@ body {
   color: var(--primary-color);
   background-color: var(--bg-color);
   overflow-x: hidden;
+  /* iOS Safari optimizations */
+  -webkit-overflow-scrolling: touch;
+  /* iOS Safari font rendering */
+  font-display: swap;
+  text-rendering: optimizeLegibility;
+  -webkit-font-feature-settings: "kern" 1;
+  font-feature-settings: "kern" 1;
 }
 
 .container {
@@ -75,6 +86,7 @@ body {
   width: 100%;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 1000;
   transition: var(--transition);
   padding: 20px 0;
@@ -155,6 +167,10 @@ body {
   align-items: center;
   position: relative;
   background: var(--bg-light);
+  /* iOS Safari video fallback */
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-position: center;
 }
 
 .hero-background-video {
@@ -174,6 +190,15 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+/* iOS Safari video fixes */
+.hero-bg-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.hero-bg-video::-webkit-media-controls-enclosure {
+  display: none !important;
 }
 
 .hero-content {
@@ -415,6 +440,8 @@ body {
   background: var(--bg-color);
   position: relative;
   overflow: hidden;
+  /* iOS Safari optimization */
+  -webkit-overflow-scrolling: touch;
 }
 
 .work-background-video {
@@ -424,6 +451,9 @@ body {
   width: 100%;
   height: 100%;
   z-index: 0;
+  /* iOS Safari video container fix */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .work-bg-video {
@@ -435,6 +465,15 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+/* iOS Safari video fixes */
+.work-bg-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.work-bg-video::-webkit-media-controls-enclosure {
+  display: none !important;
 }
 
 .work-bg-video.active {
@@ -486,6 +525,38 @@ body {
   border: none;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  /* iOS Safari iframe optimization */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* iOS Safari iframe fixes */
+iframe {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS touch optimization */
+.video-item,
+.work-item,
+.skill-item,
+.nav-link,
+.hero-button,
+.contact-button,
+.youtube-link,
+.social-links a {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* iOS specific button styling */
+button,
+.hero-button,
+.contact-button,
+.youtube-link {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .work-info h3 {
@@ -1117,5 +1188,28 @@ section.in-view {
   height: auto;
   border: none;
   background: white;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* This targets iOS Safari specifically */
+  .hero-bg-video,
+  .work-bg-video {
+    /* Ensure videos work on iOS Safari */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .hero {
+    /* Improve iOS Safari rendering */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Fix iOS Safari font rendering issues */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
 }
 
