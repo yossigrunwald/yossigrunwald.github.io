@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Preload critical resources -->
+  <link rel="preload" href="488741_Colorful Communication Multicolor Cyber_By_Jmg-visuals_Artlist_HD.mp4" as="video" type="video/mp4">
 </head>
 <body>
   <!-- Loading Screen -->
@@ -45,7 +47,7 @@
   <!-- Hero Section -->
   <section id="home" class="hero">
     <div class="hero-background-video">
-      <video id="hero-bg-video" class="hero-bg-video" autoplay muted playsinline loop>
+      <video id="hero-bg-video" class="hero-bg-video" autoplay muted playsinline loop preload="auto">
         <source src="488741_Colorful Communication Multicolor Cyber_By_Jmg-visuals_Artlist_HD.mp4" type="video/mp4">
       </video>
     </div>
@@ -67,7 +69,7 @@
         <!-- Video 1 -->
         <div class="video-item" data-video="https://www.youtube.com/embed/wlfIZ-MSCxU">
           <div class="video-thumbnail">
-            <img src="https://img.youtube.com/vi/wlfIZ-MSCxU/maxresdefault.jpg" alt="Video 1">
+            <img src="https://img.youtube.com/vi/wlfIZ-MSCxU/maxresdefault.jpg" alt="Video 1" loading="lazy">
             <div class="play-overlay">
               <i class="fas fa-play"></i>
             </div>
@@ -76,7 +78,7 @@
         <!-- Video 2 -->
         <div class="video-item" data-video="https://www.youtube.com/embed/8qOgSQZAnRg">
           <div class="video-thumbnail">
-            <img src="https://img.youtube.com/vi/8qOgSQZAnRg/maxresdefault.jpg" alt="Video 2">
+            <img src="https://img.youtube.com/vi/8qOgSQZAnRg/maxresdefault.jpg" alt="Video 2" loading="lazy">
             <div class="play-overlay">
               <i class="fas fa-play"></i>
             </div>
@@ -124,7 +126,7 @@
     <div class="container">
       <div class="about-content">
         <div class="about-image">
-          <img src="image 2.png" alt="Yossi Grunwald" />
+          <img src="image 2.png" alt="Yossi Grunwald" loading="lazy" />
         </div>
         <div class="about-text">
           <h2>About Me</h2>
@@ -160,7 +162,7 @@
   <!-- Work Section -->
   <section id="work" class="work">
     <div class="work-background-video">
-      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop>
+      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="metadata">
         <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
       </video>
     </div>
