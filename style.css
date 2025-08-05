@@ -32,6 +32,11 @@ body {
   overflow-x: hidden;
   /* iOS Safari optimizations */
   -webkit-overflow-scrolling: touch;
+  /* iOS Safari font rendering */
+  font-display: swap;
+  text-rendering: optimizeLegibility;
+  -webkit-font-feature-settings: "kern" 1;
+  font-feature-settings: "kern" 1;
 }
 
 .container {
@@ -162,6 +167,10 @@ body {
   align-items: center;
   position: relative;
   background: var(--bg-light);
+  /* iOS Safari video fallback */
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-position: center;
 }
 
 .hero-background-video {
@@ -1179,5 +1188,28 @@ section.in-view {
   height: auto;
   border: none;
   background: white;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* This targets iOS Safari specifically */
+  .hero-bg-video,
+  .work-bg-video {
+    /* Ensure videos work on iOS Safari */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .hero {
+    /* Improve iOS Safari rendering */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  /* Fix iOS Safari font rendering issues */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
 }
 
