@@ -524,4 +524,43 @@ document.addEventListener('DOMContentLoaded', function() {
       contactVideo.style.opacity = 0;
     });
   }
+  
+  // Add touch interaction for iOS devices to help with autoplay
+  if (browserInfo.isIOS) {
+    let hasInteracted = false;
+    
+    function enableVideoPlayback() {
+      if (!hasInteracted) {
+        hasInteracted = true;
+        
+        // Try to play all videos after user interaction
+        [heroVideo, workVideo, contactVideo].forEach(video => {
+          if (video && video.paused) {
+            video.play().catch(() => {
+              console.log('Could not auto-play video after interaction');
+            });
+          }
+        });
+      }
+    }
+    
+    // Listen for first user interaction
+    document.addEventListener('touchstart', enableVideoPlayback, { once: true });
+    document.addEventListener('click', enableVideoPlayback, { once: true });
+  }
 });
+
+// Polyfill for IntersectionObserver if not supported
+if (!('IntersectionObserver' in window)) {
+  // Simple fallback - load all videos after a delay
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const allVideos = document.querySelectorAll('video');
+      allVideos.forEach(video => {
+        if (video.readyState < 2) {
+          video.load();
+        }
+      });
+    }, 1000);
+  });
+}
