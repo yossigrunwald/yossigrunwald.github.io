@@ -8,14 +8,16 @@ let minimumTimeElapsed = false;
 function checkResourcesLoaded() {
   const heroVideo = document.getElementById('hero-bg-video');
   const workVideo = document.getElementById('work-bg-video');
+  const contactVideo = document.getElementById('contact-bg-video');
   const profileImage = document.querySelector('img[src="image 2.png"]');
   
   // Check if videos are ready to play
   const heroVideoReady = !heroVideo || heroVideo.readyState >= 3;
   const workVideoReady = !workVideo || workVideo.readyState >= 3;
+  const contactVideoReady = !contactVideo || contactVideo.readyState >= 3;
   const profileImageReady = !profileImage || profileImage.complete;
   
-  return heroVideoReady && workVideoReady && profileImageReady;
+  return heroVideoReady && workVideoReady && contactVideoReady && profileImageReady;
 }
 
 // Hide loading screen when everything is ready
@@ -328,6 +330,7 @@ window.addEventListener('scroll', () => {
 document.addEventListener('DOMContentLoaded', function() {
   const heroVideo = document.getElementById('hero-bg-video');
   const workVideo = document.getElementById('work-bg-video');
+  const contactVideo = document.getElementById('contact-bg-video');
   
   // Function to play video when ready
   function playVideoWhenReady(video) {
@@ -372,5 +375,37 @@ document.addEventListener('DOMContentLoaded', function() {
   if (workVideo) {
     // Work video has loop attribute in HTML, so just ensure it plays
     playVideoWhenReady(workVideo);
+  }
+  
+  // Initialize contact video with fade-out effect
+  if (contactVideo) {
+    playVideoWhenReady(contactVideo);
+    
+    // Handle fade-out effect in the last 2 seconds
+    contactVideo.addEventListener('timeupdate', function() {
+      const duration = contactVideo.duration;
+      const currentTime = contactVideo.currentTime;
+      
+      // Start fade-out 2 seconds before the end
+      if (duration && currentTime >= duration - 2) {
+        const fadeProgress = (duration - currentTime) / 2; // Goes from 1 to 0
+        const opacity = 0.3 * fadeProgress; // From 0.3 to 0
+        contactVideo.style.opacity = opacity;
+      }
+      
+      // Ensure video stops and doesn't loop
+      if (currentTime >= duration - 0.1) {
+        contactVideo.pause();
+        contactVideo.currentTime = duration;
+        contactVideo.style.opacity = 0;
+      }
+    });
+    
+    // When video ends, ensure it stays paused and invisible
+    contactVideo.addEventListener('ended', function() {
+      contactVideo.pause();
+      contactVideo.currentTime = contactVideo.duration;
+      contactVideo.style.opacity = 0;
+    });
   }
 });
