@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Start fade-out 2 seconds before the end
       if (duration && currentTime >= duration - 2) {
         const fadeProgress = (duration - currentTime) / 2; // Goes from 1 to 0
-        const opacity = 0.3 * fadeProgress; // From 0.3 to 0
+        const opacity = fadeProgress; // From 1 to 0
         contactVideo.style.opacity = opacity;
       }
       
