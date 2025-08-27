@@ -13,8 +13,9 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Preload critical resources -->
+  <!-- Preload critical hero section resources only -->
   <link rel="preload" href="YouCut_20250826_224149599.mp4" as="video" type="video/mp4">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" as="style">
 </head>
 <body>
   <!-- Loading Screen -->
@@ -162,7 +163,7 @@
   <!-- Work Section -->
   <section id="work" class="work">
     <div class="work-background-video">
-      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="metadata">
+      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="none">
         <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
       </video>
     </div>
@@ -200,7 +201,7 @@
   <!-- Contact Section -->
   <section id="contact" class="contact">
     <div class="contact-background-video">
-      <video id="contact-bg-video" class="contact-bg-video" autoplay muted playsinline preload="auto">
+      <video id="contact-bg-video" class="contact-bg-video" autoplay muted playsinline preload="none">
         <source src="vecteezy_3d-animation-white-geometric-background-with-cubes_46549143.mp4" type="video/mp4">
       </video>
     </div>

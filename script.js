@@ -1,16 +1,25 @@
 
 
-// Loading Screen
-let resourcesLoaded = false;
+// Loading Screen - Progressive Loading Strategy
+let heroSectionLoaded = false;
 let minimumTimeElapsed = false;
 
-// Check if all critical resources are loaded
-function checkResourcesLoaded() {
+// Check if hero section critical resources are loaded
+function checkHeroSectionLoaded() {
+  const heroVideo = document.getElementById('hero-bg-video');
+  
+  // Only check hero video for initial loading
+  const heroVideoReady = !heroVideo || heroVideo.readyState >= 3;
+  
+  return heroVideoReady;
+}
+
+// Check if all resources are loaded (for fallback)
+function checkAllResourcesLoaded() {
   const heroVideo = document.getElementById('hero-bg-video');
   const workVideo = document.getElementById('work-bg-video');
   const profileImage = document.querySelector('img[src="image 2.png"]');
   
-  // Check if videos are ready to play (contact video doesn't need to be loaded initially)
   const heroVideoReady = !heroVideo || heroVideo.readyState >= 3;
   const workVideoReady = !workVideo || workVideo.readyState >= 3;
   const profileImageReady = !profileImage || profileImage.complete;
@@ -18,44 +27,93 @@ function checkResourcesLoaded() {
   return heroVideoReady && workVideoReady && profileImageReady;
 }
 
-// Hide loading screen when everything is ready
+// Hide loading screen when hero section is ready
 function hideLoadingScreen() {
-  if (resourcesLoaded && minimumTimeElapsed) {
+  if (heroSectionLoaded && minimumTimeElapsed) {
     document.getElementById('loading-screen').classList.add('hidden');
+    // Start loading other sections after hero is ready
+    initializeLazyLoading();
   }
 }
 
-// Set a minimum time of 200ms to prevent flashing
+// Set a minimum time of 150ms to prevent flashing (reduced from 200ms)
 setTimeout(() => {
   minimumTimeElapsed = true;
   hideLoadingScreen();
-}, 200);
+}, 150);
 
-// Check resources on load
+// Check hero section resources on load
 window.addEventListener('load', () => {
-  resourcesLoaded = checkResourcesLoaded();
+  heroSectionLoaded = checkHeroSectionLoaded();
   
-  if (!resourcesLoaded) {
-    // If not all resources are loaded, keep checking
+  if (!heroSectionLoaded) {
+    // If hero section is not loaded, keep checking
     const checkInterval = setInterval(() => {
-      if (checkResourcesLoaded()) {
-        resourcesLoaded = true;
+      if (checkHeroSectionLoaded()) {
+        heroSectionLoaded = true;
         hideLoadingScreen();
         clearInterval(checkInterval);
       }
-    }, 100);
+    }, 50); // Check more frequently for hero section
     
-    // Maximum wait time of 3 seconds
+    // Maximum wait time of 2 seconds for hero section (reduced from 3 seconds)
     setTimeout(() => {
-      resourcesLoaded = true;
+      heroSectionLoaded = true;
       hideLoadingScreen();
       clearInterval(checkInterval);
-    }, 3000);
+    }, 2000);
   } else {
-    // Everything is already loaded
+    // Hero section is already loaded
     hideLoadingScreen();
   }
 });
+
+// Initialize lazy loading for non-hero sections
+function initializeLazyLoading() {
+  // Lazy load work section video
+  const workVideo = document.getElementById('work-bg-video');
+  if (workVideo && workVideo.readyState < 3) {
+    // Load work video in background
+    workVideo.load();
+  }
+  
+  // Lazy load about section image
+  const profileImage = document.querySelector('img[src="image 2.png"]');
+  if (profileImage && !profileImage.complete) {
+    // Image will load naturally, but we can add intersection observer for more control
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Image is about to be visible, ensure it's loading
+          const img = entry.target;
+          if (!img.complete) {
+            img.src = img.src; // Trigger reload if needed
+          }
+          imageObserver.unobserve(img);
+        }
+      });
+    }, { rootMargin: '100px' }); // Start loading 100px before it's visible
+    
+    imageObserver.observe(profileImage);
+  }
+  
+  // Lazy load contact video when user scrolls near contact section
+  const contactVideo = document.getElementById('contact-bg-video');
+  const contactSection = document.getElementById('contact');
+  
+  if (contactVideo && contactSection) {
+    const contactObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && contactVideo.readyState < 3) {
+          contactVideo.load();
+          contactObserver.unobserve(contactSection);
+        }
+      });
+    }, { rootMargin: '200px' }); // Start loading 200px before contact section
+    
+    contactObserver.observe(contactSection);
+  }
+}
 
 // Mobile Menu Toggle
 const mobileMenu = document.getElementById('mobile-menu');
@@ -393,10 +451,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Initialize work video (if it should autoplay)
+  // Initialize work video with intersection observer for better performance
   if (workVideo) {
-    // Work video has loop attribute in HTML, so just ensure it plays
-    playVideoWhenReady(workVideo);
+    const workSection = document.getElementById('work');
+    if (workSection) {
+      const workObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // Load and play work video when section is visible
+            if (workVideo.readyState < 3) {
+              workVideo.load();
+            }
+            playVideoWhenReady(workVideo);
+            workObserver.unobserve(workSection);
+          }
+        });
+      }, { rootMargin: '100px' }); // Start loading 100px before visible
+      
+      workObserver.observe(workSection);
+    } else {
+      // Fallback: play immediately if section not found
+      playVideoWhenReady(workVideo);
+    }
   }
   
   // Initialize contact video with scroll-triggered playback

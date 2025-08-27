@@ -34,7 +34,7 @@ body {
   padding: 0 20px;
 }
 
-/* Loading Screen */
+/* Loading Screen - Optimized for fast hero section reveal */
 #loading-screen {
   position: fixed;
   top: 0;
@@ -46,12 +46,21 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.3s ease; /* Faster transition */
 }
 
 #loading-screen.hidden {
   opacity: 0;
   pointer-events: none;
+  /* Remove after animation completes to free up memory */
+  animation: removeElement 0.3s ease forwards;
+}
+
+@keyframes removeElement {
+  to {
+    visibility: hidden;
+    display: none;
+  }
 }
 
 .loader {
