@@ -367,6 +367,30 @@ document.addEventListener('DOMContentLoaded', function() {
         heroVideo.currentTime = heroVideo.duration;
       }
     });
+    
+    // Pause video when user scrolls away from hero section
+    let heroVideoPaused = false;
+    window.addEventListener('scroll', function() {
+      const heroSection = document.getElementById('home');
+      const nextSection = document.getElementById('video-gallery');
+      
+      if (heroSection && nextSection && !heroVideoPaused) {
+        const heroHeight = heroSection.offsetHeight;
+        const scrollPosition = window.pageYOffset;
+        
+        // Calculate 30% into the next section
+        const nextSectionTop = nextSection.offsetTop;
+        const pauseTrigger = nextSectionTop + (nextSection.offsetHeight * 0.3);
+        
+        // Pause video when scrolled 30% into next section OR after half a second of scrolling
+        if (scrollPosition >= heroHeight * 0.5 || scrollPosition >= pauseTrigger) {
+          if (!heroVideo.paused && heroVideo.currentTime < heroVideo.duration) {
+            heroVideo.pause();
+            heroVideoPaused = true;
+          }
+        }
+      }
+    });
   }
   
   // Initialize work video (if it should autoplay)
