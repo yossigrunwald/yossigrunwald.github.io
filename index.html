@@ -48,8 +48,11 @@
   <!-- Hero Section -->
   <section id="home" class="hero">
     <div class="hero-background-video">
-      <video id="hero-bg-video" class="hero-bg-video" autoplay muted playsinline preload="auto">
+      <video id="hero-bg-video" class="hero-bg-video" autoplay muted playsinline preload="auto" poster="">
         <source src="YouCut_20250826_224149599.mp4" type="video/mp4">
+        <source src="YouCut_20250826_224149599.webm" type="video/webm">
+        <!-- Fallback for browsers that don't support video -->
+        <div class="video-fallback" style="background-image: url('image 1.png'); background-size: cover; background-position: center; width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
       </video>
     </div>
     <div class="hero-content">
@@ -163,8 +166,11 @@
   <!-- Work Section -->
   <section id="work" class="work">
     <div class="work-background-video">
-      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="none">
+      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="none" webkit-playsinline="true">
         <source src="Ok_this_very_202507111938.mp4" type="video/mp4">
+        <source src="Ok_this_very_202507111938.webm" type="video/webm">
+        <!-- Fallback for browsers that don't support video -->
+        <div class="video-fallback" style="background: var(--bg-color); width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
       </video>
     </div>
     <div class="container">
@@ -201,8 +207,11 @@
   <!-- Contact Section -->
   <section id="contact" class="contact">
     <div class="contact-background-video">
-      <video id="contact-bg-video" class="contact-bg-video" autoplay muted playsinline preload="none">
+      <video id="contact-bg-video" class="contact-bg-video" autoplay muted playsinline preload="none" webkit-playsinline="true" x-webkit-airplay="allow">
         <source src="vecteezy_3d-animation-white-geometric-background-with-cubes_46549143.mp4" type="video/mp4">
+        <source src="vecteezy_3d-animation-white-geometric-background-with-cubes_46549143.webm" type="video/webm">
+        <!-- Fallback for browsers that don't support video -->
+        <div class="video-fallback" style="background: var(--bg-light); width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
       </video>
     </div>
     <div class="container">
