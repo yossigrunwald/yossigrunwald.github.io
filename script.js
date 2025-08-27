@@ -354,8 +354,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // When video ends, keep it on the last frame (don't restart)
     heroVideo.addEventListener('ended', function() {
-      // Video will naturally stay on last frame since loop is not set
+      // Ensure video stays on last frame and is paused
       heroVideo.pause();
+      heroVideo.currentTime = heroVideo.duration;
+    });
+    
+    // Additional safety: ensure video doesn't loop even if somehow it tries to
+    heroVideo.addEventListener('timeupdate', function() {
+      if (heroVideo.currentTime >= heroVideo.duration - 0.1) {
+        heroVideo.pause();
+        heroVideo.currentTime = heroVideo.duration;
+      }
     });
   }
   
