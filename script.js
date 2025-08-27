@@ -8,16 +8,14 @@ let minimumTimeElapsed = false;
 function checkResourcesLoaded() {
   const heroVideo = document.getElementById('hero-bg-video');
   const workVideo = document.getElementById('work-bg-video');
-  const contactVideo = document.getElementById('contact-bg-video');
   const profileImage = document.querySelector('img[src="image 2.png"]');
   
-  // Check if videos are ready to play
+  // Check if videos are ready to play (contact video doesn't need to be loaded initially)
   const heroVideoReady = !heroVideo || heroVideo.readyState >= 3;
   const workVideoReady = !workVideo || workVideo.readyState >= 3;
-  const contactVideoReady = !contactVideo || contactVideo.readyState >= 3;
   const profileImageReady = !profileImage || profileImage.complete;
   
-  return heroVideoReady && workVideoReady && contactVideoReady && profileImageReady;
+  return heroVideoReady && workVideoReady && profileImageReady;
 }
 
 // Hide loading screen when everything is ready
@@ -377,9 +375,27 @@ document.addEventListener('DOMContentLoaded', function() {
     playVideoWhenReady(workVideo);
   }
   
-  // Initialize contact video with fade-out effect
+  // Initialize contact video with scroll-triggered playback
   if (contactVideo) {
-    playVideoWhenReady(contactVideo);
+    let videoHasPlayed = false;
+    
+    // Create intersection observer to detect when contact section is visible
+    const contactSection = document.getElementById('contact');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !videoHasPlayed) {
+          // Start playing video when contact section becomes visible
+          playVideoWhenReady(contactVideo);
+          videoHasPlayed = true;
+        }
+      });
+    }, {
+      threshold: 0.2 // Trigger when 20% of the section is visible
+    });
+    
+    if (contactSection) {
+      observer.observe(contactSection);
+    }
     
     // Handle fade-out effect in the last 2 seconds
     contactVideo.addEventListener('timeupdate', function() {
