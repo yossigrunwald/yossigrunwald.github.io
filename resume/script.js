@@ -179,7 +179,7 @@
 
   // ---- email, assembled here so scrapers reading the HTML don't get it ----
   const mail = $('#mail');
-  if (mail) { const a = ['grunwaldyossi', 'gmail.com'].join('@'); mail.href = 'mailto:' + a; mail.textContent = a; }
+  if (mail) { const a = ['grunwaldyossi2', 'gmail.com'].join('@'); mail.href = 'mailto:' + a; mail.textContent = a; }
 
   // ---- gentle reveal ----
   if (!reduce) {
