@@ -6,7 +6,8 @@
 /* ---------- tape labels: DOM on top of the canvas, at most six ---------- */
 #labels{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;transition:opacity .2s linear}
 #labels.dim{opacity:0}
-.tape{position:absolute;left:0;top:0;width:max-content;max-width:min(320px,calc(100vw - 20px));will-change:transform}
+.tape{position:absolute;left:0;top:0;width:max-content;max-width:min(320px,calc(100vw - 20px));will-change:transform;transition:opacity .15s linear}
+.tape.thru{opacity:.25}
 .tape .tw{position:relative;transform:rotate(var(--r,0deg));transform-origin:50% 60%;filter:drop-shadow(2px 3px 0 rgba(20,17,15,.38));animation:slap .2s cubic-bezier(.3,.9,.4,1) both}
 .tape .tb{background:var(--ink);padding:1.5px}
 .tape .ti{background:var(--t);padding:7px 17px 7px;color:var(--ink);font-family:var(--hand);font-weight:700}
@@ -28,21 +29,27 @@
 #tm .lamps i.on{animation:lamp .5s ease-out}
 @keyframes lamp{0%{transform:scale(2.1)}100%{transform:none}}
 #chip.gone{display:none}
+#chip.gone2{opacity:0;pointer-events:none}
+#chip.faint{opacity:0}
 
 /* ---------- the Play pill ---------- */
 #pill{position:absolute;z-index:6;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));height:64px;margin:0;border:0;border-radius:32px;background:var(--t,var(--gold));color:var(--ink);font:700 18px/1.1 var(--road);letter-spacing:.01em;text-align:left;display:flex;align-items:center;gap:13px;padding:0 20px 0 10px;box-shadow:0 0 0 2px var(--ink),3px 5px 0 2px rgba(20,17,15,.5);transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)));transition:transform .3s cubic-bezier(.2,1.35,.4,1);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #pill[hidden]{display:flex;visibility:hidden}
 #pill.up{transform:none;visibility:visible}
+#pill.up.tuck{transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)))}
 #pill:active{transform:translateY(2px)}
 #pill .pp{flex:none;width:44px;height:44px;border-radius:50%;background:var(--ink);display:grid;place-items:center}
 #pill .pp svg{width:16px;height:18px;margin-left:3px;fill:var(--t,var(--gold))}
-#pill .pt{padding-top:3px}
+#pill .pp svg.go{width:21px;height:14px;margin-left:0;fill:none;stroke:var(--t,var(--gold));stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#pill .pt{padding-top:3px;white-space:nowrap}
 #pill .num{font:900 23px/.8 var(--stencil);letter-spacing:.03em}
 #pill .sep{display:inline-block;width:.27em;opacity:.6;margin:0 .26em}
 @media (min-width:700px){#pill{left:50%;right:auto;width:420px;margin-left:-210px}}
+@media (max-width:379px){#pill{font-size:16px;gap:10px;padding-right:12px}#pill .num{font-size:20px}}
+@media (max-width:339px){#pill{font-size:14px;gap:8px;padding:0 10px 0 8px}#pill .num{font-size:17px}#pill .pp{width:40px;height:40px}}
 
 /* ---------- the three-track moment ---------- */
-#three{position:absolute;z-index:4;left:0;right:0;top:36%;display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:none}
+#three{position:absolute;z-index:4;left:0;right:0;top:104px;display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:none}
 #three[hidden]{display:none}
 #three p{position:relative;z-index:0;margin:-3px 0 0;padding:10px 20px 9px;font-family:var(--hand);font-weight:700;font-size:21px;line-height:1;color:var(--ink);background:var(--ink);opacity:0;transform:scale(1.5) rotate(-10deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.4));clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 17%,calc(100% - 5px) 33%,100% 50%,calc(100% - 5px) 67%,100% 83%,calc(100% - 5px) 100%,5px 100%,0 83%,5px 67%,0 50%,5px 33%,0 17%)}
 #three p::before{content:"";position:absolute;inset:1.5px;background:var(--t,var(--masking));z-index:-1;clip-path:inherit}
@@ -52,7 +59,8 @@
 #three .s3{--t:var(--pinktape);--r:2deg;margin-left:50px}
 #three .s4{--t:var(--masking);font-size:15px;--r:-1deg;margin-top:14px;padding:7px 14px 6px}
 #three p.in{opacity:1;transform:rotate(var(--r));transition:transform .16s cubic-bezier(.3,1.5,.5,1),opacity .08s linear}
-#three.bye p{opacity:0;transition:opacity .35s linear}
+#three.bye p{opacity:0;transition:opacity .3s linear}
+@media (max-height:619px){#three{top:20%}}
 
 /* ---------- the video player ---------- */
 #player{position:fixed;inset:0;z-index:20;background:#000;touch-action:none}
@@ -64,7 +72,12 @@
 /* ---------- the plain resume: one column, road-sign body, stencil headings ---------- */
 #plain{max-width:680px;margin:0 auto;padding:20px 20px 72px}
 #plain .top{position:relative;padding-top:4px;margin-bottom:26px;border-bottom:3px solid var(--ink);padding-bottom:16px}
-#plain .play{display:none;float:right;margin:2px 0 8px 12px;background:var(--ink);color:var(--bone);font:700 12px/1 var(--road);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;padding:13px 11px 11px;border-radius:2px;min-height:38px}
+/* the way back into the game: a gold tape tab with a play triangle, torn at both ends like the first-ad chip */
+#plain .play{display:none;float:right;margin:0 0 6px 12px;padding:5px 0;color:var(--ink);text-decoration:none;white-space:nowrap;transform:rotate(1.4deg);filter:drop-shadow(2px 2.5px 0 rgba(20,17,15,.4));-webkit-tap-highlight-color:transparent}
+#plain .play>span{display:block;background:var(--ink);padding:1.5px}
+#plain .play b{display:block;background:var(--gold);font:700 12px/1 var(--road);letter-spacing:.1em;text-transform:uppercase;padding:11px 13px 9px 12px}
+#plain .play svg.tri{margin-right:4px}
+#plain .play:active{transform:rotate(1.4deg) translateY(1px)}
 html.can #plain .play{display:block}
 #plain h1{margin:0;font:900 clamp(52px,17vw,104px)/.84 var(--stencil);text-transform:uppercase;letter-spacing:.005em;clear:both}
 #plain .roles{margin:12px 0 0;font:900 clamp(19px,5.6vw,30px)/1 var(--stencil);letter-spacing:.09em;text-transform:uppercase}
@@ -76,7 +89,7 @@ html.can #plain .play{display:block}
 #plain .finds>li{padding:11px 0 10px;border-top:1.5px solid #C5D0DA}
 #plain .finds>li:first-child{border-top:0}
 #plain [data-head]{font-weight:700;font-size:18px}
-#plain [data-after]::before{content:"·";display:inline-block;width:.27em;margin-right:.26em}
+#plain [data-after]{display:none}
 #plain [data-date]{display:block;font-size:14px;font-weight:700;color:#4B555C;margin-top:2px}
 #plain q{quotes:"\201C" "\201D";font-size:18px}
 #plain [data-find="line"] q{display:block;font:700 21px/1.3 var(--hand)}
@@ -89,8 +102,20 @@ html.can #plain .play{display:block}
 #plain .reel li{min-width:0;grid-column:span 2}
 #plain .reel li:nth-child(2),#plain .reel li:nth-child(3),#plain .reel .yt{grid-column:span 3}
 #plain .reel .big{grid-column:1/7;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center}
-#plain .reel video{display:block;width:100%;aspect-ratio:9/16;background:#14110F;object-fit:cover;border-radius:10px;box-shadow:0 0 0 1.5px var(--ink)}
-#plain .reel .big video{width:min(100%,330px)}
+#plain .reel video,#plain .reel .vt{display:block;width:100%;aspect-ratio:9/16;background:#14110F;border-radius:10px;box-shadow:0 0 0 1.5px var(--ink)}
+#plain .reel video{object-fit:contain}
+#plain .reel .big video,#plain .reel .big .vt{width:min(100%,330px)}
+#plain .reel .vt{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#plain .reel .vt img{display:block;width:100%;height:100%;object-fit:cover}
+#plain .reel .vt .pb{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1.5px var(--bone);display:grid;place-items:center;color:var(--bone)}
+#plain .reel .vt .pb svg{width:14px;height:16px;margin-left:3px}
+#plain .reel .big .vt .pb{width:64px;height:64px;margin:-32px 0 0 -32px}
+#plain .reel .big .vt .pb svg{width:21px;height:24px;margin-left:5px}
+#plain .reel .vt .len{position:absolute;left:0;bottom:9px;background:var(--gold);color:var(--ink);font:900 16px/1 var(--stencil);font-style:normal;letter-spacing:.05em;padding:6px 8px 3px 7px;box-shadow:0 0 0 1.5px var(--ink)}
+#plain .reel .big .vt .len{font-size:22px;padding:7px 11px 3px 10px;bottom:14px}
+#plain .reel .vt:active .pb{transform:scale(.94)}
+#plain .reel .dur{display:none}
+#plain .nomail{display:block;margin-top:10px;font-size:16px}
 #plain .reel p{margin:7px 0 0;font-size:15px;line-height:1.25}
 #plain .reel .big p{font-size:18px;text-align:center}
 #plain .reel p span{color:#4B555C;white-space:nowrap}
@@ -109,7 +134,8 @@ html.can #plain .play{display:block}
   body,html.g body{background:#fff!important;position:static!important;font-size:10.5pt;line-height:1.3}
   #stage,html.g #stage{display:none!important}
   #plain,html.g #plain{display:block!important;max-width:none;padding:0}
-  #plain .play,#plain .reel video,#plain .reel img{display:none!important}
+  #plain .play,#plain .reel video,#plain .reel img,#plain .reel .vt{display:none!important}
+  #plain .reel .dur{display:inline}
   #plain .top{margin-bottom:8pt;padding-bottom:6pt;border-bottom-width:1.5pt}
   #plain h1{font-size:40pt}
   #plain .roles{font-size:13pt;margin-top:4pt}

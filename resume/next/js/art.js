@@ -225,10 +225,33 @@ export function tiles() {
     addGrain(c, 0.8); return c;
   };
   out.mat = mat(PAL.mat, PAL.matGrid); out.matLit = mat(PAL.matLit, PAL.matLitGrid);
+  { // floor: poured slabs with a seam every 256 units and a few scuffs, so the tables stand on something
+    const c = mk(512, 512), g = c.getContext('2d');
+    g.fillStyle = PAL.floor; g.fillRect(0, 0, 512, 512);
+    for (let k = 0; k < 3; k++) { g.fillStyle = `rgba(255,255,255,${0.007 + r() * 0.008})`; g.fillRect(r() * 512, r() * 512, 90 + r() * 200, 70 + r() * 160); }
+    for (let k = 0; k < 7; k++) {
+      const x = r() * 512, y = r() * 512, l = 40 + r() * 110, a = r() * 6.28, bend = (r() - 0.5) * 26;
+      wrapX(g, () => wrapY(g, () => { g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1 + r() * 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l / 2 - Math.sin(a) * bend, y + Math.sin(a) * l / 2 + Math.cos(a) * bend, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }));
+    }
+    g.fillStyle = PAL.floorSeam; g.fillRect(0, 0, 512, 3); g.fillRect(0, 0, 3, 512);
+    g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(0, 3, 512, 1.4); g.fillRect(3, 0, 1.4, 512);
+    addGrain(c, 0.9); out.floor = c;
+  }
+  { // the tape that closes off a cut edge: masking tape, ink hatch every 18 units, ink keyline. 36 x 24 units, repeats along x
+    const c = mk(72, 48), g = c.getContext('2d'); g.scale(SS, SS);
+    g.fillStyle = PAL.masking; g.fillRect(0, 0, 36, 24);
+    g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(0, 1.2, 36, 5);
+    g.fillStyle = rgba(PAL.ink, 0.86);
+    for (const x of [-18, 0, 18, 36]) { g.beginPath(); g.moveTo(x + 5, 24); g.lineTo(x + 10.5, 24); g.lineTo(x + 26.5, 0); g.lineTo(x + 21, 0); g.closePath(); g.fill(); }
+    g.fillStyle = PAL.ink; g.fillRect(0, 0, 36, 1.2); g.fillRect(0, 22.8, 36, 1.2);
+    addGrain(c, 0.8); out.tape = c;
+  }
   return out;
 }
 
 // ---------- the hub: a round of plywood with the name routed in and four tape arrows ----------
+// where the two routed lines sit on the hub, in world units (centre y on screen, width, height): the first-paint HTML name lands on them
+export const hubText = { name: null, roles: null };
 export function hubSprite(name, roles) {
   const R = 160, r = mulberry32(SEED ^ 0x77);
   const det = g => {
@@ -250,10 +273,12 @@ export function hubSprite(name, roles) {
       try { g.letterSpacing = (spacing * fs / 60) + 'px'; } catch (e) { /* same */ }
       g.fillStyle = 'rgba(255,226,178,.5)'; g.fillText(txt, 0.9, y + 1.1);
       g.fillStyle = PAL.routed; g.fillText(txt, 0, y);
+      const m = g.measureText(txt), asc = m.actualBoundingBoxAscent || fs * 0.72;
       try { g.letterSpacing = '0px'; } catch (e) { /* same */ }
+      return { cy: y - asc / 2 - 8 * HK, w: width, h: asc };          // the top of the hub is 8 units up
     };
-    routed(name.toUpperCase(), -50, 254, 1);
-    routed(roles.toUpperCase(), 93, 214, 4);
+    hubText.name = routed(name.toUpperCase(), -50, 254, 1);
+    hubText.roles = routed(roles.toUpperCase(), 85, 244, 4);
     // four tape arrows at the rim: gold north, pink east, masking south, blue west
     const arrow = (ang, col) => {
       g.save(); g.rotate(ang); g.translate(0, -126);
@@ -279,10 +304,18 @@ export function hubSprite(name, roles) {
 
 // ---------- the van: 46 x 24, h 22, baked at 64 headings on demand (spec 8.1) ----------
 // st: { lights, gold, ladder, loaf, cam }
+// Drawn 1.3 times that size (VAN_K) so it is not the smallest thing on screen; the collider keeps its radius.
+// A panel van: plain body behind, glass only at the front third, a short bonnet, the roof pulled back off the windscreen.
+export const VAN_K = 1.3;
+const grow = (slabs, k) => slabs.map(s => ({
+  ...s, b: s.b.map(v => v * k), z0: s.z0 * k, z1: s.z1 * k,
+  path: g => { g.scale(k, k); s.path(g); g.scale(1 / k, 1 / k); },
+  det: s.det ? g => { g.save(); g.scale(k, k); s.det(g); g.restore(); } : null
+}));
 export function vanSprite(a, st) {
   const sn = Math.sin(a), cs = Math.cos(a), near = (x, y) => x * sn + y * cs > 0;
   const sl = [], late = [];
-  const body = '#F4F1E8', bodySide = '#D3CEBF', sill = '#BDB8AA', stripe = st.gold ? PAL.gold : '#AEB6BC';
+  const body = '#F4F1E8', bodySide = '#D6D1C2', sill = '#BDB8AA', stripe = st.gold ? PAL.gold : '#AEB6BC', glass = PAL.glass;
   for (const [tx, ty] of [[-14, -12], [-14, 8], [13, -12], [13, 8]]) {
     const t = rbox(tx - 4.5, ty, 9, 4, 1.6, 0, 6.5, '#2B2724', PAL.ink, { hl: 0 });
     (near(tx, ty + 2) ? late : sl).push(t);
@@ -296,21 +329,31 @@ export function vanSprite(a, st) {
     lamps.push([-24, ly, box(-24.1, ly + 0.3, 1.5, 3.4, 6.4, 10, '#B9483A', '#9C3B30', { hl: 0, ns: 1 })]);
   }
   for (const [x, y, s] of lamps) if (!near(x, y + 2)) sl.push(s);
-  sl.push(rbox(-23, -11, 46, 22, 5, 10.5, 14, body, bodySide, { ns: 1 }));
+  sl.push(rbox(-23, -11, 46, 22, 5, 10.5, 14, body, bodySide, {
+    ns: 1, det: g => { g.fillStyle = 'rgba(20,17,15,.1)'; g.fillRect(15.4, -8, 0.8, 16); }               // the bonnet line
+  }));
   for (const [x, y, s] of lamps) if (near(x, y + 2)) sl.push(s);
-  sl.push(rbox(-21.5, -9.6, 35, 19.2, 4, 14, 19, PAL.glass, PAL.glass, { hl: 0, ns: 1 }));
-  sl.push(rbox(-22.4, -10.6, 37, 21.2, 5, 19, 21.6, '#FBF9F3', '#E2DED1', {
-    det: g => { g.fillStyle = 'rgba(20,17,15,.08)'; g.fillRect(-22.4, -1, 37, 0.8); g.fillRect(-9, -10.6, 0.8, 21.2); }
+  // upper body: the far side window, the panel, the cab glass, the near side window. Painted far to near for this heading.
+  const win = y => box(-3.6, y, 10.2, 1.2, 14.8, 18.4, glass, glass, { hl: 0, ns: 1 });
+  const panel = rbox(-22, -9.8, 28.8, 19.6, 4, 14, 19, body, bodySide, { hl: 0, ns: 1 });
+  const cab = rbox(4.8, -9.5, 9.8, 19, 2.6, 14, 18.6, '#24343B', glass, {
+    hl: 0, ns: 1, det: g => { g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(10.6, -9.5); g.lineTo(12.4, -9.5); g.lineTo(11.2, -2); g.lineTo(9.4, -2); g.fill(); }   // one hard glint on the screen
+  });
+  const upper = [[1.5, -9.8, win(-10.4)], [-7.6, 0, panel], [9.7, 0, cab], [1.5, 9.8, win(9.2)]];
+  upper.sort((p, q) => (p[0] * sn + p[1] * cs) - (q[0] * sn + q[1] * cs));
+  for (const u of upper) sl.push(u[2]);
+  sl.push(rbox(-22.4, -10.6, 32.4, 21.2, 5, 19, 21.6, '#FBF9F3', '#E2DED1', {
+    det: g => { g.fillStyle = 'rgba(20,17,15,.08)'; g.fillRect(-22.4, -1, 32.4, 0.8); g.fillRect(-9, -10.6, 0.8, 21.2); }
   }));
   const rk = PAL.rack, rks = '#9BA2A7';
-  for (const rx of [-18, -5, 8]) sl.push(box(rx, -9, 1.5, 18, 21.6, 23, rk, rks, { hl: 0, ns: 1 }));
-  sl.push(box(-20, -9.3, 31.5, 1.5, 21.6, 23.4, rk, rks, { hl: 0, ns: 1 }));
-  sl.push(box(-20, 7.8, 31.5, 1.5, 21.6, 23.4, rk, rks, { hl: 0, ns: 1 }));
+  for (const rx of [-18, -6, 6]) sl.push(box(rx, -9, 1.5, 18, 21.6, 23, rk, rks, { hl: 0, ns: 1 }));
+  sl.push(box(-20, -9.3, 28.5, 1.5, 21.6, 23.4, rk, rks, { hl: 0, ns: 1 }));
+  sl.push(box(-20, 7.8, 28.5, 1.5, 21.6, 23.4, rk, rks, { hl: 0, ns: 1 }));
   if (st.ladder) {
     const lc = '#E8A91C', ls = '#B57F0C';
-    for (let i = 0; i < 7; i++) sl.push(box(-18.5 + i * 4.6, -8.6, 1.3, 6.8, 23.4, 24.4, lc, ls, { hl: 0, ns: 1 }));
-    sl.push(box(-21, -9.2, 34, 1.5, 23.4, 25.2, lc, ls, { hl: 0, ns: 1 }));
-    sl.push(box(-21, -3, 34, 1.5, 23.4, 25.2, lc, ls, { hl: 0, ns: 1 }));
+    for (let i = 0; i < 7; i++) sl.push(box(-19 + i * 4.2, -8.6, 1.3, 6.8, 23.4, 24.4, lc, ls, { hl: 0, ns: 1 }));
+    sl.push(box(-21, -9.2, 30, 1.5, 23.4, 25.2, lc, ls, { hl: 0, ns: 1 }));
+    sl.push(box(-21, -3, 30, 1.5, 23.4, 25.2, lc, ls, { hl: 0, ns: 1 }));
   }
   if (st.loaf) {
     sl.push(rbox(-19, 0.2, 13.5, 8.6, 4, 23.4, 27.4, '#C98030', '#9E5D1E', { hl: 0, ns: 1 }));
@@ -319,10 +362,17 @@ export function vanSprite(a, st) {
     }));
   }
   if (st.cam) {
-    sl.push(box(-2.5, 0.4, 9.5, 7.6, 23.4, 29.4, '#33383D', '#1C1F22', { hl: 0, ns: 1, det: g => { g.fillStyle = PAL.pink; g.fillRect(-1.4, 1.4, 2, 2); } }));
-    sl.push(cyl(9.2, 4.2, 2.7, 24.4, 28.8, '#4A5157', '#101214', { hl: 0, ns: 1 }));
+    sl.push(box(-4.5, 0.4, 9.5, 7.6, 23.4, 29.4, '#33383D', '#1C1F22', { hl: 0, ns: 1, det: g => { g.fillStyle = PAL.pink; g.fillRect(-3.4, 1.4, 2, 2); } }));
+    sl.push(cyl(7.2, 4.2, 2.7, 24.4, 28.8, '#4A5157', '#101214', { hl: 0, ns: 1 }));
   }
-  return bake(sl, { rot: a, sres: 1, grain: 0 });
+  return bake(grow(sl, VAN_K), { rot: a, sres: 1, grain: 0 });
+}
+// a lit headlight seen from outside: a hard disc and its ring, no blur
+export function headlight() {
+  return flat(8, 8, 4, 4, g => {
+    g.fillStyle = PAL.lamp; g.beginPath(); g.arc(4, 4, 3.4, 0, 6.2832); g.fill();
+    g.fillStyle = '#FFE1A6'; g.beginPath(); g.arc(4, 4, 2.4, 0, 6.2832); g.fill();
+  }, 0);
 }
 
 // ---------- paper ----------
@@ -384,7 +434,7 @@ export function phoneOverlay(w, h, r, tape) {
   return flat(W, H, W / 2, H, g => {
     g.translate(W / 2, H);
     const sy = -(h + 5);
-    g.fillStyle = '#07090A'; g.fillRect(-w / 2, sy, w, h);
+    g.fillStyle = PAL.ink; g.fillRect(-w / 2, sy, w, h);                 // the corners outside the rounded screen are phone body, not glass
     g.globalCompositeOperation = 'destination-out'; g.beginPath(); rr(g, -w / 2, sy, w, h, r); g.fill();
     g.globalCompositeOperation = 'source-over';
     g.save(); g.beginPath(); rr(g, -w / 2, sy, w, h, r); g.clip();
@@ -411,6 +461,19 @@ export function playMark() {
   return flat(52, 52, 26, 26, g => {
     g.fillStyle = 'rgba(20,17,15,.72)'; g.beginPath(); g.arc(26, 26, 24, 0, 6.2832); g.fill();
     g.strokeStyle = '#F4F1E8'; g.lineWidth = 2; g.stroke(); g.fillStyle = '#F4F1E8'; tri(g, 18.5, 26, 19);
+  }, 0);
+}
+// a sleeping screen's play triangle: flat tape pink, no disc
+export function playTri(s, color) {
+  return flat(s + 4, s + 4, s / 2 + 2, s / 2 + 2, g => { g.fillStyle = color; g.beginPath(); g.moveTo(2 + s * 0.14, 2); g.lineTo(2 + s * 0.98, 2 + s / 2); g.lineTo(2 + s * 0.14, 2 + s); g.closePath(); g.fill(); }, 0);
+}
+// the light a sleeping phone throws on the dark mat: two hard-edged steps centred on its foot, nothing on the hub
+export function pinkSteps(x, y) {
+  return flat(160, 104, 80, 52, g => {
+    g.fillStyle = rgba(PAL.pink, 0.16);
+    g.beginPath(); g.ellipse(80, 52, 75, 48, 0, 0, 6.2832); g.fill();
+    g.beginPath(); g.ellipse(80, 52, 48, 30, 0, 0, 6.2832); g.fill();
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath(); g.arc(80 - x, 52 - y, 163, 0, 6.2832); g.fill();
   }, 0);
 }
 // the first-ad phone: face 135 x 240, leaning on two cardboard file boxes
@@ -445,69 +508,100 @@ export function skitPhone() {
 }
 
 // ---------- kitchen ----------
+// a leaf: pointed at both ends, w wide in the middle, from (x0,y0) to (x1,y1)
+function leaf(g, x0, y0, x1, y1, w) {
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l * w, ny = (x1 - x0) / l * w;
+  g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(mx + nx, my + ny, x1, y1); g.quadraticCurveTo(mx - nx, my - ny, x0, y0); g.closePath();
+}
+const mixHex = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+// the loaf on its rack (the clamp lamp over it is its own sprite, lampSprite)
 export function loafSprite(baked) {
   const st = PAL.steel, sd = '#6E7679', sl = [];
   for (const [x, y] of [[-63, -40], [60, -40], [-63, 37], [60, 37]]) sl.push(box(x, y, 3, 3, 0, 9, sd, sd, { hl: 0 }));
   for (let i = 0; i < 12; i++) sl.push(box(-57.5 + i * 10.4, -41, 1.4, 82, 9, 10.4, st, sd, { hl: 0 }));
   sl.push(box(-65, -42, 130, 2.6, 9, 11.4, '#AEB6B9', sd, { hl: 0 })); sl.push(box(-65, 39.4, 130, 2.6, 9, 11.4, '#AEB6B9', sd, { hl: 0 }));
   sl.push(box(-65, -42, 2.6, 84, 9, 11.4, '#AEB6B9', sd, { hl: 0 })); sl.push(box(62.4, -42, 2.6, 84, 9, 11.4, '#AEB6B9', sd, { hl: 0 }));
-  const lo = baked ? ['#B46C27', '#8C511A'] : ['#E2D1AC', '#CBB78C'], hi = baked ? ['#D9943F', '#BC772C'] : ['#F2E8D0', '#E4D7B7'];
-  const mix = (a, b2, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b2); return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',') + ')'; };
+  // the loaf: 16 thin slabs with one wall colour, so it is a dome and not a stack
+  const wall = baked ? '#9A5A1E' : '#D8C7A0', foot = baked ? '#8C511A' : '#CFBD94', crown = baked ? '#D9943F' : '#F2E8D0';
+  const cuts = [-27, -3, 21];
   const score = g => {
-    if (baked) {
-      g.lineCap = 'round';
-      for (const x of [-27, -3, 21]) {
-        g.strokeStyle = '#6F3D12'; g.lineWidth = 6.2; g.beginPath(); g.moveTo(x - 7, 13); g.quadraticCurveTo(x + 1, 0, x + 8, -13); g.stroke();
-        g.strokeStyle = '#F0D9A6'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 6, 11.5); g.quadraticCurveTo(x + 1.6, 0, x + 7, -11.5); g.stroke();
-      }
-      const r = mulberry32(5); g.fillStyle = 'rgba(247,243,234,.6)';
-      for (let i = 0; i < 46; i++) g.fillRect(-40 + r() * 80, -20 + r() * 40, 1 + r(), 1 + r());
-    } else {
-      g.strokeStyle = '#C9B58B'; g.lineWidth = 1.5; g.lineCap = 'round';
-      for (const x of [-27, -3, 21]) { g.beginPath(); g.moveTo(x - 7, 13); g.quadraticCurveTo(x + 1, 0, x + 8, -13); g.stroke(); }
+    for (const x of cuts) {
+      if (baked) {
+        g.fillStyle = '#6F3D12'; leaf(g, x - 8, 14, x + 9, -14, 7); g.fill();                        // the cut, opened in the oven
+        g.fillStyle = '#F0D9A6'; leaf(g, x - 5.4, 10.5, x + 7, -11, 3.6); g.fill();                  // its cream floor
+        g.strokeStyle = '#E8B25A'; g.lineWidth = 1.7; g.lineCap = 'round';                           // the ear, raised along the upper-left lip
+        g.beginPath(); g.moveTo(x - 7.4, 12.6); g.quadraticCurveTo(x - 3.6, -3.4, x + 8.2, -13.2); g.stroke();
+      } else { g.fillStyle = '#C9B58B'; leaf(g, x - 7, 13, x + 8, -13, 3); g.fill(); }
     }
+    if (baked) { const r = mulberry32(5); g.fillStyle = 'rgba(247,243,234,.62)'; for (let i = 0; i < 40; i++) g.fillRect(-36 + r() * 72, -21 + r() * 16, 1, 1); }   // flour dust, the top third only
   };
-  const N = 8;
+  const N = 16;
   for (let i = 0; i < N; i++) {
-    const t = i / (N - 1), e = 1 - Math.pow(t, 2.2) * 0.3 - (i === N - 1 ? 0.03 : 0), w = 118 * e, d = 70 * e, z0 = 11.4 + 34.6 * (1 - Math.pow(1 - i / N, 1.7)), z1 = 11.4 + 34.6 * (1 - Math.pow(1 - (i + 1) / N, 1.7));
-    sl.push(rbox(-w / 2, -d / 2, w, d, d * 0.49, z0, z1, mix(lo[0], hi[0], t), mix(lo[1], hi[1], t), { hl: i === N - 1 ? 1 : 0, ns: i ? 1 : 0, det: i === N - 1 ? score : null }));
+    const t = i / (N - 1), e = 1 - Math.pow(t, 2.2) * 0.3 - (i === N - 1 ? 0.02 : 0), w = 118 * e, d = 70 * e;
+    const z0 = 11.4 + 34.6 * (1 - Math.pow(1 - i / N, 1.7)), z1 = 11.4 + 34.6 * (1 - Math.pow(1 - (i + 1) / N, 1.7));
+    sl.push(rbox(-w / 2, -d / 2, w, d, d * 0.49, z0, z1, mixHex(wall, crown, Math.pow(t, 1.4)), i < 2 ? foot : wall, { hl: 0, ns: i ? 1 : 0, det: i === N - 1 ? score : null }));
   }
   return bake(sl);
 }
-// the pool of warm lamp light on the loaf: two flat, hard-edged steps
-export function lampPool() {
-  return flat(300, 220, 150, 110, g => {
-    g.fillStyle = rgba(PAL.lamp, 0.2); g.beginPath(); g.ellipse(150, 110, 148, 108, 0, 0, 6.2832); g.fill();
-    g.fillStyle = rgba(PAL.lamp, 0.2); g.beginPath(); g.ellipse(150, 110, 108, 76, 0, 0, 6.2832); g.fill();
-  }, 0);
-}
-// flour sack, 110 x 70, tall: it hides the cake
-export function sackSprite() {
-  const T = '#F0EADA', S = '#D9D0BA';
-  const front = (g, x, y, w, h) => {
-    g.fillStyle = 'rgba(20,17,15,.07)';
-    g.beginPath(); g.moveTo(x + 14, y); g.lineTo(x + 26, y); g.lineTo(x + 21, y + h); g.lineTo(x + 11, y + h); g.fill();
-    g.beginPath(); g.moveTo(x + w - 30, y); g.lineTo(x + w - 20, y); g.lineTo(x + w - 13, y + h); g.lineTo(x + w - 25, y + h); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.moveTo(x + 40, y); g.lineTo(x + 58, y); g.lineTo(x + 55, y + h); g.lineTo(x + 43, y + h); g.fill();
-    // one stencilled blank panel
-    g.strokeStyle = 'rgba(64,74,92,.72)'; g.lineWidth = 2.2; g.setLineDash([13, 3.5]); g.strokeRect(x + 21, y + 22, w - 42, 33); g.setLineDash([]);
-    g.fillStyle = 'rgba(64,74,92,.5)'; g.fillRect(x + 31, y + 33, w - 62, 2.6); g.fillRect(x + 31, y + 42, w - 78, 2.6);
-    // stitched hem
-    g.strokeStyle = 'rgba(120,96,60,.75)'; g.lineWidth = 1.3; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x + 6, y + h - 6.5); g.lineTo(x + w - 6, y + h - 6.5); g.stroke(); g.setLineDash([]);
-  };
-  const top = g => {
-    g.strokeStyle = 'rgba(20,17,15,.14)'; g.lineWidth = 1.3;
-    for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283 + 0.3; g.beginPath(); g.moveTo(Math.cos(a) * 16, Math.sin(a) * 9); g.lineTo(Math.cos(a) * 54, Math.sin(a) * 33); g.stroke(); }
+// The clamp lamp: a tall post at the rack's back-left corner, an arm, and a steel cone shade hung high over the loaf, so
+// on screen it floats clear above the bread and never sits on it. Three stacked discs make the cone; under its front
+// lip the lit inside shows warm, with the bulb. No black anywhere on it. Origin = the loaf's centre.
+export function lampSprite() {
+  const st = PAL.steel, sd = '#6E7679', cx = -34, cy = -26, up = 150 * HK;
+  const inside = g => {
+    g.fillStyle = PAL.lamp; g.beginPath(); g.ellipse(cx, cy - up + 17, 17.5, 10, 0, 0, 6.2832); g.fill();
+    g.fillStyle = '#FFE1A6'; g.beginPath(); g.ellipse(cx, cy - up + 23, 6, 2.6, 0, 0, 6.2832); g.fill();
   };
   return bake([
-    rbox(-55, -35, 110, 70, 15, 0, 132, T, S, { front, det: top }),
-    cyl(0, 0, 17, 132, 137, '#E3DAC5', '#CFC5AD', { ns: 1, hl: 0 }),
-    cyl(0, 0, 14.5, 137, 141, '#B58A52', '#8E6A3A', { ns: 1, hl: 0 }),                              // twine
-    {
-      path: g => { for (let i = 0; i <= 48; i++) { const a = i / 48 * 6.2832, r = 21 + 4.5 * Math.cos(a * 7); i ? g.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.82) : g.moveTo(Math.cos(a) * r, Math.sin(a) * r * 0.82); } g.closePath(); },
-      b: [-26, -22, 26, 22], z0: 141, z1: 152, top: T, side: '#D3C9B2', ns: 1,
-      det: g => { g.strokeStyle = 'rgba(20,17,15,.2)'; g.lineWidth = 1.1; for (let i = 0; i < 7; i++) { const a = (i + 0.5) / 7 * 6.2832; g.beginPath(); g.moveTo(Math.cos(a) * 4, Math.sin(a) * 3.2); g.lineTo(Math.cos(a) * 19, Math.sin(a) * 15.5); g.stroke(); } g.fillStyle = 'rgba(20,17,15,.28)'; g.beginPath(); g.ellipse(0, 0, 4.2, 3.4, 0, 0, 6.2832); g.fill(); }
+    box(-67, -44, 3.4, 3.4, 0, 166, st, sd, { hl: 0 }),                                               // the post
+    box(-69.5, -46.5, 8.4, 8.4, 0, 5, '#7C8588', '#5C6467', { hl: 0 }),                               // its clamp
+    decal(inside),
+    cyl(cx, cy, 20, 150, 153, '#7F888B', sd, { ns: 1 }),                                              // the lip
+    cyl(cx, cy, 14, 153, 160, '#8C9598', '#7A8386', { ns: 1 }),
+    poly([[-66.2, -40.6], [-64.4, -43.4], [cx + 0.9, cy - 1.4], [cx - 0.9, cy + 1.4]], 160, 164, '#AEB6B9', sd, { hl: 0, ns: 1 }),   // the arm
+    cyl(cx, cy, 8, 160, 166, st, '#848D90', { ns: 1, det: g => { g.fillStyle = '#C9CED2'; g.beginPath(); g.arc(cx, cy, 3.5, 0, 6.2832); g.fill(); } })
+  ]);
+}
+// the pool of warm lamp light: one hard-edged ellipse and a hot spot. Origin = the loaf's centre.
+export function lampPool() {
+  return flat(240, 160, 100, 60, g => {
+    g.fillStyle = rgba(PAL.lamp, 0.22); g.beginPath(); g.ellipse(120, 80, 115, 75, 0, 0, 6.2832); g.fill();
+    g.fillStyle = rgba(PAL.lamp, 0.18); g.beginPath(); g.ellipse(112, 76, 55, 35, 0, 0, 6.2832); g.fill();
+  }, 0);
+}
+// a decal: drawn last, over the finished slabs, in the prop's own coordinates (the screen, not the plan)
+const decal = fn => ({ path: () => { }, b: [0, 0, 0, 0], z0: 0, z1: 0, top: 'rgba(0,0,0,0)', side: null, hl: 0, ns: 1, front: g => fn(g) });
+// flour sack, 112 x 72, tall: it hides the cake. Four slabs so it bulges: foot, belly, shoulder, and a rolled fold stitched shut.
+export function sackSprite() {
+  const T = '#F1ECDD', S = '#DCD3BE', print = 'rgba(64,74,92,.72)';
+  const front = g => {
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(20,17,15,.05)';                                  // two hard creases where the cloth hangs
+    g.beginPath(); g.moveTo(-41, -19); g.lineTo(-33, -19); g.lineTo(-37, 30); g.lineTo(-44, 30); g.fill();
+    g.beginPath(); g.moveTo(35, -19); g.lineTo(41, -19); g.lineTo(45, 30); g.lineTo(38, 30); g.fill();
+    g.fillStyle = 'rgba(20,17,15,.06)'; g.fillRect(-58, 15, 116, 20);    // weight: the lowest part of the front is darker
+    g.globalCompositeOperation = 'source-over';
+    // the print, no words: a wheat ear in a ring, one band above and one below
+    g.fillStyle = print; g.fillRect(-50, -17.6, 100, 3); g.fillRect(-50, 24.2, 100, 3);
+    g.strokeStyle = print; g.lineWidth = 2.4; g.beginPath(); g.arc(0, 5, 16, 0, 6.2832); g.stroke();
+    g.fillRect(-1, -4, 2, 20);
+    for (let i = 0; i < 5; i++) for (const sd of [-1, 1]) {
+      g.save(); g.translate(sd * 3.1, 13 - i * 3.9); g.rotate(sd * 0.61); leaf(g, 0, 3.5, 0, -3.5, 3.2); g.fill(); g.restore();
     }
+    leaf(g, 0, -4, 0, -10.4, 3.2); g.fill();
+  };
+  const stitch = g => {
+    g.strokeStyle = 'rgba(20,17,15,.3)'; g.lineWidth = 1.1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(-38, 0.5); g.lineTo(38, 0.5); g.stroke(); g.setLineDash([]);
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-40, -8.6, 80, 2.2);
+  };
+  return bake([
+    rbox(-52, -33, 104, 66, 20, 0, 14, T, '#D0C6AF', { hl: 0 }),
+    rbox(-56, -36, 112, 72, 24, 14, 92, T, S, { hl: 0 }),
+    rbox(-50, -31, 100, 62, 22, 92, 118, '#F5F1E4', S, { hl: 0 }),
+    poly([[28, 5], [31, 3], [46, 12], [44, 15]], 118, 120.4, '#B58A52', '#8E6A3A', { hl: 0, ns: 1 }),   // the twine's loose end
+    rbox(-43, -10, 86, 20, 8, 118, 128, '#E3DAC5', '#CFC5AD', { hl: 0, det: stitch }),
+    cyl(40, 0, 3.4, 128, 130, '#B58A52', '#8E6A3A', { hl: 0, ns: 1 }),                                    // the knot
+    decal(front)
   ]);
 }
 // one cake on a plate: 48 round. cut = a slice is out
@@ -560,33 +654,46 @@ export function garageSprite() {
   const mouth = (g, x, y, w, h) => {
     g.fillStyle = '#6B5335'; g.beginPath(); g.moveTo(x, y + h); g.lineTo(x + 15, y + h - 13); g.lineTo(x + w - 15, y + h - 13); g.lineTo(x + w, y + h); g.fill();   // floor
     g.fillStyle = '#4A3823'; g.fillRect(x + 15, y, w - 30, h - 13);                                                                                             // back wall
-    g.fillStyle = rgba(PAL.lamp, 0.26); g.beginPath(); g.ellipse(x + w / 2, y + 12, 40, 26, 0, 0, 6.2832); g.fill();
-    g.fillStyle = rgba(PAL.lamp, 0.34); g.beginPath(); g.ellipse(x + w / 2, y + 12, 22, 15, 0, 0, 6.2832); g.fill();
-    g.strokeStyle = '#1B1611'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + 9); g.stroke();
-    g.fillStyle = '#FFE9BC'; g.beginPath(); g.arc(x + w / 2, y + 12.5, 4.6, 0, 6.2832); g.fill();
-    g.fillStyle = '#8A9396'; g.fillRect(x + w / 2 - 2, y + 6.5, 4, 3);
+    g.fillStyle = 'rgba(20,17,15,.2)'; for (let i = 4; i < h - 13; i += 5) g.fillRect(x + 15, y + i, w - 30, 1);                                                // its flutes
+    g.fillStyle = rgba(PAL.lamp, 0.26); g.beginPath(); g.ellipse(x + w / 2, y + 22, 42, 30, 0, 0, 6.2832); g.fill();
+    g.fillStyle = rgba(PAL.lamp, 0.34); g.beginPath(); g.ellipse(x + w / 2, y + 22, 23, 17, 0, 0, 6.2832); g.fill();
+    g.strokeStyle = '#1B1611'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + 18); g.stroke();
+    g.fillStyle = '#FFE9BC'; g.beginPath(); g.arc(x + w / 2, y + 22.5, 5, 0, 6.2832); g.fill();
+    g.fillStyle = '#8A9396'; g.fillRect(x + w / 2 - 2, y + 15.5, 4, 3.4);
   };
   const roof = g => {
     g.fillStyle = 'rgba(20,17,15,.1)'; g.fillRect(-60, -0.6, 120, 1.2);
-    g.fillStyle = rgba(PAL.masking, 0.95); g.fillRect(-60, -9, 120, 15); g.strokeStyle = 'rgba(20,17,15,.28)'; g.lineWidth = 0.8; g.strokeRect(-61, -9, 122, 15);
+    g.fillStyle = rgba(PAL.masking, 0.95); g.fillRect(-60, 8, 120, 22); g.strokeStyle = 'rgba(20,17,15,.28)'; g.lineWidth = 0.8; g.strokeRect(-61, 8, 122, 22);
+    // a house, drawn on the tape in marker: no word
+    g.strokeStyle = PAL.ink; g.lineWidth = 1.9; g.lineJoin = 'round'; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-9.5, 19); g.lineTo(0, 11); g.lineTo(9.5, 19); g.moveTo(-6.5, 17.5); g.lineTo(-6.5, 27); g.lineTo(6.5, 27); g.lineTo(6.5, 17.5); g.moveTo(-1.6, 27); g.lineTo(-1.6, 21.8); g.lineTo(1.9, 21.8); g.lineTo(1.9, 27); g.stroke();
     g.fillStyle = 'rgba(20,17,15,.07)'; for (let i = -57; i < 60; i += 4.5) g.fillRect(i, 43.2, 1, 2);
   };
   const flute = (g, x, y, w, h) => { g.fillStyle = 'rgba(20,17,15,.07)'; for (let i = 1; i < h; i += 4) g.fillRect(x, y + i, w, 1); };
   return bake([
     box(-60, -45, 120, 90, 0, 1.5, '#8F744B', D, { hl: 0 }),
-    poly([[-60, 45], [-58, 45], [-80, 70], [-82, 70]], 0, 76, T, S, { hl: 0 }),                     // left flap, swung open
-    poly([[58, 45], [60, 45], [82, 70], [80, 70]], 0, 76, T, D, { hl: 0 }),                          // right flap
-    box(-60, -45, 120, 4, 0, 78, T, S, { hl: 0, ns: 1 }),
-    box(-60, -45, 4, 90, 0, 78, T, S, { hl: 0, front: flute }),
-    box(56, -45, 4, 90, 0, 78, T, S, { hl: 0, front: flute }),
-    face(-56, 45, 112, 46.8, '#3B2C1B', { det: mouth }),
-    box(-60, -45, 120, 90, 78, 80.5, T, S, { det: roof }),
-    box(-59, 45, 118, 15, 79, 80.5, '#D6BC92', D, { hl: 0, ns: 1 })                                   // top flap held out like an awning
+    poly([[-60, 45], [-58, 45], [-80, 70], [-82, 70]], 0, 98, T, S, { hl: 0 }),                     // left flap, swung open
+    poly([[58, 45], [60, 45], [82, 70], [80, 70]], 0, 98, T, D, { hl: 0 }),                          // right flap
+    box(-60, -45, 120, 4, 0, 100, T, S, { hl: 0, ns: 1 }),
+    box(-60, -45, 4, 90, 0, 100, T, S, { hl: 0, front: flute }),
+    box(56, -45, 4, 90, 0, 100, T, S, { hl: 0, front: flute }),
+    face(-56, 45, 112, 60, '#3B2C1B', { det: mouth }),
+    box(-60, -45, 120, 90, 100, 102.5, T, S, { det: roof }),
+    box(-59, 45, 118, 8, 101, 102.5, '#D6BC92', D, { hl: 0, ns: 1 })                                  // top flap held out like a short awning
   ]);
+}
+// the bulb's light spilling out of the garage mouth: two hard steps
+export function bulbSteps() {
+  return flat(84, 56, 42, 28, g => {
+    g.fillStyle = rgba(PAL.lamp, 0.2); g.beginPath(); g.ellipse(42, 28, 40, 26, 0, 0, 6.2832); g.fill();
+    g.fillStyle = rgba(PAL.lamp, 0.24); g.beginPath(); g.ellipse(42, 28, 24, 15, 0, 0, 6.2832); g.fill();
+  }, 0);
 }
 
 // ---------- dressing ----------
-export function tapeRoll(color) {
+// dull = its track has nothing found yet: saturated tape colour on screen always means "found" (spec 8.2)
+export function tapeRoll(color, dull) {
+  if (dull) { const [r, g, b] = hex(color), l = Math.round(r * 0.3 + g * 0.59 + b * 0.11), m = v => Math.round(v + (l - v) * 0.45).toString(16).padStart(2, '0'); color = '#' + m(r) + m(g) + m(b); }
   return bake([
     ring(0, 0, 13, 7.4, 0, 9, shade(color, 12), shade(color, -16), { eo: 1, hl: 0 }),
     ring(0, 0, 8.8, 7.4, 0, 9.4, '#D9C9A6', '#B8A67F', { eo: 1, hl: 0, ns: 1 })
@@ -631,4 +738,15 @@ export function crumbs() {
 
 // ---------- particles ----------
 export function puffSprite(color) { return glow(color, 14, 0.85, 0.25); }
+// thrown flour: a hard-edged disc with a shaded crescent on its lower right, so it shows on white. Its shadow is a
+// second sprite, because the disc hops and the shadow stays on the ground.
+export function flourDisc() {
+  return flat(26, 26, 13, 13, g => {
+    g.fillStyle = PAL.flourShade; g.beginPath(); g.arc(13, 13, 13, 0, 6.2832); g.fill();
+    g.fillStyle = '#FFFDF8'; g.beginPath(); g.arc(11.4, 11.4, 10.6, 0, 6.2832); g.fill();
+  }, 0);
+}
+export function flourShadow() {
+  return flat(26, 26, 13, 13, g => { g.fillStyle = 'rgba(20,17,15,.2)'; g.beginPath(); g.arc(13, 13, 13, 0, 6.2832); g.fill(); }, 0);
+}
 export function bitSprite() { return flat(8, 6, 4, 3, g => { g.fillStyle = PAL.sheet; g.fillRect(0, 0, 8, 6); g.strokeStyle = 'rgba(150,163,176,.8)'; g.lineWidth = 0.6; g.strokeRect(0.3, 0.3, 7.4, 5.4); }, 0); }

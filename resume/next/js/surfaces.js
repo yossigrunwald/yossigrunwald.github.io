@@ -1,9 +1,10 @@
 // surfaces.js — the three ways a table clears: paper bodies (desk), the flour canvas (block),
 // the trail canvas and the headlight wedge (mat). Plus the particle pool.
 import { G, BOX, PAL, DRIFTS, HUB_R, S, mulberry32, SEED, surfaceAt } from './world.js';
-import { mk, glow, rgba } from './art.js';
+import { mk, rgba } from './art.js';
 
-export const TR = 0.5;                       // trail and flour canvases: pixels per world unit (half resolution)
+export const TR = 0.5;                       // trail canvas: pixels per world unit (half resolution)
+const FR = 1;                                // flour canvas: one pixel per unit, so its edges are as crisp as the sprites
 const rnd = mulberry32(SEED ^ 0x9e37);
 
 // ---------------- trail: one persistent canvas, stamped, never cleared, never faded ----------------
@@ -11,93 +12,199 @@ export let trail = null;
 let tg = null, last = null;
 // ---------------- flour: the block only ----------------
 export let flour = null;
-let fg = null, brush = null, wiped = null, cw = 0, ch = 0;
+let fg = null, wiped = null, cw = 0, ch = 0;
 const CELL = 12;
+export const NOSE = 18;                      // flour is felt at the van's nose, this far ahead of its middle: behind that it is already ploughed
+
+// One heap of flour, hard-edged like everything else on the table. A lumpy outline through 18 radial points, drawn as
+// its cast shadow and four steps (rim, body, shoulder, crest). Then what makes it powder and not plaster: a scoop taken
+// out of it, sifted specks on top, and a skirt of loose dust thrown off the rim, thicker on the side away from the light.
+// The two small spills keep a plain 10-point outline and get a thin skirt only.
+function drift(g, d, r) {
+  const R = d.r, k = R / 80, big = R >= 44, n = big ? 18 : 10, pts = [], rad = [];
+  // A big heap's radii span R x 0.70..1.12, but neighbours agree with each other (smoothed twice, then stretched back to
+  // the full span): an uneven heap with two or three broad sides, not a splash with fingers.
+  let raw = []; for (let i = 0; i < n; i++) raw.push(r());
+  if (big) {
+    for (let p = 0; p < 2; p++) raw = raw.map((v, i) => 0.25 * raw[(i + n - 1) % n] + 0.5 * v + 0.25 * raw[(i + 1) % n]);
+    const lo = Math.min(...raw), hi = Math.max(...raw); raw = raw.map(v => (v - lo) / (hi - lo || 1));
+  }
+  for (let i = 0; i < n; i++) {
+    const a = (i + (r() - 0.5) * (big ? 0.3 : 0.5)) / n * 6.2832, q = R * (big ? 0.70 + raw[i] * 0.42 : 0.78 + raw[i] * 0.3);
+    rad.push(q); pts.push([Math.cos(a) * q, Math.sin(a) * q * 0.8]);
+  }
+  // where the smoothed rim really is at an angle (the curve passes inside its control points)
+  const rim = a => {
+    const f = ((a / 6.2832) % 1 + 1) % 1 * n, i = f | 0, t = f - i, e = j => 0.125 * rad[(j + n - 1) % n] + 0.75 * rad[j % n] + 0.125 * rad[(j + 1) % n];
+    return e(i) * (1 - t) + e(i + 1) * t;
+  };
+  const blob = (ox, oy, sc) => {
+    g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const p = pts[i % n], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2 * sc + d.x + ox, my = (p[1] + q[1]) / 2 * sc + d.y + oy;
+      if (i === 0) g.moveTo(mx, my); else g.quadraticCurveTo(p[0] * sc + d.x + ox, p[1] * sc + d.y + oy, mx, my);
+    }
+    g.closePath(); g.fill();
+  };
+  g.fillStyle = 'rgba(20,17,15,.14)'; blob(6 * k + 1, 4 * k + 1, 1);
+  g.fillStyle = PAL.flourShade; blob(0, 0, 1);
+  g.fillStyle = PAL.flour; blob(-3 * k, -3 * k, 0.92);
+  g.fillStyle = '#FBF8F1'; blob(-6 * k, -5.5 * k, 0.74);                 // a middle step, so it climbs like a heap and is not a yolk on a white
+  g.fillStyle = '#FFFDF8'; blob(-9 * k, -8 * k, 0.5);
+  // the rim is not a clean line: it breaks into crumbs, small angular clumps on and just off the edge, each with a shaded side
+  for (let i = 0, m = big ? 84 : 30; i < m; i++) {
+    const a = r() < 0.6 ? -0.785 + r() * 3.1416 : 2.356 + r() * 3.1416, q = rim(a) - 2.5 + r() * 7, cr = 1.1 + r() * 2.3, a0 = r() * 6.2832;
+    const x = d.x + Math.cos(a) * q, y = d.y + Math.sin(a) * q * 0.8, pg = [];
+    for (let j = 0; j < 5; j++) { const t = a0 + j * 1.2566, e = cr * (0.6 + r() * 0.6); pg.push([Math.cos(t) * e, Math.sin(t) * e]); }
+    const crumb = (ox, oy) => { g.beginPath(); g.moveTo(x + pg[0][0] + ox, y + pg[0][1] + oy); for (let j = 1; j < 5; j++) g.lineTo(x + pg[j][0] + ox, y + pg[j][1] + oy); g.closePath(); g.fill(); };
+    g.fillStyle = PAL.flourShade; crumb(0.9, 0.9); g.fillStyle = i % 3 ? PAL.flour : '#FFFDF8'; crumb(0, 0);
+  }
+  if (big) {                                                              // the scoop: its upper-left wall is in shade, its floor is plain flour
+    const sx = d.x + 0.12 * R, sy = d.y + 0.12 * R, el = (x, y, m) => { g.beginPath(); g.ellipse(x, y, 0.275 * R * m, 0.1 * R * m, -0.436, 0, 6.2832); g.fill(); };
+    g.fillStyle = PAL.flourShade; el(sx, sy, 1);
+    g.fillStyle = PAL.flour; el(sx + 2, sy + 2, 0.8);
+  }
+  g.fillStyle = '#E4DBC8';                                                // sifted: one-unit specks all over the top
+  for (let i = 0, m = big ? 70 : 16; i < m; i++) {
+    const a = r() * 6.2832, q = Math.sqrt(r()) * 0.8 * rim(a);
+    g.fillRect(Math.round(d.x + Math.cos(a) * q), Math.round(d.y + Math.sin(a) * q * 0.8), 1, 1);
+  }
+  g.fillStyle = rgba(PAL.flour, 0.9);                                     // the skirt: 3 to 24 units off the rim, thinning as it goes
+  const m1 = big ? 300 : 90, m2 = big ? 40 : 10, m3 = big ? 160 : 50;       // m3: a close fringe, tight against the rim
+  for (let i = 0; i < m1 + m2 + m3; i++) {
+    const a = r() < 0.667 ? -0.785 + r() * 3.1416 : 2.356 + r() * 3.1416, sz = i >= m1 && i < m1 + m2 ? 2 : 1;
+    const q = rim(a) + (i < m1 + m2 ? 24 * (1 - 0.875 * Math.cbrt(r())) : -1 + r() * 6);
+    g.fillRect(Math.round(d.x + Math.cos(a) * q), Math.round(d.y + Math.sin(a) * q * 0.8), sz, sz);
+  }
+}
 
 export function initSurfaces() {
   trail = mk((BOX[2] - BOX[0]) * TR, (BOX[3] - BOX[1]) * TR); tg = trail.getContext('2d');
   tg.setTransform(TR, 0, 0, TR, -BOX[0] * TR, -BOX[1] * TR); tg.lineCap = 'round'; tg.lineJoin = 'round';
+  // two old tyre tracks on the plywood, leading out of the garage mouth
+  tg.strokeStyle = 'rgba(74,38,16,.2)'; tg.lineWidth = 3.2; tg.setLineDash([9, 3.5]);
+  for (const x of [-11.5, 11.5]) { tg.beginPath(); tg.moveTo(x, 448); tg.lineTo(x, 508); tg.stroke(); }
+  tg.setLineDash([]);
 
   const b = G.block, w = b[2] - b[0], h = b[3] - b[1], r = mulberry32(SEED ^ 0xf10);
-  flour = mk(w * TR, h * TR); fg = flour.getContext('2d'); fg.setTransform(TR, 0, 0, TR, -b[0] * TR, -b[1] * TR);
+  flour = mk(w * FR, h * FR); fg = flour.getContext('2d'); fg.setTransform(FR, 0, 0, FR, -b[0] * FR, -b[1] * FR);
   cw = Math.ceil(w / CELL); ch = Math.ceil(h / CELL); wiped = new Uint8Array(cw * ch);
-  // the 60% haze: an even dusting, then soft clouds so it is never one flat tint
-  fg.fillStyle = rgba(PAL.flour, 0.46); fg.fillRect(b[0], b[1], w, h);
-  const cloud = glow(PAL.flour, 60, 0.2).c, thin = glow('#000000', 60, 0.16).c;
-  for (let i = 0; i < 230; i++) { const s = 0.5 + r() * 1.2, x = b[0] + r() * w, y = b[1] + r() * h; fg.drawImage(cloud, x - 60 * s, y - 60 * s, 120 * s, 120 * s); }
-  fg.globalCompositeOperation = 'destination-out';
-  for (let i = 0; i < 46; i++) { const s = 0.4 + r() * 0.9, x = b[0] + r() * w, y = b[1] + r() * h; fg.drawImage(thin, x - 60 * s, y - 60 * s, 120 * s, 120 * s); }
-  fg.globalCompositeOperation = 'source-over';
-  // drifts: opaque mounds built from many small dabs, so the edge is ragged; a shaded lower-right rim; spilled grains around
-  const halo = glow(PAL.flour, 60, 0.5, 0.3).c;
-  for (const d of DRIFTS) {
-    const blobs = []; fg.drawImage(halo, d.x - d.r * 1.5, d.y - d.r * 1.2, d.r * 3, d.r * 2.4);
-    for (let i = 0; i < 90; i++) { const a = r() * 6.283, rad = Math.pow(r(), 0.7) * d.r * 0.86; blobs.push([d.x + Math.cos(a) * rad, d.y + Math.sin(a) * rad * 0.78, d.r * (0.08 + r() * 0.16) * (1.25 - rad / d.r)]); }
-    blobs.push([d.x, d.y, d.r * 0.5]);
-    fg.fillStyle = PAL.flourShade; for (const [x, y, br] of blobs) { fg.beginPath(); fg.arc(x + 3.4, y + 2.8, br, 0, 6.2832); fg.fill(); }
-    fg.fillStyle = PAL.flour; for (const [x, y, br] of blobs) { fg.beginPath(); fg.arc(x, y, br, 0, 6.2832); fg.fill(); }
-    fg.fillStyle = rgba(PAL.flourShade, 0.55);                              // a few dimples so it is a heap, not a cloud
-    for (let i = 0; i < 9; i++) { const a = r() * 6.283, rad = r() * d.r * 0.5; fg.beginPath(); fg.arc(d.x + Math.cos(a) * rad + 2, d.y + Math.sin(a) * rad * 0.78 + 2, 2 + r() * 4, 0, 6.2832); fg.fill(); }
-    fg.fillStyle = PAL.flour;
-    for (let i = 0; i < 130; i++) { const a = r() * 6.283, rad = d.r * (0.8 + r() * 0.55); fg.fillRect(d.x + Math.cos(a) * rad, d.y + Math.sin(a) * rad * 0.78, 1.5 + r() * 3, 1.5 + r() * 3); }
+  // the haze: one flat dusting, then the bench wiped by a palm seven or nine times so the wood shows through in swipes
+  fg.fillStyle = rgba(PAL.flour, 0.34); fg.fillRect(b[0], b[1], w, h);
+  fg.globalCompositeOperation = 'destination-out'; fg.strokeStyle = 'rgba(0,0,0,.45)'; fg.lineCap = 'round';
+  const dirs = [-0.42, 0.3, 1.2];
+  for (let i = 0; i < 9; i++) {
+    const len = 180 + r() * 140, rad = 300 + r() * 420, a = dirs[i % 3] + (r() - 0.5) * 0.16, sweep = len / rad, turn = r() < 0.5 ? 1 : -1;
+    const mx = b[0] + 60 + r() * (w - 120), my = b[1] + 50 + r() * (h - 100);
+    const cx = mx - Math.sin(a) * rad * turn, cy = my + Math.cos(a) * rad * turn, a0 = Math.atan2(my - cy, mx - cx);
+    fg.lineWidth = 34 + r() * 12; fg.beginPath(); fg.arc(cx, cy, rad, a0 - sweep / 2, a0 + sweep / 2); fg.stroke();
   }
-  for (let i = 0; i < 1500; i++) { fg.fillStyle = rgba(PAL.flour, 0.35 + r() * 0.5); fg.fillRect(b[0] + r() * w, b[1] + r() * h, 1.5 + r() * 2, 1.5 + r() * 2); }
+  fg.globalCompositeOperation = 'source-over';
+  // loose grains, exactly one unit each, only near a heap or the sack
+  fg.fillStyle = rgba(PAL.flour, 0.9);
+  const near = DRIFTS.concat([{ x: -420, y: 60, r: 50 }]);
+  for (let i = 0; i < 5000; i++) {
+    const d = near[(r() * near.length) | 0], a = r() * 6.2832, rad = d.r * 0.7 + Math.pow(r(), 1.7) * (90 + d.r * 0.3);
+    fg.fillRect(Math.round(d.x + Math.cos(a) * rad), Math.round(d.y + Math.sin(a) * rad * 0.8), 1, 1);
+  }
+  for (const d of DRIFTS) drift(fg, d, r);
   // nothing floury on the hub
   fg.globalCompositeOperation = 'destination-out'; fg.beginPath(); fg.arc(0, 0, HUB_R + 3, 0, 6.2832); fg.fill(); fg.globalCompositeOperation = 'source-over';
-  brush = glow('#000000', 22, 0.9, 0.4).c;
 }
 
+// inside a heap's footprint (whether or not it has been ploughed since)
+function inDrift(x, y) {
+  for (const d of DRIFTS) { const dx = x - d.x, dy = (y - d.y) / 0.8; if (dx * dx + dy * dy < d.r * d.r * 0.8) return true; }
+  return false;
+}
 // 0 none or wiped · 1 haze · 2 deep drift
 export function flourAt(x, y) {
   const b = G.block;
   if (x < b[0] || x >= b[2] || y < b[1] || y >= b[3] || x * x + y * y < HUB_R * HUB_R) return 0;
   if (wiped[((y - b[1]) / CELL | 0) * cw + ((x - b[0]) / CELL | 0)]) return 0;
-  for (const d of DRIFTS) { const dx = x - d.x, dy = (y - d.y) / 0.8; if (dx * dx + dy * dy < d.r * d.r * 0.8) return 2; }
-  return 1;
+  return inDrift(x, y) ? 2 : 1;
 }
-// one plough tick: a soft erase, two full-strength tyre stamps, and a little bank thrown up either side
-function wipe(x, y, hx, hy) {
+// One plough tick. The furrow is cut with two hard discs (a 20-unit one that takes about half, a 14-unit one that takes
+// everything) and two tyre stamps, so its edge is as hard as every other edge on the table. What was pushed aside is
+// banked along both sides as short flat dabs lying along the heading, overlapping into a broken ridge: no row of dots.
+// lvl: what the van is ploughing (0 nothing left, 1 haze, 2 a heap). Nothing left to push means no new bank.
+const berm = [3, 5], bank = [22, 23]; let dabs = 0;
+function wipe(x, y, hx, hy, lvl) {
   const b = G.block, px = -hy, py = hx;
   fg.globalCompositeOperation = 'destination-out';
-  fg.drawImage(brush, x - 22, y - 22, 44, 44);
-  fg.beginPath(); fg.arc(x + px * 9 - hx * 8, y + py * 9 - hy * 8, 2.8, 0, 6.2832); fg.arc(x - px * 9 - hx * 8, y - py * 9 - hy * 8, 2.8, 0, 6.2832); fg.fill();
+  fg.fillStyle = 'rgba(0,0,0,.45)'; fg.beginPath(); fg.arc(x, y, 20, 0, 6.2832); fg.fill();
+  fg.fillStyle = '#000'; fg.beginPath(); fg.arc(x, y, 14, 0, 6.2832);
+  fg.moveTo(x + px * 11.7 - hx * 10 + 3.2, y + py * 11.7 - hy * 10); fg.arc(x + px * 11.7 - hx * 10, y + py * 11.7 - hy * 10, 3.2, 0, 6.2832);
+  fg.moveTo(x - px * 11.7 - hx * 10 + 3.2, y - py * 11.7 - hy * 10); fg.arc(x - px * 11.7 - hx * 10, y - py * 11.7 - hy * 10, 3.2, 0, 6.2832); fg.fill();
   fg.globalCompositeOperation = 'source-over';
-  for (const sgn of [-1, 1]) {
-    const o = 24.5 + rnd() * 3; fg.fillStyle = rgba(PAL.flour, 0.42 + rnd() * 0.3);
-    fg.beginPath(); fg.arc(x + px * sgn * o - hx * 6, y + py * sgn * o - hy * 6, 2.6 + rnd() * 2.2, 0, 6.2832); fg.fill();
+  if (lvl) {
+    const head = Math.atan2(hy, hx);
+    for (let sd = 0; sd < 2; sd++) {
+      berm[sd] -= 6;
+      while (berm[sd] <= 0) {
+        // the bank wanders between 20 and 25 units out, a little at a time, so one dab runs into the next; now and then it breaks
+        bank[sd] = Math.max(20, Math.min(25, bank[sd] + (rnd() - 0.5) * 2.4));
+        const along = berm[sd] - 7 - rnd() * 3, o = bank[sd] * (sd ? 1 : -1);
+        berm[sd] += 5 + rnd() * 3;
+        if (rnd() < 0.1) continue;
+        const dx = x + px * o + hx * along, dy = y + py * o + hy * along, heap = inDrift(dx, dy);
+        const rl = (9 + rnd() * 6) / 2, rw = (2.2 + rnd() * 1.8) / 2, ang = head + (rnd() - 0.5) * 0.3;
+        if (heap) { fg.fillStyle = PAL.flourShade; fg.beginPath(); fg.ellipse(dx + 1, dy + 1, rl, rw, ang, 0, 6.2832); fg.fill(); }   // on white a ridge only shows by its shaded side
+        fg.fillStyle = heap ? rgba('#FFFDF8', 0.95) : rgba(PAL.flour, 0.42 + rnd() * 0.2);
+        fg.beginPath(); fg.ellipse(dx, dy, rl, rw, ang, 0, 6.2832); fg.fill();
+        if (heap && ++dabs % 3 === 0) {                                     // in a heap, a clump breaks off now and then
+          const cx = dx + px * (sd ? 3 : -3) + (rnd() - 0.5) * 4, cy = dy + py * (sd ? 3 : -3) + (rnd() - 0.5) * 4, cr = 1.5 + rnd();
+          fg.fillStyle = PAL.flourShade; fg.beginPath(); fg.arc(cx + 0.8, cy + 0.8, cr, 0, 6.2832); fg.fill();
+          fg.fillStyle = '#FFFDF8'; fg.beginPath(); fg.arc(cx, cy, cr, 0, 6.2832); fg.fill();
+        }
+      }
+    }
   }
+  // cells whose middle is inside the 14-unit disc are ploughed. (Not a whole 3 x 3 block: that reached past the van's nose,
+  // so the flour ahead always counted as already gone, and nothing was banked or thrown.)
   const cx = (x - b[0]) / CELL | 0, cy = (y - b[1]) / CELL | 0;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const u = cx + i, v = cy + j; if (u >= 0 && v >= 0 && u < cw && v < ch) wiped[v * cw + u] = 1; }
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const u = cx + i, v = cy + j, ex = b[0] + (u + 0.5) * CELL - x, ey = b[1] + (v + 0.5) * CELL - y;
+    if (u >= 0 && v >= 0 && u < cw && v < ch && ex * ex + ey * ey < 196) wiped[v * cw + u] = 1;
+  }
 }
 
 // called every 6 units of travel with the van's position and unit heading. Returns what was ploughed (0, 1, 2).
 export function stamp(x, y, hx, hy) {
-  const surf = surfaceAt(x, y), px = -hy, py = hx, bx = x - hx * 9, by = y - hy * 9;
-  const L = [bx + px * 9, by + py * 9], Rr = [bx - px * 9, by - py * 9];
+  const px = -hy, py = hx, bx = x - hx * 12, by = y - hy * 12;
+  const L = [bx + px * 11.7, by + py * 11.7], Rr = [bx - px * 11.7, by - py * 11.7];
+  const sL = surfaceAt(L[0], L[1]), sR = surfaceAt(Rr[0], Rr[1]);
   let ploughed = 0;
-  if (surf === 'block') { ploughed = flourAt(x, y); wipe(x, y, hx, hy); }
-  if (last && surf && surf !== 'hub' && last.surf === surf && Math.hypot(L[0] - last.L[0], L[1] - last.L[1]) < 30) {
-    const seg = (a, c) => { tg.beginPath(); tg.moveTo(a[0], a[1]); tg.lineTo(c[0], c[1]); tg.stroke(); };
-    if (surf === 'mat') {                    // the line of light
-      tg.lineCap = 'butt'; tg.strokeStyle = rgba(PAL.pink, 0.2); tg.lineWidth = 15; seg(last.L, L); seg(last.R, Rr);
-      tg.strokeStyle = rgba(PAL.pink, 0.5); tg.lineWidth = 7; seg(last.L, L); seg(last.R, Rr);
-      tg.lineCap = 'round'; tg.strokeStyle = '#FFE3EB'; tg.lineWidth = 2.8; seg(last.L, L); seg(last.R, Rr);
-    } else {
-      tg.lineCap = 'round'; tg.lineWidth = 2.8;
-      tg.strokeStyle = surf === 'desk' ? 'rgba(96,110,128,.22)' : 'rgba(74,38,16,.2)';
-      seg(last.L, L); seg(last.R, Rr);
-    }
-  }
-  last = { L, R: Rr, surf };
+  if (surfaceAt(x, y) === 'block') { ploughed = flourAt(x + hx * NOSE, y + hy * NOSE); wipe(x, y, hx, hy, ploughed); }   // what the nose is pushing into
+  if (last && Math.hypot(L[0] - last.L[0], L[1] - last.L[1]) < 30) { mark(last.L, L, last.sL, sL); mark(last.R, Rr, last.sR, sR); }
+  last = { L, R: Rr, sL, sR };
   return ploughed;
 }
-
-// ---------------- the headlight wedge: apex at the nose, 260 long, 22 degrees either side ----------------
-export function wedgePath(ctx, van) {
-  const a = van.a, ax = van.x + Math.cos(a) * 22, ay = van.y + Math.sin(a) * 22, d = 0.384, Rr = 260 / Math.cos(d);
-  ctx.moveTo(ax, ay); ctx.lineTo(ax + Math.cos(a - d) * Rr, ay + Math.sin(a - d) * Rr); ctx.lineTo(ax + Math.cos(a + d) * Rr, ay + Math.sin(a + d) * Rr); ctx.closePath();
+// One tyre's mark from a to c. Its colour comes from the surface under that tyre, at both ends, never from the surface
+// under the middle of the van: so no pink runs out onto the desk, and no grey onto the mat.
+function mark(a, c, s0, s1) {
+  if (!s1 || s1 === 'hub' || s0 !== s1) return;
+  const seg = () => { tg.beginPath(); tg.moveTo(a[0], a[1]); tg.lineTo(c[0], c[1]); tg.stroke(); };
+  if (s1 === 'mat') {                        // the line of light
+    tg.lineCap = 'butt'; tg.strokeStyle = rgba(PAL.pink, 0.2); tg.lineWidth = 15; seg();
+    tg.strokeStyle = rgba(PAL.pink, 0.5); tg.lineWidth = 7; seg();
+    tg.lineCap = 'round'; tg.strokeStyle = '#FFE3EB'; tg.lineWidth = 2.8; seg();
+  } else {
+    tg.lineCap = 'round'; tg.lineWidth = 3.2;
+    tg.strokeStyle = s1 === 'desk' ? 'rgba(96,110,128,.22)' : 'rgba(74,38,16,.2)'; seg();
+  }
 }
 
+// ---------------- the headlight wedge: apex at the nose, 22 degrees either side. 260 long on the mat, shorter elsewhere ----------------
+export function wedgePath(ctx, van, len = 260) {
+  const a = van.a, ax = van.x + Math.cos(a) * 28, ay = van.y + Math.sin(a) * 28, d = 0.384, Rr = len / Math.cos(d);
+  ctx.moveTo(ax, ay); ctx.lineTo(ax + Math.cos(a - d) * Rr, ay + Math.sin(a - d) * Rr); ctx.lineTo(ax + Math.cos(a + d) * Rr, ay + Math.sin(a + d) * Rr); ctx.closePath();
+}
+// the same wedge cut off by a circle of radius r round the nose: a hot spot that ends in an arc, not in a straight chord
+export function sectorPath(ctx, van, r) {
+  const a = van.a, ax = van.x + Math.cos(a) * 28, ay = van.y + Math.sin(a) * 28, d = 0.384;
+  ctx.moveTo(ax, ay); ctx.arc(ax, ay, r, a - d, a + d); ctx.closePath();
+}
 // ---------------- paper: point bodies. Pushed, they fly, slide off the desk edge and are gone for good ----------------
 export const paper = { inPile: false, hits: 0 };
 export function updatePaper(dt, van) {
@@ -173,10 +280,14 @@ export function drawParts(ctx, spr, v) {
   const K = v.s;
   for (const p of P) {
     const u = p.t / p.life;
-    if (p.k < 2) {
-      const sz = p.size * (0.6 + u * 1.5), im = p.k ? spr.steam.c : spr.puff.c;
-      ctx.globalAlpha = (p.k ? 0.5 : 0.75) * (1 - u) * (u < 0.15 ? u / 0.15 : 1);
-      ctx.drawImage(im, p.x - sz, p.y - sz, sz * 2, sz * 2);
+    if (p.k === 0) {                                    // thrown flour: a hard disc that hops (up to 10 units) and leaves its shadow on the ground
+      const rr = p.size * (1 - u * u * u), lift = 10 * Math.sin(Math.PI * u), d = rr * 2;
+      ctx.drawImage(spr.fshad.c, p.x + lift * 0.75 - rr, p.y + lift * 0.5 - rr, d, d);
+      ctx.drawImage(spr.fdisc.c, p.x - rr, p.y - lift - rr, d, d);
+    } else if (p.k === 1) {
+      const sz = p.size * (0.6 + u * 1.5);
+      ctx.globalAlpha = 0.5 * (1 - u) * (u < 0.15 ? u / 0.15 : 1);
+      ctx.drawImage(spr.steam.c, p.x - sz, p.y - sz, sz * 2, sz * 2); ctx.globalAlpha = 1;
     } else if (p.k === 2) {
       const c = Math.cos(p.a) * K, n = Math.sin(p.a) * K * (0.4 + 0.6 * Math.abs(Math.cos(p.a * 1.7)));
       ctx.globalAlpha = u > 0.7 ? (1 - u) / 0.3 : 1;

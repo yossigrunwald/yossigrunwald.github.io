@@ -5,13 +5,13 @@ export const MEDIA = '../media/';          // launch: move the tree up one level
 export const STAGE = 1;                    // finds with data-stage <= STAGE are live (1 = the hub slice)
 
 export const PAL = {
-  floor: '#23282B',
+  floor: '#23282B', floorSeam: '#1B1F22',
   desk: '#EDF1F4', deskShade: '#C5D0DA', sheet: '#FBFCFD', scribble: '#A9B4BF',
   gold: '#F2B411', goldDeep: '#A66F00',
   wood: '#B8743B', grain: '#8F5426', routed: '#4A2610',
   flour: '#F7F3EA', flourShade: '#D9CDB8',
   blue: '#2F6BDE', blueTape: '#78AEEB',
-  mat: '#0C1614', matGrid: '#1B2B27', matLit: '#1E322D', matLitGrid: '#35524A', matThing: '#142220',
+  mat: '#0C1614', matGrid: '#1B2B27', matLit: '#1E322D', matLitGrid: '#3F6358', matThing: '#142220',
   pink: '#FF4D7D', pinkTape: '#FF6F91',
   masking: '#E6D7AE', ink: '#14110F',
   van: '#F4F1E8', glass: '#1D2A30', rack: '#C9CED2',
@@ -38,6 +38,17 @@ export const G = {
 };
 export const HUB_R = 160;
 export const BOX = [-700, -800, 700, 520];           // world box of everything drivable in this stage
+// Where the slice cuts through a bigger table the edge is taped off, and a ghost of the table carries on beyond it.
+// GHOST: each table's rect grown past its cut edges. CUTS: the tape bands [x0, y0, x1, y1, vertical, onMat].
+export const GHOST = { desk: [-460, -964, 460, -110], block: [-864, -110, -110, 684], strip: [-110, 110, 110, 684], mat: [110, -110, 864, 684] };
+export const CUTS = [
+  [-472, -820, 472, -796, 0, 0],                     // desk, north
+  [-720, -122, -696, 532, 1, 0],                     // block, west
+  [696, -122, 720, 532, 1, 1],                       // mat, east
+  [-712, 516, 110, 540, 0, 0],                       // block and strip, south
+  [110, 516, 712, 540, 0, 1]                         // mat, south
+];
+export const EDGE = 26;                              // the van's centre stops this far inside an edge: its nose reaches the tape
 export const SPAWN = { x: 0, y: 20 };
 
 const inR = (r, x, y) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3];
@@ -49,9 +60,9 @@ export function surfaceAt(x, y) {
   if (inR(G.strip, x, y)) return 'strip';
   return null;
 }
-// the van may stand here: its centre and four probes 14 units out must all be on a table
+// the van may stand here: its centre and four probes half a van-length out must all be on a table
 export function standable(x, y) {
-  const m = 14;
+  const m = EDGE;
   return !!(surfaceAt(x, y) && surfaceAt(x - m, y) && surfaceAt(x + m, y) && surfaceAt(x, y - m) && surfaceAt(x, y + m));
 }
 export function clampToWorld(x, y) {
@@ -62,6 +73,13 @@ export function clampToWorld(x, y) {
     if (standable(px, py)) return [px, py];
   }
   return [bx, by];
+}
+
+// distance from a point to a collider's surface (0 or less = inside)
+export function collDist(c, x, y) {
+  if (c.t === 'c') return Math.hypot(x - c.x, y - c.y) - c.r;
+  const qx = x < c.x0 ? c.x0 : x > c.x1 ? c.x1 : x, qy = y < c.y0 ? c.y0 : y > c.y1 ? c.y1 : y;
+  return Math.hypot(x - qx, y - qy);
 }
 
 // Waypoint graph (spec 9.4): the nodes inside the slice. Used when the autopilot is stuck.
@@ -88,7 +106,7 @@ export function readFinds(doc = document) {
       id: d.find, track: d.track, x: +d.x, y: +d.y, tab: d.tab || '', stage: +d.stage || 9,
       live: (+d.stage || 9) <= STAGE,
       head: q('[data-head]'), line: q('[data-line]'), date: q('[data-date]'), after: q('[data-after]'),
-      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || '',
+      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || '', go: d.go || null,
       el, found: false, foundAt: 0
     });
   });
@@ -131,8 +149,10 @@ export function makeSheets(cards) {
 }
 
 // ---- flour drifts on the near block (centre, radius). Seeded shapes are drawn in surfaces.js ----
+// The last two are small: the spill at the sack's foot, and the untouched heap behind the sack that gives the cake away.
 export const DRIFTS = [
-  { x: -385, y: 255, r: 86 }, { x: -585, y: 95, r: 72 }, { x: -205, y: 410, r: 74 }, { x: -600, y: 415, r: 84 }
+  { x: -385, y: 255, r: 58 }, { x: -585, y: 95, r: 50 }, { x: -205, y: 410, r: 52 }, { x: -600, y: 415, r: 58 },
+  { x: -474, y: 104, r: 26 }, { x: -432, y: -74, r: 34 }
 ];
 
 // ---- shared, mutable game state ----

@@ -6,9 +6,10 @@ const VMAX = 340, ACC = 1500, BRAKE = 900, TURN = 720 * Math.PI / 180;
 
 export const van = {
   x: SPAWN.x, y: SPAWN.y, px: SPAWN.x, py: SPAWN.y, vx: 0, vy: 0, a: -Math.PI / 2, speed: 0,
-  lights: false, drag: 1, cn: null, cs: null, odo: 0, squash: 0, slideC: null, slideSide: 0, push: 0
+  lights: true, drag: 1, cn: null, cs: null, odo: 0, squash: 0, edgeAt: -9, slideC: null, slideSide: 0, push: 0
 };
-export const input = { stick: null, dx: 0, dy: 0, mag: 0, keys: new Set() };
+// hold: the van takes no steering for now (the three-track moment); the stick and the keys are read again when it lifts
+export const input = { stick: null, dx: 0, dy: 0, mag: 0, keys: new Set(), hold: false, last: null };
 export const auto = { on: false, x: 0, y: 0, speed: 300, prop: null, stuck: 0, via: null, tried: false, slideC: null, slideSide: 0, done: null, idle: false };
 
 let bumpFn = null;
@@ -58,17 +59,20 @@ export function step(dt) {
   van.px = van.x; van.py = van.y;
   let dx = 0, dy = 0, mag = 0, human = false;
   const k = input.keys;
-  if (k.size) {
+  if (k.size && !input.hold) {
     dx = (k.has('r') ? 1 : 0) - (k.has('l') ? 1 : 0); dy = (k.has('d') ? 1 : 0) - (k.has('u') ? 1 : 0);
     const l = Math.hypot(dx, dy); if (l) { dx /= l; dy /= l; mag = 1; human = true; }
   }
-  if (!mag && input.mag > 0) { dx = input.dx; dy = input.dy; mag = input.mag; human = true; }
+  if (!mag && input.mag > 0 && !input.hold) { dx = input.dx; dy = input.dy; mag = input.mag; human = true; }
   const cn = van.cn;
   if (human) {
-    // never stuck: the bump lands first; after a quarter second of pushing, the push is bent round whatever is in the way
-    let worst = 0; if (van.cs) for (const q of van.cs) { const d = dx * q.nx + dy * q.ny; if (d < worst) worst = d; }
+    // never stuck: the bump lands first; after a quarter second of pushing, the push is bent round whatever is in the way.
+    // Not round a thing whose label has only just gone up, though: for 1.5 s a held thumb keeps the van at what it found,
+    // so a find is an arrival and not something the van curls past.
+    let worst = 0, wq = null; if (van.cs) for (const q of van.cs) { const d = dx * q.nx + dy * q.ny; if (d < worst) { worst = d; wq = q; } }
     van.push = worst < -0.7 ? van.push + dt : 0;
-    if (van.push > 0.25) { const r = around(dx, dy, van, null, 0.95); if (r) { dx = r[0]; dy = r[1]; } }
+    const wf = wq && wq.c.prop && (wq.c.prop.find || wq.c.prop.say), fresh = wf && S.rt - (wf.labAt === undefined ? -9 : wf.labAt) < 1.5;
+    if (van.push > 0.25 && !fresh) { const r = around(dx, dy, van, null, 0.95); if (r) { dx = r[0]; dy = r[1]; } }
     if (!cn) van.slideC = null;
   }
 
@@ -142,11 +146,15 @@ export function step(dt) {
     }
   }
 
-  // open table edges: no drone in this stage, so the van slides along the edge instead of falling
+  // table edges: no drone in this stage, so the van stops with its nose at the edge (or the tape) and slides along it.
+  // Running into it at speed gives the van a small squash, so the stop reads as an edge and not as a fault.
   if (!standable(nx, ny)) {
-    if (standable(nx, van.y)) { ny = van.y; van.vy = 0; }
-    else if (standable(van.x, ny)) { nx = van.x; van.vx = 0; }
-    else { nx = van.x; ny = van.y; van.vx = van.vy = 0; }
+    let hit;
+    if (standable(nx, van.y)) { ny = van.y; hit = Math.abs(van.vy); van.vy = 0; }
+    else if (standable(van.x, ny)) { nx = van.x; hit = Math.abs(van.vx); van.vx = 0; }
+    else { nx = van.x; ny = van.y; hit = Math.hypot(van.vx, van.vy); van.vx = van.vy = 0; }
+    if (hit > 90 && S.rt - van.edgeAt > 0.3) van.squash = 1;
+    van.edgeAt = S.rt;
   }
 
   van.odo += Math.hypot(nx - van.x, ny - van.y);
@@ -159,44 +167,58 @@ export function step(dt) {
 }
 
 // ---- pointer and keyboard ----
-// h: { first(), tap(worldX, worldY), toWorld(clientX, clientY), w() -> viewport width, live() }
+// The stick vector from where the thumb is now. Also called by main.js when a thumb that stayed down gets the van back.
+export function readStick(s) {
+  if (!s || s.dead || s.edge) { input.mag = 0; return; }
+  let dx = s.x - s.cx, dy = s.y - s.cy, d = Math.hypot(dx, dy);
+  if (d > 90) { s.cx = s.x - dx / d * 90; s.cy = s.y - dy / d * 90; d = 90; }       // the stick centre follows the thumb
+  if (d > 8) {
+    input.dx = dx / d; input.dy = dy / d; input.mag = Math.min(1, (d - 8) / 56);
+    if (!s.live) { s.live = true; stopAuto(); }
+  } else input.mag = 0;
+}
+// h: { first() -> 0 | 1 | 2, tap(worldX, worldY), toWorld(clientX, clientY), w() -> viewport width, live() }
+// first(): 0 an ordinary touch · 1 swallowed, it steers nothing for now · 2 it ended something: it may steer, it is not a tap
 export function bindInput(cv, h) {
   let pid = null;
   const end = (e, cancel) => {
     if (e.pointerId !== pid) return;
     const s = input.stick; pid = null; input.stick = null; input.mag = 0;
     try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
-    if (s) input.last = { ms: Math.round(performance.now() - s.t), moved: Math.round(s.moved), live: s.live, cancel };
-    if (s && !cancel && !s.live && !s.dead && performance.now() - s.t < 200 && s.moved < 10) h.tap(s.wx, s.wy);    // where the thumb landed, in the world as it was then
+    if (!s) return;
+    const ms = performance.now() - s.t;
+    input.last = { ms: Math.round(ms), moved: Math.round(s.moved), live: s.live, cancel };
+    // A tap is a press that never moved 10 px. A still press cannot be a drag, so slow and deliberate taps count too.
+    if (!cancel && !s.live && !s.noTap && s.moved < 10 && ms < 700) h.tap(s.wx, s.wy);   // where the thumb landed, in the world as it was then
   };
   cv.addEventListener('pointerdown', e => {
     if (pid !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    if (e.pointerType === 'touch' && (e.clientX < 20 || e.clientX > h.w() - 20)) return;      // iOS back swipe
+    // within 20 px of the left or right edge (the iOS back swipe) a drag steers nothing; a tap there still counts
+    const edge = e.pointerType === 'touch' && (e.clientX < 20 || e.clientX > h.w() - 20);
     pid = e.pointerId;
     try { cv.setPointerCapture(pid); } catch (err) { /* synthetic pointers cannot be captured */ }
     const w = h.toWorld(e.clientX, e.clientY);
-    input.stick = { cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, live: false, wx: w[0], wy: w[1], dead: false };
-    input.stick.dead = !!h.first(); e.preventDefault();          // a touch that only dismisses something steers nothing
+    const s = input.stick = { cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, live: false, wx: w[0], wy: w[1], dead: false, noTap: false, edge };
+    const r = h.first(); s.dead = r === 1; s.noTap = r > 0;
+    // Not for touch: cancelling a touch's pointerdown can drop the click that follows the tap (WebKit), and that click
+    // is one of the ways a screen is played. touch-action, user-select and the touchmove handler already stop scroll and zoom.
+    if (e.pointerType === 'mouse') e.preventDefault();
   });
   cv.addEventListener('pointermove', e => {
     if (e.pointerId !== pid) return;
-    const s = input.stick; if (s.dead) return; s.x = e.clientX; s.y = e.clientY;
-    let dx = s.x - s.cx, dy = s.y - s.cy, d = Math.hypot(dx, dy);
-    if (d > s.moved) s.moved = d;
-    if (d > 90) { s.cx = s.x - dx / d * 90; s.cy = s.y - dy / d * 90; d = 90; }       // the stick centre follows the thumb
-    if (d > 8) {
-      input.dx = dx / d; input.dy = dy / d; input.mag = Math.min(1, (d - 8) / 56);
-      if (!s.live) { s.live = true; stopAuto(); }
-    } else input.mag = 0;
+    const s = input.stick; s.x = e.clientX; s.y = e.clientY;
+    const d = Math.hypot(s.x - s.cx, s.y - s.cy); if (d > s.moved) s.moved = d;
+    if (!input.hold) readStick(s);
   });
   cv.addEventListener('pointerup', e => end(e, false));
   cv.addEventListener('pointercancel', e => end(e, true));
+  cv.addEventListener('lostpointercapture', e => end(e, true));       // a touch that vanishes without an up or a cancel must not leave the stick held
   cv.addEventListener('contextmenu', e => e.preventDefault());
 
   const KEY = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
   addEventListener('keydown', e => {
     const k = KEY[e.code]; if (!k || e.metaKey || e.ctrlKey || e.altKey || !h.live()) return;
-    if (h.first()) return; input.keys.add(k); stopAuto(); e.preventDefault();
+    if (h.first() === 1) return; input.keys.add(k); stopAuto(); e.preventDefault();
   });
   addEventListener('keyup', e => { const k = KEY[e.code]; if (k) input.keys.delete(k); });
   addEventListener('blur', () => { input.keys.clear(); });
