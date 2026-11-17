@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Yossi Grunwald — resume</title>
+<meta name="description" content="Yossi Grunwald. Founder, baker, director. Built the app, bakes the bread, directs the video.">
+<meta name="theme-color" content="#23282B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2323282B'/%3E%3Crect x='10' y='22' width='44' height='22' rx='6' fill='%23F4F1E8'/%3E%3Crect x='10' y='32' width='44' height='5' fill='%23F2B411'/%3E%3Crect x='16' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3Crect x='39' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/big-shoulders-stencil-900.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/shantell-sans-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/overpass-var.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Big Shoulders Stencil";font-style:normal;font-weight:900;font-display:swap;src:url(fonts/big-shoulders-stencil-900.woff2) format("woff2")}
+@font-face{font-family:"Shantell Sans";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/shantell-sans-700.woff2) format("woff2")}
+@font-face{font-family:"Overpass";font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/overpass-var.woff2) format("woff2")}
+:root{--floor:#23282B;--ink:#14110F;--bone:#F4F1E8;--desk:#EDF1F4;--gold:#F2B411;--blue:#2F6BDE;--bluetape:#78AEEB;--pink:#FF4D7D;--pinktape:#FF6F91;--masking:#E6D7AE;
+--stencil:"Big Shoulders Stencil","Arial Narrow","Haettenschweiler",Impact,sans-serif;--hand:"Shantell Sans","Segoe Print","Comic Sans MS",cursive;--road:"Overpass","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--desk);color:var(--ink);font:400 17px/1.5 var(--road)}
+svg.ar{width:1.05em;height:.62em;vertical-align:.04em;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+svg.tri{width:.72em;height:.8em;vertical-align:-.04em;fill:currentColor}
+.md{display:inline-block;width:.27em}
+#stage{display:none}
+html.g,html.g body{height:100%;overflow:hidden;overscroll-behavior:none}
+html.g body{background:var(--floor);position:fixed;inset:0;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.g #plain{display:none}
+html.g #stage{display:block;position:fixed;inset:0;height:100dvh;overflow:hidden}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;overscroll-behavior:none;opacity:0;transition:opacity .2s linear;outline:0}
+#stage.on #c{opacity:1}
+#first{position:absolute;left:50%;top:calc(50% + 46px);transform:translate(-50%,-50%);text-align:center;color:var(--bone);pointer-events:none;transition:opacity .3s linear,transform .3s ease-out;width:max-content}
+#first .fn{margin:0;font:900 min(12.4vw,62px)/.86 var(--stencil);letter-spacing:.01em;text-transform:uppercase;white-space:nowrap}
+#first .fr{margin:9px 0 0;font:900 min(4.6vw,23px)/1 var(--stencil);letter-spacing:.09em;text-transform:uppercase;color:#C9CED2;white-space:nowrap}
+#stage.on #first{opacity:0;transform:translate(-50%,-50%) scale(.66)}
+#hud{position:absolute;left:0;right:0;top:0;height:0;z-index:5;font-family:var(--road)}
+#toplain{position:absolute;z-index:6;right:calc(4px + env(safe-area-inset-right));top:calc(2px + env(safe-area-inset-top));height:44px;min-width:44px;padding:0 6px;display:flex;align-items:center;text-decoration:none}
+#toplain span{display:block;background:var(--ink);color:var(--bone);font:700 11px/1 var(--road);letter-spacing:.09em;text-transform:uppercase;padding:7px 7px 5px;border-radius:2px;box-shadow:0 0 0 1.5px var(--bone),2.5px 2.5px 0 1.5px rgba(20,17,15,.4)}
+#tm{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(11px + env(safe-area-inset-top));display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;row-gap:5px;filter:drop-shadow(2px 2px 0 rgba(20,17,15,.4))}
+#tm .case{width:24px;height:24px;border-radius:6px 3px 3px 6px;background:var(--ink);box-shadow:inset 0 0 0 1.5px var(--bone);position:relative}
+#tm .case::after{content:"";position:absolute;left:7px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+#tm .blade{height:24px;min-width:34px;margin-left:-1px;padding:0 9px 4px 6px;display:flex;align-items:center;justify-content:flex-end;gap:1px;background:linear-gradient(var(--ink),var(--ink)) right/3px 100% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 3.2px) left bottom/100% 3px no-repeat,var(--gold);border:1.5px solid var(--ink);border-left:0;color:var(--ink);transition:width .18s steps(5,end)}
+#tm b{font:900 18px/1 var(--stencil);padding-top:2px}
+#tm small{font:900 11px/1 var(--stencil);opacity:.8;padding-top:7px}
+#tm .lamps{grid-column:1/3;display:flex;gap:6px;padding-left:3px}
+#tm .lamps i{width:10px;height:10px;background:#454C50;box-shadow:0 0 0 1.5px var(--ink)}
+#tm .lamps .lk{border-radius:50%}
+#tm .lamps .lv{box-shadow:none;clip-path:polygon(50% 0,100% 100%,0 100%);width:12px;height:11px;background:var(--ink);position:relative}
+#tm .lamps .lv::after{content:"";position:absolute;inset:2.6px 2.4px 1.5px;clip-path:polygon(50% 0,100% 100%,0 100%);background:#454C50}
+#chip{position:absolute;left:calc(50% - 8px);top:calc(3px + env(safe-area-inset-top));transform:translateX(-50%) rotate(-1.6deg);padding:7px 0;text-decoration:none;color:var(--ink);white-space:nowrap;filter:drop-shadow(2px 2.5px 0 rgba(20,17,15,.4))}
+#chip>span{display:block;background:var(--ink);padding:1.5px;clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 17%,calc(100% - 4px) 33%,100% 50%,calc(100% - 4px) 67%,100% 83%,calc(100% - 4px) 100%,4px 100%,0 83%,4px 67%,0 50%,4px 33%,0 17%)}
+#chip b{display:block;background:var(--gold);font:700 13px/1 var(--road);letter-spacing:.02em;padding:8px 12px 6px;clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 17%,calc(100% - 4px) 33%,100% 50%,calc(100% - 4px) 67%,100% 83%,calc(100% - 4px) 100%,4px 100%,0 83%,4px 67%,0 50%,4px 33%,0 17%)}
+#chip em{font:900 16px/.8 var(--stencil);font-style:normal;letter-spacing:.03em}
+#chip svg.tri{margin-right:3px}
+@media (max-width:359px){#chip{left:calc(50% - 14px)}#chip b{font-size:11.5px;padding:8px 8px 6px}#chip em{font-size:14px}#toplain span{letter-spacing:.05em;padding:7px 5px 5px}}
+a:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+</style>
+<link rel="stylesheet" href="game.css">
+<script>
+/* The page is the plain resume. This swaps to the game only when it can run (spec 10). */
+(function(w,d){var h=d.documentElement,ok=false;
+try{ok=!!d.createElement('canvas').getContext('2d')&&'noModule' in w.HTMLScriptElement.prototype}catch(e){}
+if(!ok)return;h.classList.add('can');
+var q=location.search+location.hash,rm=false,sd=false;
+try{rm=w.matchMedia('(prefers-reduced-motion: reduce)').matches;sd=!!(navigator.connection&&navigator.connection.saveData)}catch(e){}
+if(!/[?#&]plain\b/.test(q)&&!rm&&!sd)h.classList.add('g');
+w.ygDead=function(){w.ygOff=1;h.classList.remove('g','can')};
+w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);try{history.replaceState(null,'',game?location.pathname+location.search:'#plain')}catch(e){}if(!game)w.scrollTo(0,0);d.dispatchEvent(new Event('ygview'))};
+d.addEventListener('click',function(e){var t=e.target,a=t&&t.closest?t.closest('[data-view],[data-mail]'):null;if(!a)return;e.preventDefault();
+if(a.hasAttribute('data-view')){w.ygView(a.getAttribute('data-view')==='play');return}
+var m=['grunwaldyossi','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.href='mailto:'+m;location.href=a.href});
+})(window,document);
+</script>
+<link rel="modulepreload" href="js/main.js">
+<link rel="modulepreload" href="js/world.js">
+<link rel="modulepreload" href="js/art.js">
+<link rel="modulepreload" href="js/van.js">
+<link rel="modulepreload" href="js/surfaces.js">
+<link rel="modulepreload" href="js/finds.js">
+<link rel="modulepreload" href="js/ui.js">
+<link rel="modulepreload" href="js/audio.js">
+</head>
+<body>
+
+<!-- THE GAME: canvas and HUD. Hidden unless the inline script above decided the game can run. -->
+<div id="stage">
+  <a id="toplain" href="#plain" data-view="plain"><span>plain resume</span></a>
+  <canvas id="c" aria-hidden="true" tabindex="-1"></canvas>
+  <div id="first" aria-hidden="true">
+    <p class="fn">Yossi Grunwald</p>
+    <p class="fr">Founder · Baker · Director</p>
+  </div>
+  <div id="hud">
+    <div id="tm" role="status" aria-label="Finds">
+      <span class="case"></span><span class="blade"><b id="tmn">0</b><small id="tmt"></small></span>
+      <span class="lamps" aria-hidden="true"><i class="lw"></i><i class="lk"></i><i class="lv"></i></span>
+    </div>
+    <a id="chip" href="../media/ad1-workeey.mp4"><span><b><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> first ad <span class="md">·</span> <em>0:30</em></b></span></a>
+  </div>
+  <div id="labels" aria-live="polite"></div>
+  <div id="three" hidden>
+    <p class="s0"><b>One person —</b></p>
+    <p class="s1" data-track="w">built the app ·</p>
+    <p class="s2" data-track="k">bakes the bread ·</p>
+    <p class="s3" data-track="v">directs the video.</p>
+    <p class="s4"><span id="more"></span> more on the table</p>
+  </div>
+  <button id="pill" type="button" hidden><span class="pp" aria-hidden="true"><svg viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></span><span class="pt"></span></button>
+  <div id="player" hidden>
+    <video playsinline controls preload="none"></video>
+    <button id="px" type="button" aria-label="Close the video"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
+  </div>
+</div>
+
+<!-- THE DOCUMENT: the plain resume, and the single source of every word and coordinate the game shows.
+     data-find = id · data-track = w (Workeey) k (kitchen) v (video) a (also) c (contact) · data-x / data-y = world position
+     data-tab = the one-word tab · data-stage = build stage that switches the find on (1 = the hub slice, live now). -->
+<main id="plain">
+  <header class="top">
+    <a class="play" href="./" data-view="play">play it instead</a>
+    <h1 data-name>Yossi Grunwald</h1>
+    <p class="roles" data-roles>Founder · Baker · Director</p>
+    <p class="sum"><b>One person</b> — built the app <span class="md">·</span> bakes the bread <span class="md">·</span> directs the video.</p>
+  </header>
+
+  <section id="watch" aria-labelledby="h-watch">
+    <h2 id="h-watch"><span>Watch</span></h2>
+    <ol class="reel">
+      <li class="big" data-for="ad1">
+        <video controls playsinline preload="none" poster="../media/ad1-workeey.jpg" src="../media/ad1-workeey.mp4"></video>
+        <p><b>Workeey — my first ad</b> <span>0:30 <span class="md">·</span> my edit, my sound</span></p>
+      </li>
+      <li data-for="ad2">
+        <video controls playsinline preload="none" poster="../media/ad2-one-line.jpg" src="../media/ad2-one-line.mp4"></video>
+        <p><b>Ad 2 — one line</b> <span>1:30</span></p>
+      </li>
+      <li data-for="ad3">
+        <video controls playsinline preload="none" poster="../media/ad3-blender-v7.jpg" src="../media/ad3-blender-v7.mp4"></video>
+        <p><b>Ad 3 — Blender</b> <span>0:40</span></p>
+      </li>
+      <li data-for="skit1">
+        <video controls playsinline preload="none" poster="../media/skit-20.jpg" src="../media/skit-20.mp4"></video>
+        <p><b>Skit — Her Wi-Fi</b> <span>0:20</span></p>
+      </li>
+      <li data-for="skit2">
+        <video controls playsinline preload="none" poster="../media/skit-21b.jpg" src="../media/skit-21b.mp4"></video>
+        <p><b>Skit — Fixed Itself</b> <span>0:13</span></p>
+      </li>
+      <li data-for="skit3">
+        <video controls playsinline preload="none" poster="../media/skit-23.jpg" src="../media/skit-23.mp4"></video>
+        <p><b>Skit — The Burgers</b> <span>0:17</span></p>
+      </li>
+      <li class="yt" data-for="camp">
+        <a href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener"><img src="../media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt="" loading="lazy"><span><b>Camp Chaburah</b> the 2023 summer film <span class="md">·</span> YouTube</span></a>
+      </li>
+      <li class="yt" data-for="promo">
+        <a href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener"><img src="../media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt="" loading="lazy"><span><b>The promo</b> Camp Chaburah, 2023 <span class="md">·</span> YouTube</span></a>
+      </li>
+      <li class="yt" data-for="colorwar">
+        <a href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener"><img src="../media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt="" loading="lazy"><span><b>Color war</b> the general's entrance <span class="md">·</span> YouTube</span></a>
+      </li>
+      <li class="yt" data-for="aug2025">
+        <a href="https://www.youtube.com/watch?v=xI7ifRNVhD4" target="_blank" rel="noopener"><img src="../media/yt-xI7ifRNVhD4.jpg" width="320" height="180" alt="" loading="lazy"><span><b>August 2025</b> YouTube</span></a>
+      </li>
+    </ol>
+  </section>
+
+  <section id="workeey" class="tw" aria-labelledby="h-w">
+    <h2 id="h-w"><span>Workeey</span></h2>
+    <ul class="finds">
+      <li data-find="ad1" data-track="w" data-x="0" data-y="-300" data-tab="WORKEEY" data-stage="1"
+          data-video="ad1-workeey" data-len="0:30" data-pill="Play first ad · 0:30 · sound on" data-lure="My first ad">
+        <b data-head>Workeey — my app.</b> <span data-line>Founder, July 2026 <svg class="ar" viewBox="0 0 20 12" role="img" aria-label="to"><path d="M1 6h17M12.5 1 18.5 6l-6 5"/></svg> now.</span>
+        <span data-after>my edit, my sound.</span>
+      </li>
+      <li data-find="app" data-track="w" data-x="0" data-y="-1340" data-tab="THE APP" data-stage="2">
+        <b data-head>One free app.</b> <span data-line>Runs a small trade business in one place.</span>
+        <ul class="cards" data-cards aria-label="What it does">
+          <li data-card data-x="-250" data-y="-470" data-stage="1">Jobs</li>
+          <li data-card data-x="240" data-y="-500" data-stage="1">Clients</li>
+          <li data-card data-x="-30" data-y="-610" data-stage="1">Quotes</li>
+          <li data-card data-x="290" data-y="-740" data-stage="2">Invoices</li>
+          <li data-card data-x="-300" data-y="-780" data-stage="2">Card payments</li>
+          <li data-card data-x="60" data-y="-900" data-stage="2">SMS reminders</li>
+          <li data-card data-x="-230" data-y="-1040" data-stage="2">QuickBooks</li>
+          <li data-card data-x="300" data-y="-1070" data-stage="2">Calendar</li>
+          <li data-card data-x="30" data-y="-1190" data-stage="2">Works offline</li>
+        </ul>
+        <span class="links"><a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a> <a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Google Play</a></span>
+      </li>
+      <li data-find="line" data-track="w" data-x="-340" data-y="-1250" data-tab="WHY" data-stage="2">
+        <q data-line>People in the trades should be able to finish the job and go home — not start a second shift of paperwork.</q>
+      </li>
+      <li data-find="solo" data-track="w" data-x="340" data-y="-1250" data-tab="SOLO" data-stage="2">
+        <b data-head>Built solo.</b> <span data-line>AI is the method.</span>
+      </li>
+      <li data-find="ad2" data-track="w" data-x="-380" data-y="-620" data-tab="AD 2" data-stage="2"
+          data-video="ad2-one-line" data-len="1:30" data-pill="Play · 1:30">
+        <b data-head>Ad 2 — one line.</b> <span data-line>One line on white paper. AI voice, AI choir, my cut.</span>
+      </li>
+      <li data-find="ad3" data-track="w" data-x="380" data-y="-900" data-tab="AD 3" data-stage="2"
+          data-video="ad3-blender-v7" data-len="0:40" data-pill="Play · 0:40">
+        <b data-head>Ad 3 — Blender.</b> <span data-line>A worker and a round talking mascot, in 3D.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="kitchen" class="tk" aria-labelledby="h-k">
+    <h2 id="h-k"><span>Kitchen</span></h2>
+    <ul class="finds">
+      <li data-find="bread" data-track="k" data-x="-228" data-y="35" data-tab="BREAD" data-stage="1">
+        <b data-head>The bread.</b> <span data-line>I'm the baker.</span>
+        <small data-date>restaurant <span class="md">·</span> Brooklyn <span class="md">·</span> 2026 <svg class="ar" viewBox="0 0 20 12" role="img" aria-label="to now"><path d="M1 6h17M12.5 1 18.5 6l-6 5"/></svg></small>
+      </li>
+      <li data-find="cake" data-track="k" data-x="-420" data-y="-10" data-tab="CAKE" data-stage="1">
+        <b data-head>And the cake.</b> <span data-line>One cake, really.</span>
+      </li>
+      <li data-find="service" data-track="k" data-x="-600" data-y="200" data-tab="THE LINE" data-stage="4">
+        <b data-head>Service.</b> <span data-line>Cold line, usually. Have worked hot line and dessert. Prep most days.</span>
+      </li>
+      <li data-find="next" data-track="k" data-x="-330" data-y="330" data-tab="NEXT" data-stage="4">
+        <b data-head>Next.</b> <span data-line>Full service — and training the new guy.</span>
+      </li>
+      <li data-find="matzah" data-track="k" data-x="-680" data-y="430" data-tab="MATZAH" data-stage="4">
+        <b data-head>Before this.</b> <span data-line>A season on a timed matzah line.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="video" class="tv" aria-labelledby="h-v">
+    <h2 id="h-v"><span>Video</span></h2>
+    <ul class="finds">
+      <li data-find="skit1" data-track="v" data-x="205" data-y="30" data-tab="VIDEO" data-stage="1"
+          data-video="skit-20" data-len="0:20" data-pill="Play skit · Her Wi-Fi · 0:20">
+        <b data-head>Video — 2021 <svg class="ar" viewBox="0 0 20 12" role="img" aria-label="to"><path d="M1 6h17M12.5 1 18.5 6l-6 5"/></svg> now.</b> <span data-line>Now I direct AI + Blender.</span>
+      </li>
+      <li data-find="skit2" data-track="v" data-x="400" data-y="-40" data-tab="SKIT" data-stage="3"
+          data-video="skit-21b" data-len="0:13" data-pill="Play · 0:13">
+        <b data-head>Skit.</b> <span data-line>Fixed Itself</span>
+      </li>
+      <li data-find="skit3" data-track="v" data-x="590" data-y="50" data-tab="SKIT" data-stage="3"
+          data-video="skit-23" data-len="0:17" data-pill="Play · 0:17">
+        <b data-head>Skit.</b> <span data-line>The Burgers</span>
+      </li>
+      <li data-find="chair" data-track="v" data-x="330" data-y="300" data-tab="DIRECTOR" data-stage="3">
+        <b data-head>Director.</b> <q data-line>What video editors now are is who can prompt AI well to do stuff. And that's me.</q>
+      </li>
+      <li data-find="freelance" data-track="v" data-x="780" data-y="280" data-tab="FREELANCE" data-stage="3">
+        <b data-head>Freelance editor.</b> <span data-line>2021 <svg class="ar" viewBox="0 0 20 12" role="img" aria-label="to"><path d="M1 6h17M12.5 1 18.5 6l-6 5"/></svg> 2026. The camp, plus a few clients.</span>
+      </li>
+      <li data-find="camp" data-track="v" data-x="790" data-y="790" data-tab="CAMP" data-stage="3"
+          data-yt="8qOgSQZAnRg" data-pill="Play the 2023 summer film">
+        <b data-head>Camp Chaburah.</b> <span data-line>Videographer + editor. Four summers, 2021–24.</span>
+      </li>
+      <li data-find="promo" data-track="v" data-x="620" data-y="930" data-tab="PROMO" data-stage="3"
+          data-yt="wlfIZ-MSCxU" data-pill="Play">
+        <b data-head>The promo.</b> <span data-line>Camp Chaburah, 2023.</span>
+      </li>
+      <li data-find="colorwar" data-track="v" data-x="960" data-y="960" data-tab="COLOR WAR" data-stage="3"
+          data-yt="cq0rZWnLQL8" data-pill="Play">
+        <b data-head>Color war.</b> <span data-line>The general's entrance.</span>
+      </li>
+      <li data-find="aug2025" data-track="v" data-x="800" data-y="1050" data-tab="AUG 2025" data-stage="3"
+          data-yt="xI7ifRNVhD4" data-pill="Play">
+        <b data-head>August 2025.</b>
+      </li>
+    </ul>
+    <p class="tools"><b>Tools.</b> Premiere Pro, Photoshop, Blender, AI video, image and voice tools, drone, camera, lighting.</p>
+  </section>
+
+  <section id="also" class="ta" aria-labelledby="h-a">
+    <h2 id="h-a"><span>Also</span></h2>
+    <ul class="finds">
+      <li data-find="ai" data-track="a" data-x="-180" data-y="-1430" data-tab="AI" data-stage="2">
+        <b data-head>Built with AI.</b> <span data-line>An automation for a business, 2026. And a market-research tool.</span>
+      </li>
+      <li data-find="before" data-track="a" data-x="-250" data-y="585" data-tab="BEFORE" data-stage="4">
+        <b data-head>Before.</b> <span data-line>Direct Support Professional, Yedei Chesed, Oct 2024 – Jun 2025. Yeshiva Gadlus Hatorah, 2023–25.</span>
+      </li>
+      <li data-find="hand" data-track="a" data-x="-600" data-y="585" data-tab="BY HAND" data-stage="4">
+        <b data-head>By hand.</b> <span data-line>Woodworking as a kid. Draws and paints.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="contact" class="tc" aria-labelledby="h-c">
+    <h2 id="h-c"><span>Contact</span></h2>
+    <ul class="finds">
+      <li data-find="home" data-track="c" data-x="0" data-y="400" data-tab="HOME" data-stage="4">
+        <b data-head>Say hi.</b>
+        <span class="links">
+          <a href="#contact" data-mail>Email</a>
+          <a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" rel="noopener">LinkedIn</a>
+          <a href="https://www.youtube.com/@coolboredom" target="_blank" rel="noopener">YouTube @coolboredom</a>
+          <a href="https://www.youtube.com/@Workeey-app" target="_blank" rel="noopener">Workeey YouTube</a>
+          <a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">Workeey TikTok</a>
+        </span>
+      </li>
+    </ul>
+    <p class="where">Brooklyn, NY. English + Yiddish.</p>
+  </section>
+</main>
+
+<script type="module" src="js/main.js" onerror="window.ygDead&&window.ygDead()"></script>
+</body>
+</html>
