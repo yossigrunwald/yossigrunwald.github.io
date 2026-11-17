@@ -46,7 +46,7 @@ html.g #stage{display:block;position:fixed;inset:0;height:100dvh;overflow:hidden
 #tm .case{width:24px;height:24px;border-radius:6px 3px 3px 6px;background:var(--ink);box-shadow:inset 0 0 0 1.5px var(--bone);position:relative}
 #tm .case::after{content:"";position:absolute;left:7px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
 #tm .case::before{content:"";position:absolute;left:-3.5px;top:4px;width:3.5px;height:13px;border-radius:2px 0 0 2px;background:var(--ink);box-shadow:inset 1.5px 0 0 var(--bone),inset 0 1.5px 0 var(--bone),inset 0 -1.5px 0 var(--bone)}
-#tm .blade{position:relative;height:24px;min-width:34px;margin-left:-1px;padding:0 10px 4px 6px;display:flex;align-items:center;justify-content:flex-end;gap:3px;background:linear-gradient(var(--ink),var(--ink)) right/3px 100% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 3.2px) left bottom/100% 3px no-repeat,var(--gold);border:1.5px solid var(--ink);border-left:0;color:var(--ink);transition:width .18s steps(5,end)}
+#tm .blade{position:relative;height:24px;min-width:34px;margin-left:-1px;padding:0 10px 4px 6px;display:flex;align-items:center;justify-content:flex-end;gap:3px;background:linear-gradient(var(--ink),var(--ink)) right/3px 100% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px var(--tk,3.2px)) left bottom/100% 3px no-repeat,var(--gold);border:1.5px solid var(--ink);border-left:0;color:var(--ink);transition:width .18s steps(5,end)}
 #tm .blade::after{content:"";position:absolute;right:-1.5px;top:100%;width:3px;height:6px;background:var(--ink)}
 #tm b{font:900 18px/1 var(--stencil);padding-top:2px}
 #tm small{font:700 12px/1 var(--road);padding-top:5px}
@@ -60,9 +60,13 @@ html.g #stage{display:block;position:fixed;inset:0;height:100dvh;overflow:hidden
 #chip b{display:block;background:var(--gold);font:700 13px/1 var(--road);letter-spacing:.02em;padding:8px 12px 6px}
 #chip em{font:900 16px/.8 var(--stencil);font-style:normal;letter-spacing:.03em}
 #chip svg.tri{margin-right:3px}
+#reelb{position:absolute;z-index:6;right:calc(12px + env(safe-area-inset-right));top:calc(47px + env(safe-area-inset-top));width:44px;height:44px;margin:0;padding:1px 0 0;border:0;border-radius:50%;background:var(--bone);color:var(--ink);box-shadow:0 0 0 1.5px var(--ink),2px 2.5px 0 1.5px rgba(20,17,15,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transform:rotate(-5deg);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#reelb svg{width:10px;height:11px;margin-left:2px;fill:currentColor}
+#reelb b{font:900 13px/.8 var(--stencil);letter-spacing:.08em;text-transform:uppercase}
+@media (min-width:700px),(orientation:landscape){#chip{left:calc(178px + env(safe-area-inset-left));transform:rotate(-1.6deg)}}
 @media (max-width:379px){#chip{left:calc(50% - 16px)}#chip b{font-size:12px;padding:8px 9px 6px}#chip em{font-size:15px}#toplain b{letter-spacing:.04em;padding:8px 7px 6px}#tm{left:calc(10px + env(safe-area-inset-left))}}
 @media (max-width:339px){#chip b{font-size:11px;padding:8px 7px 6px}#chip em{font-size:13.5px}#toplain b{font-size:10px;padding:8px 6px 6px}}
-html:not(.js) #plain [data-mail]{display:none}
+html:not(.js) #plain [data-mail],html:not(.js) #plain img[data-src]{display:none}
 a:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 </style>
 <link rel="stylesheet" href="game.css">
@@ -71,11 +75,14 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offse
 (function(w,d){var h=d.documentElement,ok=false;h.classList.add('js');
 function title(g){d.title='Yossi Grunwald — '+(g?'resume':'the paperwork')}
 function hush(){var v=d.querySelectorAll('#plain video'),i;for(i=0;i<v.length;i++)v[i].pause()}
+/* The document's pictures are fetched when the document is shown, not while the game is (they are a third of the first load). */
+function pics(){var m=d.querySelectorAll('#plain img[data-src]'),i;for(i=0;i<m.length;i++){m[i].src=m[i].getAttribute('data-src');m[i].removeAttribute('data-src')}}
+d.addEventListener('DOMContentLoaded',function(){if(!h.classList.contains('g'))pics()});
 /* The document's own buttons work whether or not the game can run. */
 d.addEventListener('click',function(e){var t=e.target,a=t&&t.closest?t.closest('[data-view],[data-mail],[data-play]'):null;if(!a)return;e.preventDefault();
 if(a.hasAttribute('data-view')){if(w.ygView)w.ygView(a.getAttribute('data-view')==='play');return}
 /* Email: the first tap shows the address (never in the source as one string); the next tap is an ordinary mail link. */
-if(a.hasAttribute('data-mail')){var m=['grunwaldyossi','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.href='mailto:'+m;return}
+if(a.hasAttribute('data-mail')){var m=['grunwaldyossi2','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.href='mailto:'+m;return}
 /* A video tile: inside this tap the poster becomes the player, so it plays with sound. */
 var v=d.createElement('video'),im=a.querySelector('img'),li=a.closest('[data-for]');v.controls=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='none';if(im)v.poster=im.currentSrc||im.src;v.src=a.href;
 /* The first ad watched here counts as watched in the game too (its chip goes, its tape gains a line). */
@@ -86,8 +93,8 @@ if(!ok)return;h.classList.add('can');
 var q=location.search+location.hash,rm=false,sd=false;
 try{rm=w.matchMedia('(prefers-reduced-motion: reduce)').matches;sd=!!(navigator.connection&&navigator.connection.saveData)}catch(e){}
 if(!/[?#&]plain\b/.test(q)&&!rm&&!sd){h.classList.add('g');title(1)}
-w.ygDead=function(){w.ygOff=1;h.classList.remove('g','can');title(0)};
-w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);title(game);if(game)hush();try{history.replaceState(null,'',game?location.pathname+location.search:'#plain')}catch(e){}if(!game)w.scrollTo(0,0);d.dispatchEvent(new Event('ygview'))};
+w.ygDead=function(){w.ygOff=1;h.classList.remove('g','can');title(0);pics()};
+w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);title(game);if(game)hush();else pics();try{history.replaceState(null,'',game?location.pathname+location.search:'#plain')}catch(e){}if(!game)w.scrollTo(0,0);d.dispatchEvent(new Event('ygview'))};
 })(window,document);
 </script>
 <link rel="modulepreload" href="js/main.js">
@@ -96,6 +103,11 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);tit
 <link rel="modulepreload" href="js/van.js">
 <link rel="modulepreload" href="js/surfaces.js">
 <link rel="modulepreload" href="js/finds.js">
+<link rel="modulepreload" href="js/kit.js">
+<link rel="modulepreload" href="js/desk.js">
+<link rel="modulepreload" href="js/deskart.js">
+<link rel="modulepreload" href="js/mat.js">
+<link rel="modulepreload" href="js/matart.js">
 <link rel="modulepreload" href="js/ui.js">
 <link rel="modulepreload" href="js/audio.js">
 </head>
@@ -115,6 +127,7 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);tit
       <span class="lamps" aria-hidden="true"><i class="lw"></i><i class="lk"></i><i class="lv"></i></span>
     </div>
     <a id="chip" href="../media/ad1-workeey.mp4"><span class="zz"><b class="zz"><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> first ad <span class="md">·</span> <em>0:30</em></b></span></a>
+    <button id="reelb" type="button" aria-label="The reel: all ten videos" aria-expanded="false"><svg viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg><b>reel</b></button>
   </div>
   <div id="labels" aria-live="polite"></div>
   <div id="three" hidden>
@@ -125,15 +138,32 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);tit
     <p class="s4"><span id="more"></span> more on the table</p>
   </div>
   <button id="pill" type="button" hidden><span class="pp" aria-hidden="true"><svg viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></span><span class="pt"></span></button>
+  <div id="links" hidden></div>
+  <div id="reel" hidden>
+    <div class="rsh" role="dialog" aria-label="The reel: all ten videos">
+      <h2><span class="zig"><b class="zig">The reel</b></span></h2>
+      <p class="rn"><b id="reeln">0</b> of 10 found</p>
+      <div id="reell"></div>
+    </div>
+    <div class="rft" aria-hidden="true"></div>
+    <button id="rx" type="button" aria-label="Close the reel"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
+  </div>
   <div id="player" hidden>
     <video playsinline controls preload="none"></video>
+    <!-- A YouTube video: the embed is put into #ytf only by the tap on Play. Nothing is asked of YouTube before that. -->
+    <div id="yt" hidden>
+      <div id="ytf"></div>
+      <div id="ytcap"></div>
+      <p id="ytturn"><svg viewBox="0 0 26 24" aria-hidden="true"><rect x="9" y="6.5" width="8" height="13" rx="1.8"/><path d="M3.5 10.5a9.5 9.5 0 0 1 8-7M11.5 1l1.4 2.6-2.7 1.2M22.5 13.5a9.5 9.5 0 0 1-8 7M14.5 23l-1.4-2.6 2.7-1.2"/></svg> turn the phone</p>
+      <a id="ytopen" href="https://www.youtube.com/@coolboredom" target="_blank" rel="noopener"><span>Open in YouTube</span><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4 10 10.5 3.5M5 3.2h5.8V9"/></svg></a>
+    </div>
     <button id="px" type="button" aria-label="Close the video"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
   </div>
 </div>
 
 <!-- THE DOCUMENT: the plain resume, and the single source of every word and coordinate the game shows.
      data-find = id · data-track = w (Workeey) k (kitchen) v (video) a (also) c (contact) · data-x / data-y = world position
-     data-tab = the one-word tab · data-stage = build stage that switches the find on (1 = the hub slice, live now). -->
+     data-tab = the one-word tab · data-stage = build stage that switches the find on (1 = the hub slice, 2 = the whole desk, 3 = the whole mat: live now). -->
 <main id="plain">
   <header class="top">
     <a class="play" href="./" data-view="play"><span class="zz"><b class="zz"><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> play it instead</b></span></a>
@@ -148,57 +178,57 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);tit
     <ol class="reel">
       <li class="big" data-for="ad1">
         <a class="vt" href="../media/ad1-workeey.mp4" data-play aria-label="Play Workeey, my first ad, 0:30">
-          <img src="../media/ad1-workeey.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/ad1-workeey.jpg" width="540" height="960" alt=""><noscript><img src="../media/ad1-workeey.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:30</em>
         </a>
         <p><b>Workeey — my first ad</b> <span><span class="dur">0:30 <span class="md">·</span> </span>my edit, my sound</span></p>
       </li>
       <li data-for="ad2">
         <a class="vt" href="../media/ad2-one-line.mp4" data-play aria-label="Play ad 2, one line, 1:30">
-          <img src="../media/ad2-one-line.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/ad2-one-line.jpg" width="540" height="960" alt=""><noscript><img src="../media/ad2-one-line.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">1:30</em>
         </a>
         <p><b>Ad 2 — one line</b> <span class="dur">1:30</span></p>
       </li>
       <li data-for="ad3">
         <a class="vt" href="../media/ad3-blender-v7.mp4" data-play aria-label="Play ad 3, Blender, 0:40">
-          <img src="../media/ad3-blender-v7.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/ad3-blender-v7.jpg" width="540" height="960" alt=""><noscript><img src="../media/ad3-blender-v7.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:40</em>
         </a>
         <p><b>Ad 3 — Blender</b> <span class="dur">0:40</span></p>
       </li>
       <li data-for="skit1">
         <a class="vt" href="../media/skit-20.mp4" data-play aria-label="Play skit, Her Wi-Fi, 0:20">
-          <img src="../media/skit-20.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/skit-20.jpg" width="540" height="960" alt=""><noscript><img src="../media/skit-20.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:20</em>
         </a>
         <p><b>Skit — Her Wi-Fi</b> <span class="dur">0:20</span></p>
       </li>
       <li data-for="skit2">
         <a class="vt" href="../media/skit-21b.mp4" data-play aria-label="Play skit, Fixed Itself, 0:13">
-          <img src="../media/skit-21b.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/skit-21b.jpg" width="540" height="960" alt=""><noscript><img src="../media/skit-21b.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:13</em>
         </a>
         <p><b>Skit — Fixed Itself</b> <span class="dur">0:13</span></p>
       </li>
       <li data-for="skit3">
         <a class="vt" href="../media/skit-23.mp4" data-play aria-label="Play skit, The Burgers, 0:17">
-          <img src="../media/skit-23.jpg" width="540" height="960" alt="" loading="lazy">
+          <img data-src="../media/skit-23.jpg" width="540" height="960" alt=""><noscript><img src="../media/skit-23.jpg" width="540" height="960" alt=""></noscript>
           <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:17</em>
         </a>
         <p><b>Skit — The Burgers</b> <span class="dur">0:17</span></p>
       </li>
       <li class="yt" data-for="camp">
-        <a href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener"><img src="../media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt="" loading="lazy"><span><b>Camp Chaburah</b> the 2023 summer film <span class="md">·</span> YouTube</span></a>
+        <a href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener"><img data-src="../media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""><noscript><img src="../media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""></noscript><span><b>Camp Chaburah</b> the 2023 summer film <span class="md">·</span> YouTube</span></a>
       </li>
       <li class="yt" data-for="promo">
-        <a href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener"><img src="../media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt="" loading="lazy"><span><b>The promo</b> Camp Chaburah, 2023 <span class="md">·</span> YouTube</span></a>
+        <a href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener"><img data-src="../media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""><noscript><img src="../media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""></noscript><span><b>The promo</b> Camp Chaburah, 2023 <span class="md">·</span> YouTube</span></a>
       </li>
       <li class="yt" data-for="colorwar">
-        <a href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener"><img src="../media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt="" loading="lazy"><span><b>Color war</b> the general's entrance <span class="md">·</span> YouTube</span></a>
+        <a href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener"><img data-src="../media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""><noscript><img src="../media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""></noscript><span><b>Color war</b> the general's entrance <span class="md">·</span> YouTube</span></a>
       </li>
       <li class="yt" data-for="aug2025">
-        <a href="https://www.youtube.com/watch?v=xI7ifRNVhD4" target="_blank" rel="noopener"><img src="../media/yt-xI7ifRNVhD4.jpg" width="320" height="180" alt="" loading="lazy"><span><b>August 2025</b> YouTube</span></a>
+        <a href="https://www.youtube.com/watch?v=xI7ifRNVhD4" target="_blank" rel="noopener"><img data-src="../media/yt-xI7ifRNVhD4.jpg" width="320" height="180" alt=""><noscript><img src="../media/yt-xI7ifRNVhD4.jpg" width="320" height="180" alt=""></noscript><span><b>August 2025</b> YouTube</span></a>
       </li>
     </ol>
   </section>

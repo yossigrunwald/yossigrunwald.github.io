@@ -1,26 +1,81 @@
 // van.js — input, the driving model (spec 3.3), collisions, autopilot.
-import { S, standable, clampToWorld, WAYPOINTS, SPAWN } from './world.js';
+import { S, standable, clampToWorld, WAYPOINTS, FIXED_NODES, SPAWN, collidersNear, collDist } from './world.js';
 
 export const R = 18;                 // van collider radius
 const VMAX = 340, ACC = 1500, BRAKE = 900, TURN = 720 * Math.PI / 180;
 
 export const van = {
   x: SPAWN.x, y: SPAWN.y, px: SPAWN.x, py: SPAWN.y, vx: 0, vy: 0, a: -Math.PI / 2, speed: 0,
-  lights: true, drag: 1, cn: null, cs: null, odo: 0, squash: 0, edgeAt: -9, slideC: null, slideSide: 0, push: 0
+  lights: true, drag: 1, cn: null, cs: null, odo: 0, squash: 0, edgeAt: -9, slideC: null, slideSide: 0, push: 0, pin: 0, pinN: 0, leanC: null, leanT: 0
 };
+const nearBuf = [];
 // hold: the van takes no steering for now (the three-track moment); the stick and the keys are read again when it lifts
 export const input = { stick: null, dx: 0, dy: 0, mag: 0, keys: new Set(), hold: false, last: null };
-export const auto = { on: false, x: 0, y: 0, speed: 300, prop: null, stuck: 0, via: null, tried: false, slideC: null, slideSide: 0, done: null, idle: false };
+export const auto = { on: false, x: 0, y: 0, speed: 300, prop: null, stuck: 0, via: null, path: [], look: 0, tried: false, slideC: null, slideSide: 0, done: null, idle: false };
 
-let bumpFn = null;
+let bumpFn = null, edgeFn = null;
 export function onBump(fn) { bumpFn = fn; }
+export function onEdge(fn) { edgeFn = fn; }          // the van has run into a table edge at speed (fn(speed))
 
 // drive itself to a spot or into a prop. o: { prop, speed, done, idle }
 export function goTo(x, y, o = {}) {
   if (!o.prop) [x, y] = clampToWorld(x, y);
-  Object.assign(auto, { on: true, x, y, speed: o.speed || 300, prop: o.prop || null, stuck: 0, via: null, tried: false, slideC: null, slideSide: 0, done: o.done || null, idle: !!o.idle });
+  Object.assign(auto, { on: true, x, y, speed: o.speed || 300, prop: o.prop || null, stuck: 0, via: null, path: [], look: 0.25, tried: false, slideC: null, slideSide: 0, done: o.done || null, idle: !!o.idle });
+  const r = route(x, y, auto.prop);                    // not a straight run: by way of the waypoint graph (spec 9.4)
+  if (r && r.length) { auto.path = r; auto.via = r.shift(); }
 }
-export function stopAuto() { auto.on = false; auto.prop = null; auto.via = null; auto.done = null; auto.idle = false; }
+export function stopAuto() { auto.on = false; auto.prop = null; auto.via = null; auto.path = []; auto.done = null; auto.idle = false; }
+
+// ---- finding the way (spec 9.4) ----
+// Can the van drive the straight line from a to b? prop: the thing it is going to bump (touching it ends the line).
+const clearBuf = [];
+function clear(x0, y0, x1, y1, prop) {
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / 10));
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t; let touch = false;
+    for (const c of collidersNear(x, y, R + 8, clearBuf)) {
+      if (c.off) continue;
+      const cd = collDist(c, x, y);
+      if (prop && c.prop === prop) { if (cd < R + 4) touch = true; } else if (cd < R - 2) return false;
+    }
+    if (touch) return true;
+    if (!standable(x, y)) return false;
+  }
+  return !prop;
+}
+// The nodes are world.WAYPOINTS; two nodes are joined when the straight line between them is clear and not too long
+// (600 units where a hand-placed node is at one end, 240 between two of the mat's grid). A* over that, from the van to
+// the target. Whether a pair is joined is worked out when first asked and kept until something new is put on a table.
+const FIXED = FIXED_NODES, links = new Map(); let linksFor = -1;
+function route(tx, ty, prop) {
+  if (clear(van.x, van.y, tx, ty, prop)) return null;
+  const N = WAYPOINTS, n = N.length, A = n, B = n + 1, X = i => i === A ? van.x : i === B ? tx : N[i][0], Y = i => i === A ? van.y : i === B ? ty : N[i][1];
+  if (linksFor !== S.colliders.length + n * 4096) { links.clear(); linksFor = S.colliders.length + n * 4096; }
+  const joined = (u, v) => {
+    if (u >= n || v >= n) return v === B ? clear(X(u), Y(u), tx, ty, prop) : clear(X(u), Y(u), X(v), Y(v), null);
+    const k = u < v ? u * 4096 + v : v * 4096 + u; let r = links.get(k);
+    if (r === undefined) { r = clear(X(u), Y(u), X(v), Y(v), null); links.set(k, r); }
+    return r;
+  };
+  const g = new Float32Array(n + 2).fill(1e9), from = new Int16Array(n + 2).fill(-1), done = new Uint8Array(n + 2);
+  g[A] = 0;
+  for (;;) {
+    let u = -1, best = 1e9;
+    for (let i = 0; i < n + 2; i++) if (!done[i] && g[i] < 1e9) { const f = g[i] + Math.hypot(X(i) - tx, Y(i) - ty); if (f < best) { best = f; u = i; } }
+    if (u < 0) return null;
+    if (u === B) break;
+    done[u] = 1;
+    for (let v = 0; v < n + 2; v++) {
+      if (done[v] || v === A) continue;
+      const d = Math.hypot(X(u) - X(v), Y(u) - Y(v)), lim = u >= FIXED && v >= FIXED && u < n && v < n ? 240 : 600;
+      if (d > lim || g[u] + d >= g[v] || !joined(u, v)) continue;
+      g[v] = g[u] + d; from[v] = u;
+    }
+  }
+  const path = [];
+  for (let i = from[B]; i >= 0 && i !== A; i = from[i]) path.unshift([X(i), Y(i)]);
+  return path;
+}
 function arrive() { const d = auto.done; stopAuto(); if (d) d(); }
 
 // Bend a wanted direction (unit dx, dy) round whatever the van is touching. mem keeps the chosen side (slideC, slideSide).
@@ -71,15 +126,33 @@ export function step(dt) {
     // so a find is an arrival and not something the van curls past.
     let worst = 0, wq = null; if (van.cs) for (const q of van.cs) { const d = dx * q.nx + dy * q.ny; if (d < worst) { worst = d; wq = q; } }
     van.push = worst < -0.7 ? van.push + dt : 0;
+    // A push that starts with the van already against a thing never lands as an impact (there is no run-up to it).
+    // Leant on for 0.15 s it counts as a bump all the same, once for each time the van leans on it.
+    if (wq && worst < -0.5) {
+      if (van.leanC !== wq.c) { van.leanC = wq.c; van.leanT = 0; }
+      if (van.leanT >= 0 && (van.leanT += dt) >= 0.15) { van.leanT = -1; if (bumpFn && S.rt - (wq.c.bt || -9) > 0.5) { wq.c.bt = S.rt; bumpFn(wq.c, 0); } }
+    } else van.leanC = null;
     const wf = wq && wq.c.prop && (wq.c.prop.find || wq.c.prop.say), fresh = wf && S.rt - (wf.labAt === undefined ? -9 : wf.labAt) < 1.5;
-    if (van.push > 0.25 && !fresh) { const r = around(dx, dy, van, null, 0.95); if (r) { dx = r[0]; dy = r[1]; } }
+    if (van.push > 0.25 && !fresh) {
+      // Pinned: the way round it chose is shut (a table edge, a second thing). After a third of a second with no headway
+      // it tries the other way round, so a held thumb always gets past.
+      // (Twice at most for one push: in a true dead end, the pocket behind the tall boxes, it then rests instead of shuffling.)
+      van.pin = van.speed < 12 ? van.pin + dt : 0;
+      if (van.pin > 0.35 && van.slideC && van.pinN < 2) { van.slideSide = -van.slideSide; van.pin = 0; van.pinN++; }
+      const r = around(dx, dy, van, null, 0.95); if (r) { dx = r[0]; dy = r[1]; }
+    } else { van.pin = 0; van.pinN = 0; }
     if (!cn) van.slideC = null;
-  }
+  } else van.leanC = null;
 
   if (!human && auto.on) {
+    // on a route: four times a second, if the stop after this one can already be driven to in a straight line, skip this one
+    if (auto.via && (auto.look -= dt) <= 0) {
+      auto.look = 0.25; const nx = auto.path[0];
+      if (nx ? clear(van.x, van.y, nx[0], nx[1], null) : clear(van.x, van.y, auto.x, auto.y, auto.prop)) auto.via = auto.path.shift() || null;
+    }
     const tx = auto.via ? auto.via[0] : auto.x, ty = auto.via ? auto.via[1] : auto.y;
     const ex = tx - van.x, ey = ty - van.y, d = Math.hypot(ex, ey);
-    if (auto.via && d < 28) auto.via = null;
+    if (auto.via && d < 28) auto.via = auto.path.shift() || null;
     else if (!auto.via && !auto.prop && d < 5) arrive();
     else if (auto.prop && cn && cn.c.prop === auto.prop && cn.pen > -0.5) arrive();
     else {
@@ -92,11 +165,16 @@ export function step(dt) {
         auto.stuck += dt;
         if (auto.stuck > 0.6) {
           auto.stuck = 0;
-          if (!auto.tried) {
-            auto.tried = true; let best = null, bd = 1e9;
-            for (const w of WAYPOINTS) { const wd = Math.hypot(w[0] - van.x, w[1] - van.y); if (wd > 50 && wd < bd) { bd = wd; best = w; } }
-            auto.via = best;
-          } else arrive();
+          if (!auto.tried) {                                           // look for a way round, once
+            auto.tried = true; const r = route(auto.x, auto.y, auto.prop);
+            if (r && r.length) { auto.path = r; auto.via = r.shift(); }
+            else {
+              let best = null, bd = 1e9;
+              for (const w of WAYPOINTS) { const wd = Math.hypot(w[0] - van.x, w[1] - van.y); if (wd > 50 && wd < bd) { bd = wd; best = w; } }
+              auto.via = best; auto.path = [];
+            }
+          } else if (auto.prop) stopAuto();                           // it could not reach the thing: it stops there, and nothing counts as reached
+          else arrive();
         }
       } else auto.stuck = 0;
     }
@@ -111,13 +189,14 @@ export function step(dt) {
 
   // props: push out along the normal, drop the normal velocity, keep 85% of the tangential on impact
   van.cn = null; const cs = van.cs = [];
+  const near = collidersNear(nx, ny, R + 6, nearBuf);                // only the colliders in the grid cells the van touches
   for (let it = 0; it < 2; it++) {
-    for (const c of S.colliders) {
+    for (const c of near) {
       if (c.off) continue;
       let nnx, nny, pen;
       if (c.t === 'c') {
         const ex = nx - c.x, ey = ny - c.y, d = Math.hypot(ex, ey), rr = R + c.r;
-        if (d >= rr + 2) continue;
+        if (d >= rr + 3) continue;
         nnx = d > 0.001 ? ex / d : 0; nny = d > 0.001 ? ey / d : 1; pen = rr - d;
       } else {
         const qx = nx < c.x0 ? c.x0 : nx > c.x1 ? c.x1 : nx, qy = ny < c.y0 ? c.y0 : ny > c.y1 ? c.y1 : ny;
@@ -127,7 +206,7 @@ export function step(dt) {
           if (m === l) { nnx = -1; nny = 0; } else if (m === r) { nnx = 1; nny = 0; } else if (m === t) { nnx = 0; nny = -1; } else { nnx = 0; nny = 1; }
           pen = m + R;
         } else {
-          if (d >= R + 2) continue;
+          if (d >= R + 3) continue;
           nnx = ex / d; nny = ey / d; pen = R - d;
         }
       }
@@ -139,7 +218,7 @@ export function step(dt) {
         const vn = van.vx * nnx + van.vy * nny;
         if (vn < 0) {
           van.vx -= vn * nnx; van.vy -= vn * nny;
-          if (S.rt - (c.tt || -9) > 0.3) { van.vx *= 0.85; van.vy *= 0.85; if (bumpFn && -vn > 24) bumpFn(c, -vn); }
+          if (S.rt - (c.tt || -9) > 0.3) { van.vx *= 0.85; van.vy *= 0.85; if (bumpFn && -vn > 24) { c.bt = S.rt; bumpFn(c, -vn); } }
         }
         c.tt = S.rt;
       }
@@ -147,13 +226,15 @@ export function step(dt) {
   }
 
   // table edges: no drone in this stage, so the van stops with its nose at the edge (or the tape) and slides along it.
-  // Running into it at speed gives the van a small squash, so the stop reads as an edge and not as a fault.
+  // Running into it at speed the edge answers: a short squash, a thud, and the van rocks back a few units, so the
+  // stop reads as the lip of a table and not as glass.
   if (!standable(nx, ny)) {
-    let hit;
-    if (standable(nx, van.y)) { ny = van.y; hit = Math.abs(van.vy); van.vy = 0; }
-    else if (standable(van.x, ny)) { nx = van.x; hit = Math.abs(van.vx); van.vx = 0; }
-    else { nx = van.x; ny = van.y; hit = Math.hypot(van.vx, van.vy); van.vx = van.vy = 0; }
-    if (hit > 90 && S.rt - van.edgeAt > 0.3) van.squash = 1;
+    const fresh = S.rt - van.edgeAt > 0.3; let hit;
+    const back = v => (fresh && Math.abs(v) > 90 ? -Math.sign(v) * Math.min(100, Math.abs(v) * 0.34) : 0);
+    if (standable(nx, van.y)) { ny = van.y; hit = Math.abs(van.vy); van.vy = back(van.vy); }
+    else if (standable(van.x, ny)) { nx = van.x; hit = Math.abs(van.vx); van.vx = back(van.vx); }
+    else { nx = van.x; ny = van.y; hit = Math.hypot(van.vx, van.vy); van.vx = back(van.vx); van.vy = back(van.vy); }
+    if (hit > 90 && fresh) { van.squash = 1; if (edgeFn) edgeFn(hit); }
     van.edgeAt = S.rt;
   }
 
@@ -172,9 +253,9 @@ export function readStick(s) {
   if (!s || s.dead || s.edge) { input.mag = 0; return; }
   let dx = s.x - s.cx, dy = s.y - s.cy, d = Math.hypot(dx, dy);
   if (d > 90) { s.cx = s.x - dx / d * 90; s.cy = s.y - dy / d * 90; d = 90; }       // the stick centre follows the thumb
-  if (d > 8) {
+  if (d > (s.from && !s.live ? 10 : 8)) {             // (a touch that began on the pill is a drive only once it has moved past a tap's 10 px)
     input.dx = dx / d; input.dy = dy / d; input.mag = Math.min(1, (d - 8) / 56);
-    if (!s.live) { s.live = true; stopAuto(); }
+    if (!s.live) { s.live = true; stopAuto(); if (s.o && s.o.drive) s.o.drive(); }
   } else input.mag = 0;
 }
 // h: { first() -> 0 | 1 | 2, tap(worldX, worldY), toWorld(clientX, clientY), w() -> viewport width, live() }
@@ -184,8 +265,9 @@ export function bindInput(cv, h) {
   const end = (e, cancel) => {
     if (e.pointerId !== pid) return;
     const s = input.stick; pid = null; input.stick = null; input.mag = 0;
-    try { cv.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+    try { (s && s.from || cv).releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
     if (!s) return;
+    if (s.from) { if (s.live) s.from._drove = performance.now(); if (s.o && s.o.end) s.o.end(s.live); return; }      // it began on the pill: a drag was a drive, a tap is the pill's own click
     const ms = performance.now() - s.t;
     input.last = { ms: Math.round(ms), moved: Math.round(s.moved), live: s.live, cancel };
     // A tap is a press that never moved 10 px. A still press cannot be a drag, so slow and deliberate taps count too.
@@ -204,21 +286,40 @@ export function bindInput(cv, h) {
     // is one of the ways a screen is played. touch-action, user-select and the touchmove handler already stop scroll and zoom.
     if (e.pointerType === 'mouse') e.preventDefault();
   });
-  cv.addEventListener('pointermove', e => {
+  const move = e => {
     if (e.pointerId !== pid) return;
     const s = input.stick; s.x = e.clientX; s.y = e.clientY;
     const d = Math.hypot(s.x - s.cx, s.y - s.cy); if (d > s.moved) s.moved = d;
     if (!input.hold) readStick(s);
-  });
-  cv.addEventListener('pointerup', e => end(e, false));
-  cv.addEventListener('pointercancel', e => end(e, true));
-  cv.addEventListener('lostpointercapture', e => end(e, true));       // a touch that vanishes without an up or a cancel must not leave the stick held
+  };
+  const hook = el => {
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', e => end(e, false));
+    el.addEventListener('pointercancel', e => end(e, true));
+    el.addEventListener('lostpointercapture', e => end(e, true));     // a touch that vanishes without an up or a cancel must not leave the stick held
+  };
+  hook(cv);
   cv.addEventListener('contextmenu', e => e.preventDefault());
+  // The Play pill lies where the thumb rests. A touch that starts on it and moves is a drive, like any other (the pill
+  // tucks away meanwhile: o.drive, o.end); only a touch that ends as a tap is the pill's own.
+  h.adopt = (el, o) => {
+    el.addEventListener('pointerdown', e => {
+      if (pid !== null || !h.live() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      pid = e.pointerId;
+      try { el.setPointerCapture(pid); } catch (err) { /* synthetic pointers cannot be captured */ }
+      const w = h.toWorld(e.clientX, e.clientY);
+      const s = input.stick = { cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, live: false, wx: w[0], wy: w[1], dead: false, noTap: true, edge: false, from: el, o };
+      s.dead = h.first() === 1;
+    });
+    hook(el);
+    el.addEventListener('click', e => { if (performance.now() - (el._drove || 0) < 500) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);      // the click a mouse sends after a drag is not a press of the pill
+    el.addEventListener('dragstart', e => e.preventDefault());
+  };
 
   const KEY = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
   addEventListener('keydown', e => {
     const k = KEY[e.code]; if (!k || e.metaKey || e.ctrlKey || e.altKey || !h.live()) return;
-    if (h.first() === 1) return; input.keys.add(k); stopAuto(); e.preventDefault();
+    if (h.first(!e.repeat) === 1) return; input.keys.add(k); stopAuto(); e.preventDefault();      // (a key held down repeats: that is not a new press)
   });
   addEventListener('keyup', e => { const k = KEY[e.code]; if (k) input.keys.delete(k); });
   addEventListener('blur', () => { input.keys.clear(); });

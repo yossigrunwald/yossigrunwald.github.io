@@ -56,21 +56,25 @@ export const poly = (pts, z0, z1, top, side, o) => {
 export const face = (x, y, w, hpx, fill, o = {}) => ({ face: true, x, y, w, hpx, fill, r: o.r || 0, lift: o.lift || 0, det: o.det, sz: o.sz || 0, sd: o.sd || 4, b: [x, y - 1, x + w, y], z0: 0, z1: 0 });
 
 export function bake(slabs, o = {}) {
-  const rot = o.rot || 0, pad = 3, sres = o.sres || SS;
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, zs = 0, R = 0;
+  // shadows are baked at one pixel a unit (as the van's always were): a flat 22% shape needs no more, and it is a quarter of the memory
+  const rot = o.rot || 0, pad = 3, sres = o.sres || 1, rc = Math.cos(rot), rs = Math.sin(rot);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, zs = 0, top = 1e9;
   for (const s of slabs) {
-    const b = s.b;
-    x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]);
-    R = Math.max(R, Math.hypot(b[0], b[1]), Math.hypot(b[2], b[1]), Math.hypot(b[0], b[3]), Math.hypot(b[2], b[3]));
+    const b = s.b; let ax = b[0], ay = b[1], bx = b[2], by = b[3];
+    if (rot) {                                             // a turned prop: the box each slab really fills, not the square of the longest reach
+      ax = ay = 1e9; bx = by = -1e9;
+      for (const [px, py] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const qx = px * rc - py * rs, qy = px * rs + py * rc; ax = Math.min(ax, qx); bx = Math.max(bx, qx); ay = Math.min(ay, qy); by = Math.max(by, qy); }
+    }
+    x0 = Math.min(x0, ax); y0 = Math.min(y0, ay); x1 = Math.max(x1, bx); y1 = Math.max(y1, by);
+    if (!s.ghost) top = Math.min(top, s.face ? s.y - s.lift - s.hpx : ay - s.z1 * HK);      // ghost: it casts its shadow but is drawn by other means
     zs = Math.max(zs, s.face ? s.sz : (s.ns ? 0 : s.z1));
   }
-  if (rot) { x0 = y0 = -R; x1 = y1 = R; }
-  let top = y0;
-  for (const s of slabs) top = Math.min(top, s.face ? s.y - s.lift - s.hpx : (rot ? -R : s.b[1]) - s.z1 * HK);
+  top = Math.min(top, y0);
   const bx0 = x0 - pad, by0 = top - pad, bx1 = x1 + pad, by1 = y1 + pad;
   const c = mk((bx1 - bx0) * SS, (by1 - by0) * SS), g = c.getContext('2d');
   const OX = -bx0 * SS, OY = -by0 * SS;
   for (const s of slabs) {
+    if (s.ghost) continue;
     if (s.face) {
       const fy = s.y - s.lift - s.hpx;
       g.setTransform(SS, 0, 0, SS, OX, OY);
@@ -115,19 +119,72 @@ export function bake(slabs, o = {}) {
   }
   return spr;
 }
-export function drawSpr(ctx, sp, x, y) { ctx.drawImage(sp.c, x - sp.ox / SS, y - sp.oy / SS, sp.c.width / SS, sp.c.height / SS); }
-export function drawShadow(ctx, sp, x, y) { if (sp.s) ctx.drawImage(sp.s, x - sp.sox / sp.sres, y - sp.soy / sp.sres, sp.s.width / sp.sres, sp.s.height / sp.sres); }
-// a flat sprite from a draw function; origin at (cx, cy) in units
-export function flat(w, h, cx, cy, draw, grainK = 1) {
-  const c = mk(w * SS, h * SS), g = c.getContext('2d'); g.scale(SS, SS); draw(g);
-  if (grainK) addGrain(c, grainK);
-  return { c, ox: cx * SS, oy: cy * SS, s: null, bb: [-cx, -cy, w - cx, h - cy] };
+// A sprite may carry its own resolution (sp.res pixels a unit; SS when absent) and may be one that is let go while the
+// van is far from it and baked again when it comes near (keep(), below).
+export function drawSpr(ctx, sp, x, y) {
+  if (sp.make) {
+    if (!sp.c) {
+      // the whole table is on screen (the three-track moment): a let-go sprite is shown by its small stand-in, not baked again
+      if (LOW && sp.lo) { const q = sp.res || SS; ctx.drawImage(sp.lo, 0, 0, sp.cw / 4, sp.ch / 4, x - sp.ox / q, y - sp.oy / q, sp.cw / q, sp.ch / q); return; }
+      wake(sp); wakes.draw++;
+    }
+    sp.t = NOW;
+  }
+  const q = sp.res || SS; ctx.drawImage(sp.c, x - sp.ox / q, y - sp.oy / q, sp.c.width / q, sp.c.height / q);
 }
-// a dark twin of a sprite, for things on the unlit mat (spec 8.4)
+export function drawShadow(ctx, sp, x, y) {
+  if (sp.make) { if (!sp.c) { if (LOW) return; wake(sp); wakes.draw++; } sp.t = NOW; }
+  if (sp.s) ctx.drawImage(sp.s, x - sp.sox / sp.sres, y - sp.soy / sp.sres, sp.s.width / sp.sres, sp.s.height / sp.sres);
+}
+// ---------- sprites that are held only while they are near (spec 9.6: canvas memory) ----------
+// keep(make, x, y[, x1, y1]) bakes a sprite now and remembers how. A sweep, twice a second, lets go of the canvases of
+// the ones whose place (a point, or a rect when several things share the sprite) is outside the view grown by a
+// margin and that have not been drawn for 3 s, and asks for the ones that have come back inside to be baked again in
+// an idle slice. A sprite drawn while let go is baked on the spot. Its size, origin and bb never change.
+// Each also keeps a stand-in a quarter its size (a sixteenth of the memory): while the camera shows the whole table
+// (lowRes(true)) a let-go sprite is drawn from that, so the overview never has to hold every sprite at once.
+let NOW = 0, LOW = false, NEAR2 = null; const kept = [], NEAR = [-900, -1100, 900, 1100];
+export function lowRes(on) { LOW = on; }
+export const wakes = { draw: 0, idle: 0, drops: 0 };      // for ?debug=1: how often a let-go sprite had to be baked inside a frame's drawing, how often ahead of it
+export function clock(t) { NOW = t; }
+const isNear = sp => { const a = sp.at, n = NEAR2; return (a[2] > NEAR[0] && a[0] < NEAR[2] && a[3] > NEAR[1] && a[1] < NEAR[3]) || (!!n && a[2] > n[0] && a[0] < n[2] && a[3] > n[1] && a[1] < n[3]); };
+const at2 = sp => { const a = sp.at, n = NEAR2; return !!n && a[2] > n[0] && a[0] < n[2] && a[3] > n[1] && a[1] < n[3]; };
+function wake(sp) { const n = sp.make(); sp.c = n.c; sp.s = n.s; sp.t = NOW; }
+function drop(sp) { if (!sp.c) return; wakes.drops++; sp.c.width = sp.c.height = 0; sp.c = null; if (sp.s) { sp.s.width = sp.s.height = 0; sp.s = null; } }
+export function keep(make, x, y, x1 = x, y1 = y, first = null) {      // first: the sprite, if it has just been baked already
+  const sp = first || make(), b = sp.bb; sp.make = make; sp.t = NOW; kept.push(sp);
+  sp.at = x1 === x && y1 === y && b ? [x + b[0], y + b[1], x + b[2], y + b[3]] : [x, y, x1, y1];      // a point: the ground it covers from there
+  sp.cw = sp.c.width; sp.ch = sp.c.height; sp.lo = mk(sp.cw / 4, sp.ch / 4); sp.lo.getContext('2d').drawImage(sp.c, 0, 0, sp.cw / 4, sp.ch / 4);
+  return sp;
+}
+// called when a sprite has just been made and nothing more will read its canvas this turn: far ones are let go at once
+export function settle() { for (const sp of kept) if (!sp.seen) { sp.seen = true; if (!isNear(sp)) drop(sp); } }
+// no longer one of the kept (it has been replaced). free: nothing will ever draw it again, so its canvases go now
+export function retire(sp, free) { if (!sp || !sp.make) return; const i = kept.indexOf(sp); if (i >= 0) kept.splice(i, 1); if (free) drop(sp); else if (!sp.c) wake(sp); sp.make = null; }
+// its canvas, baked again if it was let go (for the few places that read a canvas directly)
+export function cv(sp) { if (sp.make) { if (!sp.c) wake(sp); sp.t = NOW; } return sp.c; }
+// r: the view grown by a margin · r2: a second place to keep ready (where the camera is about to go), or null
+export function sweep(r, jobs, r2 = null) {
+  NEAR[0] = r[0]; NEAR[1] = r[1]; NEAR[2] = r[2]; NEAR[3] = r[3]; NEAR2 = r2;
+  for (const sp of kept) {
+    const near = isNear(sp);
+    if (sp.c) { if (!near && NOW - sp.t > 3) drop(sp); }
+    else if (near && !sp.due && (!LOW || at2(sp))) { sp.due = true; jobs.push(() => { sp.due = false; if (!sp.c && sp.make && (!LOW || at2(sp))) { wake(sp); wakes.idle++; } }); }      // (while the whole table is on screen, only what stands where the camera goes next)
+  }
+}
+export function keptCanvases() { const out = []; for (const sp of kept) out.push(sp.c, sp.s, sp.lo); return out; }
+// a flat sprite from a draw function; origin at (cx, cy) in units. res: pixels a unit (light pools need only one)
+export function flat(w, h, cx, cy, draw, grainK = 1, res = SS) {
+  const c = mk(w * res, h * res), g = c.getContext('2d'); g.scale(res, res); draw(g);
+  if (grainK) addGrain(c, grainK);
+  return { c, ox: cx * res, oy: cy * res, s: null, res, bb: [-cx, -cy, w - cx, h - cy] };
+}
+// a dark twin of a sprite, for things on the unlit mat (spec 8.4): a flat dark shape, so it is kept at half the
+// sprite's resolution (a quarter of the memory)
 export function darkTwin(sp) {
-  const c = mk(sp.c.width, sp.c.height), g = c.getContext('2d');
-  g.drawImage(sp.c, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = rgba(PAL.matThing, 0.9); g.fillRect(0, 0, c.width, c.height);
-  return { ...sp, c, s: null };
+  const src = cv(sp), q = sp.res || SS, c = mk(src.width / 2, src.height / 2), g = c.getContext('2d');
+  g.drawImage(src, 0, 0, src.width / 2, src.height / 2); g.globalCompositeOperation = 'source-atop'; g.fillStyle = rgba(PAL.matThing, 0.9); g.fillRect(0, 0, c.width, c.height);
+  return { c, ox: sp.ox / 2, oy: sp.oy / 2, res: q / 2, s: null, bb: sp.bb };
 }
 // soft pre-rendered glow (the only place a gradient is ever used: at bake time)
 export function glow(color, r, a0 = 1, hard = 0) {
@@ -155,7 +212,7 @@ export function drawTape(g, cx, cy, w, h, deg, color, key = 1.2) {
   if (key) { g.lineWidth = key; g.strokeStyle = PAL.ink; g.lineJoin = 'round'; g.stroke(); }
   return () => g.restore();         // caller draws text in tape space, then calls this
 }
-function tri(g, x, y, s) { g.beginPath(); g.moveTo(x, y - s * 0.55); g.lineTo(x + s * 0.92, y); g.lineTo(x, y + s * 0.55); g.closePath(); g.fill(); }
+export function tri(g, x, y, s) { g.beginPath(); g.moveTo(x, y - s * 0.55); g.lineTo(x + s * 0.92, y); g.lineTo(x, y + s * 0.55); g.closePath(); g.fill(); }
 
 // the small tab that stays on a found thing for good: one word of tape
 export function tabSprite(word, color) {
@@ -215,18 +272,21 @@ export function tiles() {
     }
     addGrain(c, 0.7); out.desk = c;
   }
-  const mat = (bg, grid) => { // cutting mat: fine grid every 32 units, heavy every 128, ticks, one long diagonal
-    const c = mk(512, 512), g = c.getContext('2d');
+  // cutting mat: fine grid every 32 units, heavy every 128, ticks. 256 px (128 units) holds the whole print. diag: one diagonal a
+  // tile (the woods'); the dark mat's diagonals come every 256 units, so main.js rules those itself and its tiles carry none
+  const mat = (bg, grid, n = 256, diag = true) => {
+    const c = mk(n, n), g = c.getContext('2d');
     g.fillStyle = bg; g.fillRect(0, 0, 512, 512); g.fillStyle = grid;
     for (let i = 0; i < 8; i++) { g.fillRect(i * 64, 0, 1.2, 512); g.fillRect(0, i * 64, 512, 1.2); }
     for (let i = 0; i < 2; i++) { g.fillRect(i * 256 - 0.9, 0, 3, 512); g.fillRect(0, i * 256 - 0.9, 512, 3); g.fillRect(509.1, 0, 3, 512); g.fillRect(0, 509.1, 512, 3); }
     for (let i = 0; i < 32; i++) { const l = i % 4 === 0 ? 0 : 6; if (l) { g.fillRect(i * 16, 0, 1.2, l); g.fillRect(0, i * 16, l, 1.2); g.fillRect(i * 16, 256, 1.2, l); g.fillRect(256, i * 16, l, 1.2); } }
-    g.strokeStyle = grid; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, 512); g.lineTo(512, 0); g.stroke();
+    if (diag) { g.strokeStyle = grid; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, n); g.lineTo(n, 0); g.stroke(); }
     addGrain(c, 0.8); return c;
   };
-  out.mat = mat(PAL.mat, PAL.matGrid); out.matLit = mat(PAL.matLit, PAL.matLitGrid);
+  out.mat = mat(PAL.mat, PAL.matGrid, 256, false); out.matLit = mat(PAL.matLit, PAL.matLitGrid, 256, false);
+  out.woods = mat(PAL.woods, PAL.woodsGrid, 256); out.woodsLit = mat(PAL.woodsLit, PAL.woodsLitGrid, 256);      // the green mat of the woods: unlit, and in the light
   { // floor: poured slabs with a seam every 256 units and a few scuffs, so the tables stand on something
-    const c = mk(512, 512), g = c.getContext('2d');
+    const c = mk(256, 256), g = c.getContext('2d'); g.scale(0.5, 0.5);      // out of focus under the tables: one pixel a unit is enough
     g.fillStyle = PAL.floor; g.fillRect(0, 0, 512, 512);
     for (let k = 0; k < 3; k++) { g.fillStyle = `rgba(255,255,255,${0.007 + r() * 0.008})`; g.fillRect(r() * 512, r() * 512, 90 + r() * 200, 70 + r() * 160); }
     for (let k = 0; k < 7; k++) {
@@ -295,11 +355,12 @@ export function hubSprite(name, roles) {
     arrow(0, PAL.gold); arrow(Math.PI / 2, PAL.pink); arrow(Math.PI, PAL.masking); arrow(-Math.PI / 2, PAL.blue);
   };
   // plywood edge: the plies show as stripes
+  // (its shadow is one disc, drawn by main.js each frame: no canvas is held for it)
   return bake([
     cyl(0, 0, R, 0, 2.6, '#7C4A22', '#7C4A22', { hl: 0 }),
     cyl(0, 0, R, 2.6, 5.2, '#DDAE78', '#DDAE78', { hl: 0, ns: 1 }),
     cyl(0, 0, R, 5.2, 8, '#C28348', '#84501F', { det, ns: 1 })
-  ], { shadow: true });
+  ], { shadow: false });
 }
 
 // ---------- the van: 46 x 24, h 22, baked at 64 headings on demand (spec 8.1) ----------
@@ -376,25 +437,72 @@ export function headlight() {
 }
 
 // ---------- paper ----------
+// Ten kinds, off-white and grey only: 0-3 the letter sheets of the first slice (2 is the tick-box form), then
+// 4 a till receipt, 5 a window envelope, 6 an invoice, 7 a carbon copy, 8 a month grid, 9 a small note.
+// Each is { c, w, h, sh }: its picture, its size in units, and its flat shadow (the same outline).
 export function sheetSprites() {
-  const out = [];
-  for (let v = 0; v < 4; v++) {
-    out.push(flat(34, 44, 17, 22, g => {
-      g.fillStyle = PAL.sheet; g.fillRect(0, 0, 34, 44);
-      g.strokeStyle = 'rgba(150,163,176,.85)'; g.lineWidth = 0.8; g.strokeRect(0.4, 0.4, 33.2, 43.2);
-      g.strokeStyle = PAL.scribble; g.lineCap = 'round'; g.lineJoin = 'round';
-      const scr = (x0, x1, y, lw = 1.5) => { g.lineWidth = lw; g.beginPath(); g.moveTo(x0, y); for (let x = x0 + 2; x <= x1; x += 2) g.lineTo(x, y + ((x / 2 | 0) % 2 ? -0.9 : 0.9)); g.stroke(); };
-      if (v === 0) { scr(5, 29, 11); scr(5, 29, 21); scr(5, 20, 31); }
-      else if (v === 1) { g.lineWidth = 3.4; g.beginPath(); g.moveTo(5, 8.5); g.lineTo(21, 8.5); g.stroke(); scr(5, 29, 17, 1.2); scr(5, 29, 23.5, 1.2); scr(5, 29, 30, 1.2); scr(5, 16, 36.5, 1.2); }
-      else if (v === 2) { // a form with tick-boxes
-        g.lineWidth = 1; for (const y of [8, 18, 28]) { g.strokeRect(5, y, 5.4, 5.4); scr(14, 29, y + 2.9, 1.2); }
-        g.strokeStyle = PAL.ink; g.lineWidth = 1.4; g.beginPath(); g.moveTo(5.8, 20.6); g.lineTo(7.6, 22.6); g.lineTo(10.8, 17.4); g.stroke();
-        g.strokeStyle = PAL.scribble; scr(5, 22, 39, 1.2);
-      } else { scr(5, 18, 8, 1.2); scr(5, 29, 16, 1.2); scr(5, 29, 22, 1.2); scr(5, 29, 28, 1.2); g.lineWidth = 1.2; g.strokeRect(18, 33, 11, 6.4); }
-    }, 0.5));
-  }
-  const sh = flat(34, 44, 17, 22, g => { g.fillStyle = 'rgba(112,128,146,.5)'; g.fillRect(0, 0, 34, 44); }, 0);
-  return { v: out, sh };
+  const out = [], EDGE = 'rgba(150,163,176,.85)';
+  const add = (w, h, draw, outline) => {
+    const f = flat(w, h, w / 2, h / 2, draw, 0.5);
+    f.w = w; f.h = h; f.sh = flat(w, h, w / 2, h / 2, g => { g.fillStyle = 'rgba(112,128,146,.5)'; if (outline) { g.beginPath(); outline(g); g.fill(); } else g.fillRect(0, 0, w, h); }, 0).c;
+    out.push(f);
+  };
+  const base = (g, w, h, col = PAL.sheet, edge = EDGE, ink = PAL.scribble) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.strokeStyle = edge; g.lineWidth = 0.8; g.strokeRect(0.4, 0.4, w - 0.8, h - 0.8); g.strokeStyle = ink; g.lineCap = 'round'; g.lineJoin = 'round'; };
+  const scr = (g, x0, x1, y, lw = 1.5) => { g.lineWidth = lw; g.beginPath(); g.moveTo(x0, y); for (let x = x0 + 2; x <= x1; x += 2) g.lineTo(x, y + ((x / 2 | 0) % 2 ? -0.9 : 0.9)); g.stroke(); };
+  const bar = (g, x0, x1, y, lw) => { g.lineWidth = lw; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
+  for (let v = 0; v < 4; v++) add(34, 44, g => {
+    base(g, 34, 44);
+    if (v === 0) { scr(g, 5, 29, 11); scr(g, 5, 29, 21); scr(g, 5, 20, 31); }
+    else if (v === 1) { bar(g, 5, 21, 8.5, 3.4); scr(g, 5, 29, 17, 1.2); scr(g, 5, 29, 23.5, 1.2); scr(g, 5, 29, 30, 1.2); scr(g, 5, 16, 36.5, 1.2); }
+    else if (v === 2) { // a form with tick-boxes
+      g.lineWidth = 1; for (const y of [8, 18, 28]) { g.strokeRect(5, y, 5.4, 5.4); scr(g, 14, 29, y + 2.9, 1.2); }
+      g.strokeStyle = PAL.ink; g.lineWidth = 1.4; g.beginPath(); g.moveTo(5.8, 20.6); g.lineTo(7.6, 22.6); g.lineTo(10.8, 17.4); g.stroke();
+      g.strokeStyle = PAL.scribble; scr(g, 5, 22, 39, 1.2);
+    } else { scr(g, 5, 18, 8, 1.2); scr(g, 5, 29, 16, 1.2); scr(g, 5, 29, 22, 1.2); scr(g, 5, 29, 28, 1.2); g.lineWidth = 1.2; g.strokeRect(18, 33, 11, 6.4); }
+  });
+  // 4 a till receipt, 16 x 58: torn off in a zig-zag, six short lines, the last one the total
+  const torn = g => { g.moveTo(0.4, 0.4); g.lineTo(15.6, 0.4); g.lineTo(15.6, 54.5); for (let i = 0; i < 4; i++) { g.lineTo(13.7 - i * 3.8, 57.6); g.lineTo(11.8 - i * 3.8, 54.5); } g.closePath(); };
+  add(16, 58, g => {
+    g.fillStyle = PAL.sheet; g.beginPath(); torn(g); g.fill(); g.strokeStyle = EDGE; g.lineWidth = 0.8; g.stroke();
+    g.strokeStyle = PAL.scribble; g.lineCap = 'round';
+    bar(g, 4, 12, 6.5, 2.6); for (const y of [14, 20, 26, 32]) { bar(g, 3.4, 8.4, y, 1.1); bar(g, 10.6, 12.8, y, 1.1); }
+    g.setLineDash([1.2, 1.4]); bar(g, 3, 13, 38.5, 0.7); g.setLineDash([]);
+    g.strokeStyle = '#8795A3'; bar(g, 3.4, 6.4, 44.5, 1.3); bar(g, 9, 12.8, 44.5, 2.2);
+  }, torn);
+  // 5 a window envelope, 52 x 28: the flap's V, the grey window
+  add(52, 28, g => {
+    base(g, 52, 28);
+    g.lineWidth = 0.9; g.beginPath(); g.moveTo(0.8, 0.8); g.lineTo(26, 14.5); g.lineTo(51.2, 0.8); g.stroke();
+    g.fillStyle = '#D9E0E7'; g.beginPath(); rr(g, 6, 15.5, 19, 8, 1.6); g.fill(); g.lineWidth = 0.8; g.stroke();
+    bar(g, 9, 21, 18.3, 0.9); bar(g, 9, 17, 20.8, 0.9);
+  });
+  // 6 an invoice: a heading, a four-row ruled table, one bold total bar
+  add(34, 44, g => {
+    base(g, 34, 44);
+    bar(g, 5, 17, 6.5, 2.8); bar(g, 23, 29, 6, 1);
+    g.lineWidth = 0.8; g.strokeRect(5, 11.5, 24, 19);
+    for (const y of [16.2, 21, 25.8]) bar(g, 5, 29, y, 0.7);
+    g.lineWidth = 0.7; g.beginPath(); g.moveTo(21.5, 11.5); g.lineTo(21.5, 30.5); g.stroke();
+    for (const y of [13.9, 18.6, 23.4, 28.2]) { bar(g, 7, 15 + (y * 7 % 4), y, 0.9); bar(g, 24, 27, y, 0.9); }
+    g.fillStyle = '#8795A3'; g.fillRect(17, 34, 12, 4.4);
+  });
+  // 7 a carbon copy: the same letter, in the desk's own shade
+  add(34, 44, g => {
+    base(g, 34, 44, PAL.deskShade, 'rgba(128,142,158,.9)', '#9AA8B6');
+    scr(g, 5, 22, 8, 1.2); scr(g, 5, 29, 16, 1.2); scr(g, 5, 29, 22, 1.2); scr(g, 5, 29, 28, 1.2); scr(g, 5, 14, 35, 1.2);
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(0.8, 0.8, 32.4, 3);
+  });
+  // 8 a month torn off a calendar, 30 x 30: a header band, a grid of days, one day shaded
+  add(30, 30, g => {
+    base(g, 30, 30);
+    g.fillStyle = '#C5D0DA'; g.fillRect(0.8, 0.8, 28.4, 6); g.fillStyle = '#FBFCFD'; for (const x of [8, 22]) { g.beginPath(); g.arc(x, 3.8, 1.2, 0, 6.2832); g.fill(); }
+    g.lineCap = 'butt'; g.lineWidth = 0.6; for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(i * 5, 8.4); g.lineTo(i * 5, 28); g.stroke(); }
+    for (const y of [13.3, 18.2, 23.1]) bar(g, 1.6, 28.4, y, 0.6);
+    g.fillStyle = '#DCE3EA'; g.fillRect(15.4, 13.7, 4.2, 4.1);
+  });
+  // 9 a small note, 24 x 30: three lines in a hurry
+  add(24, 30, g => { base(g, 24, 30); scr(g, 4, 19, 8, 1.3); scr(g, 4, 19, 15, 1.3); scr(g, 4, 13, 22, 1.3); });
+  return { v: out };
 }
 // gold feature card: 54 x 34, ink keyline, one stencil word (baked after fonts load)
 export function cardSprite(word) {
@@ -402,9 +510,16 @@ export function cardSprite(word) {
     hl: 0, det: g => {
       g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-27, -17, 54, 9);
       g.lineWidth = 3; g.strokeStyle = PAL.ink; g.beginPath(); rr(g, -27, -17, 54, 34, 3); g.stroke();
-      let fs = 19; g.font = `900 ${fs}px ${STENCIL}`; const w = g.measureText(word).width;
+      let fs = 19; g.font = `900 ${fs}px ${STENCIL}`; const w = g.measureText(word).width, sp = word.indexOf(' ');
+      g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+      if (w > 44 && sp > 0) {                                 // two words that will not fit on one line: one above the other, both the same size
+        const a = word.slice(0, sp), b = word.slice(sp + 1); fs = 14;
+        g.font = `900 ${fs}px ${STENCIL}`; const m = Math.max(g.measureText(a).width, g.measureText(b).width);
+        if (m > 45) { fs *= 45 / m; g.font = `900 ${fs}px ${STENCIL}`; }
+        g.fillText(a, 0, -0.6); g.fillText(b, 0, fs * 0.8 + 0.6); return;
+      }
       if (w > 44) { fs *= 44 / w; g.font = `900 ${fs}px ${STENCIL}`; }
-      g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(word, 0, fs * 0.36);
+      g.fillText(word, 0, fs * 0.36);
     }
   })]);
 }
@@ -419,7 +534,7 @@ export function cardBack() {
 
 // ---------- phones ----------
 // Upright phone: body, dark screen well. The screen picture is drawn per frame, then the overlay goes on top.
-function phoneFace(w, h, r, sz) {
+export function phoneFace(w, h, r, sz) {
   return face(-w / 2 - 4.5, 0, w + 9, h + 10, PAL.ink, {
     r: r + 4, sz, sd: 6, det: (g, x, y, W, H) => {
       g.fillStyle = '#34302C'; g.fillRect(x + W - 2.6, y, 2.6, H);
@@ -428,33 +543,16 @@ function phoneFace(w, h, r, sz) {
     }
   });
 }
-// overlay: rounded screen corners, a hard glare band, optional strip of tape across the top
-export function phoneOverlay(w, h, r, tape) {
-  const padX = 34, padT = 24, W = w + 9 + padX * 2, H = h + 10 + padT;
-  return flat(W, H, W / 2, H, g => {
-    g.translate(W / 2, H);
-    const sy = -(h + 5);
-    g.fillStyle = PAL.ink; g.fillRect(-w / 2, sy, w, h);                 // the corners outside the rounded screen are phone body, not glass
-    g.globalCompositeOperation = 'destination-out'; g.beginPath(); rr(g, -w / 2, sy, w, h, r); g.fill();
-    g.globalCompositeOperation = 'source-over';
-    g.save(); g.beginPath(); rr(g, -w / 2, sy, w, h, r); g.clip();
-    g.fillStyle = 'rgba(255,255,255,.075)'; g.beginPath(); g.moveTo(-w / 2, sy); g.lineTo(-w * 0.02, sy); g.lineTo(-w / 2, sy + h * 0.5); g.closePath(); g.fill();
-    g.beginPath(); g.moveTo(w * 0.14, sy); g.lineTo(w * 0.3, sy); g.lineTo(-w / 2, sy + h * 0.84); g.lineTo(-w / 2, sy + h * 0.66); g.closePath(); g.fill();
-    g.restore();
-    if (tape) {
-      g.font = `700 16px ${HAND}`;
-      const a = tape.text.toUpperCase(), wa = g.measureText(a).width, wb = g.measureText(tape.len).width, tw = wa + 9 + 10 + 7 + wb;
-      const done = drawTape(g, 1, sy - 1, tw + 26, 29, -2.6, PAL.gold, 1.5);
-      g.font = `700 16px ${HAND}`; g.fillStyle = PAL.ink; g.textBaseline = 'middle'; g.textAlign = 'left';
-      let x = -tw / 2; g.fillText(a, x, 1.2); x += wa + 9; tri(g, x, 0.4, 10.5); x += 10 + 7; g.fillText(tape.len, x, 1.2);
-      done();
-    }
+// the strip of gold tape across the top of the first-ad phone: its words, a play triangle, the length. Origin = its middle.
+export function phoneTape(tape) {
+  const m = mk(4, 4).getContext('2d'); m.font = `700 16px ${HAND}`;
+  const a = tape.text.toUpperCase(), wa = m.measureText(a).width, wb = m.measureText(tape.len).width, tw = wa + 9 + 10 + 7 + wb, W = tw + 26 + 18, H = 52;
+  return flat(W, H, W / 2, H / 2, g => {
+    const done = drawTape(g, W / 2, H / 2, tw + 26, 29, -2.6, PAL.gold, 1.5);
+    g.font = `700 16px ${HAND}`; g.fillStyle = PAL.ink; g.textBaseline = 'middle'; g.textAlign = 'left';
+    let x = -tw / 2; g.fillText(a, x, 1.2); x += wa + 9; tri(g, x, 0.4, 10.5); x += 10 + 7; g.fillText(tape.len, x, 1.2);
+    done();
   }, 0);
-}
-// the edge glow of a woken phone: a hard rim in its track colour
-export function phoneRim(w, h, r, color) {
-  const W = w + 9 + 12, H = h + 10 + 12;
-  return flat(W, H, W / 2, H - 6, g => { g.strokeStyle = color; g.lineWidth = 2.2; g.beginPath(); rr(g, 6 - 1.1, 6 - 1.1, w + 9 + 2.2, h + 10 + 2.2, r + 5); g.stroke(); }, 0);
 }
 // a drawn play mark for when a loop cannot autoplay (iPhone Low Power Mode)
 export function playMark() {
@@ -509,11 +607,11 @@ export function skitPhone() {
 
 // ---------- kitchen ----------
 // a leaf: pointed at both ends, w wide in the middle, from (x0,y0) to (x1,y1)
-function leaf(g, x0, y0, x1, y1, w) {
+export function leaf(g, x0, y0, x1, y1, w) {
   const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l * w, ny = (x1 - x0) / l * w;
   g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(mx + nx, my + ny, x1, y1); g.quadraticCurveTo(mx - nx, my - ny, x0, y0); g.closePath();
 }
-const mixHex = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+export const mixHex = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 // the loaf on its rack (the clamp lamp over it is its own sprite, lampSprite)
 export function loafSprite(baked) {
   const st = PAL.steel, sd = '#6E7679', sl = [];
@@ -563,14 +661,8 @@ export function lampSprite() {
   ]);
 }
 // the pool of warm lamp light: one hard-edged ellipse and a hot spot. Origin = the loaf's centre.
-export function lampPool() {
-  return flat(240, 160, 100, 60, g => {
-    g.fillStyle = rgba(PAL.lamp, 0.22); g.beginPath(); g.ellipse(120, 80, 115, 75, 0, 0, 6.2832); g.fill();
-    g.fillStyle = rgba(PAL.lamp, 0.18); g.beginPath(); g.ellipse(112, 76, 55, 35, 0, 0, 6.2832); g.fill();
-  }, 0);
-}
 // a decal: drawn last, over the finished slabs, in the prop's own coordinates (the screen, not the plan)
-const decal = fn => ({ path: () => { }, b: [0, 0, 0, 0], z0: 0, z1: 0, top: 'rgba(0,0,0,0)', side: null, hl: 0, ns: 1, front: g => fn(g) });
+export const decal = fn => ({ path: () => { }, b: [0, 0, 0, 0], z0: 0, z1: 0, top: 'rgba(0,0,0,0)', side: null, hl: 0, ns: 1, front: g => fn(g) });
 // flour sack, 112 x 72, tall: it hides the cake. Four slabs so it bulges: foot, belly, shoulder, and a rolled fold stitched shut.
 export function sackSprite() {
   const T = '#F1ECDD', S = '#DCD3BE', print = 'rgba(64,74,92,.72)';

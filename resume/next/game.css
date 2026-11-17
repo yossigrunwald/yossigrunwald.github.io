@@ -1,4 +1,4 @@
-/* game.css — tape labels, pill, three-track strips, player, the plain resume, print. (First-paint HUD is inline in index.html.) */
+/* game.css — tape labels, pill, three-track strips, player, YouTube player, the reel, the plain resume, print. (First-paint HUD is inline in index.html.) */
 
 /* ---------- tape (shared shape) ---------- */
 .zig{clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 12.5%,calc(100% - 5px) 25%,100% 37.5%,calc(100% - 5px) 50%,100% 62.5%,calc(100% - 5px) 75%,100% 87.5%,calc(100% - 5px) 100%,5px 100%,0 87.5%,5px 75%,0 62.5%,5px 50%,0 37.5%,5px 25%,0 12.5%)}
@@ -13,6 +13,7 @@
 .tape .ti{background:var(--t);padding:7px 17px 7px;color:var(--ink);font-family:var(--hand);font-weight:700}
 .tape .h{display:block;font-size:20px;line-height:1.08;text-transform:uppercase;letter-spacing:.01em}
 .tape .l{display:block;font-size:17px;line-height:1.2;margin-top:2px}
+.tape.nar .ti{padding-left:12px;padding-right:12px}
 .tape .l.aft{display:none}
 .tape.played .l.aft{display:block}
 .tape q{quotes:"\201C" "\201D"}
@@ -22,6 +23,8 @@
 
 /* ---------- counter states ---------- */
 #tm.tick .blade{animation:ratchet .22s steps(5,end)}
+#tm::before{content:"";position:absolute;z-index:-1;left:-8px;top:-7px;right:-9px;bottom:-7px;background:var(--ink);border-radius:10px 7px 7px 10px;box-shadow:0 0 0 1.5px rgba(244,241,232,.5);opacity:0;transition:opacity .16s linear}
+#tm.plate::before{opacity:.9}
 @keyframes ratchet{0%{transform:translateX(-5px)}100%{transform:none}}
 #tm .lamps .lw.on{background:var(--gold)}
 #tm .lamps .lk.on{background:var(--blue)}
@@ -30,10 +33,10 @@
 @keyframes lamp{0%{transform:scale(2.1)}100%{transform:none}}
 #chip.gone{display:none}
 #chip.gone2{opacity:0;pointer-events:none}
-#chip.faint{opacity:0}
+#chip.faint{opacity:0;pointer-events:none}
 
 /* ---------- the Play pill ---------- */
-#pill{position:absolute;z-index:6;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));height:64px;margin:0;border:0;border-radius:32px;background:var(--t,var(--gold));color:var(--ink);font:700 18px/1.1 var(--road);letter-spacing:.01em;text-align:left;display:flex;align-items:center;gap:13px;padding:0 20px 0 10px;box-shadow:0 0 0 2px var(--ink),3px 5px 0 2px rgba(20,17,15,.5);transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)));transition:transform .3s cubic-bezier(.2,1.35,.4,1);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#pill{position:absolute;z-index:6;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));height:64px;margin:0;border:0;border-radius:32px;background:var(--t,var(--gold));color:var(--ink);font:700 18px/1.1 var(--road);letter-spacing:.01em;text-align:left;display:flex;align-items:center;gap:13px;padding:0 20px 0 10px;box-shadow:0 0 0 2px var(--ink),3px 5px 0 2px rgba(20,17,15,.5);transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)));transition:transform .3s cubic-bezier(.2,1.35,.4,1);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
 #pill[hidden]{display:flex;visibility:hidden}
 #pill.up{transform:none;visibility:visible}
 #pill.up.tuck{transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)))}
@@ -47,6 +50,18 @@
 @media (min-width:700px){#pill{left:50%;right:auto;width:420px;margin-left:-210px}}
 @media (max-width:379px){#pill{font-size:16px;gap:10px;padding-right:12px}#pill .num{font-size:20px}}
 @media (max-width:339px){#pill{font-size:14px;gap:8px;padding:0 10px 0 8px}#pill .num{font-size:17px}#pill .pp{width:40px;height:40px}}
+
+/* ---------- the links pill: one pill, a real link for each button (the app's two) ---------- */
+#links{position:absolute;z-index:6;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));height:64px;border-radius:32px;background:var(--t,var(--gold));box-shadow:0 0 0 2px var(--ink),3px 5px 0 2px rgba(20,17,15,.5);display:flex;gap:8px;padding:8px;transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)));transition:transform .3s cubic-bezier(.2,1.35,.4,1);touch-action:none}
+#links[hidden]{display:flex;visibility:hidden}
+#links.up{transform:none;visibility:visible}
+#links.up.tuck,#links.up.away{transform:translateY(calc(100% + 40px + env(safe-area-inset-bottom)))}
+#links a{flex:1 1 0;min-width:0;border-radius:24px;background:var(--ink);color:var(--t,var(--gold));font:700 17px/1 var(--road);letter-spacing:.01em;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:7px;padding:3px 8px 0;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:none;-webkit-user-drag:none}
+#links a:active{transform:translateY(1.5px)}
+#links a svg{flex:none;width:13px;height:13px;margin-top:-3px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:700px){#links{left:50%;right:auto;width:420px;margin-left:-210px}}
+@media (max-width:379px){#links a{font-size:15px;gap:5px}}
+@media (max-width:339px){#links a{font-size:13.5px;padding:3px 4px 0}#links a svg{width:11px;height:11px}}
 
 /* ---------- the three-track moment ---------- */
 #three{position:absolute;z-index:4;left:0;right:0;top:104px;display:flex;flex-direction:column;align-items:center;gap:0;pointer-events:none}
@@ -68,6 +83,88 @@
 #player video{position:absolute;left:0;top:env(safe-area-inset-top);width:100%;height:calc(100% - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom));object-fit:contain;background:#000}
 #px{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;margin:0 0 0 -28px;border:0;border-radius:50%;background:var(--bone);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 2px var(--ink),0 0 0 3.5px var(--bone);-webkit-tap-highlight-color:transparent}
 #px svg{width:22px;height:22px;stroke:var(--ink);stroke-width:2.8;stroke-linecap:round;fill:none}
+
+/* ---------- the YouTube player: 16:9 at full width, the find's tape under it ---------- */
+#yt{position:absolute;inset:0 0 calc(88px + env(safe-area-inset-bottom)) 0;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+#yt[hidden]{display:none}
+#ytf{position:relative;flex:none;width:100%;aspect-ratio:16/9;margin-top:22vh;background:#14110F center/cover no-repeat}
+#ytf iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+#ytcap{flex:none;margin-top:22px;max-width:calc(100% - 28px)}
+.tape.still{position:relative;will-change:auto}
+.tape.still .tw{animation:none;transform:rotate(-1.6deg)}
+#ytturn{flex:none;margin:26px 0 0;display:flex;align-items:center;gap:9px;color:#C9CED2;font:700 12px/1 var(--road);letter-spacing:.1em;text-transform:uppercase}
+#ytturn svg{width:26px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#ytopen{flex:none;margin-top:18px;min-height:44px;padding:3px 18px 0;display:inline-flex;align-items:center;gap:8px;border-radius:22px;background:var(--ink);color:var(--bone);box-shadow:0 0 0 1.5px var(--bone);font:700 15px/1 var(--road);letter-spacing:.01em;text-decoration:none;-webkit-tap-highlight-color:transparent}
+#ytopen svg{width:13px;height:13px;margin-top:-3px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+@media (orientation:landscape){#yt{overflow:visible}#ytf{margin-top:0;width:auto;height:100%}#ytcap,#ytturn{display:none}#ytopen{position:absolute;right:calc(14px + env(safe-area-inset-right));bottom:-66px;margin:0}}
+/* #ad1: the poster with the Play pill over it */
+#stage.poster #pill{z-index:21;bottom:calc(92px + env(safe-area-inset-bottom))}
+#stage.poster #player video{cursor:pointer}
+
+/* ---------- the reel: a sheet of all ten videos ---------- */
+#reel{position:fixed;inset:0;z-index:15;background:rgba(20,17,15,0);transition:background .25s linear;touch-action:none}
+#reel[hidden]{display:none}
+#reel.on{background:rgba(20,17,15,.6)}
+#reel .rsh{position:absolute;left:0;right:0;top:calc(58px + env(safe-area-inset-top));bottom:0;margin:0 auto;max-width:560px;background:var(--desk);box-shadow:0 0 0 2px var(--ink);border-radius:16px 16px 0 0;padding:20px 14px calc(100px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1);font-family:var(--road);color:var(--ink);-webkit-user-select:none;user-select:none}
+#reel.on .rsh{transform:none}
+#reel h2{margin:0 0 0 2px;display:inline-block;transform:rotate(-1.6deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.3))}
+#reel h2>span{display:block;background:var(--ink);padding:1.5px}
+#reel h2 b{display:block;background:var(--pinktape);padding:9px 20px 5px;font:900 30px/1 var(--stencil);letter-spacing:.05em;text-transform:uppercase}
+#reel .rn{float:right;margin:14px 4px 0 0;font:700 13px/1 var(--road);letter-spacing:.02em;color:#4B555C}
+#reel .rn b{font:900 22px/.8 var(--stencil);color:var(--ink);letter-spacing:.03em}
+#reell{clear:both;padding-top:16px}
+#reel .rg{display:grid;gap:16px 12px;align-items:start;margin-top:18px}
+#reel .rg.r2{grid-template-columns:repeat(2,minmax(0,1fr))}
+#reel .rg.r3{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 10px}
+#reel .rg.ry{margin-top:22px}
+#reel .r3 .rt p{font-size:13px;margin-top:7px;min-height:2.5em}
+#reel .r3 .rt .ra{flex-direction:column;gap:6px}
+#reel .r3 .rt .ra button>span{min-height:32px;justify-content:flex-start;padding-left:9px}
+#reel .r3 .rt .pb{width:34px;height:34px;margin:-17px 0 0 -17px}
+#reel .r3 .rt .len{font-size:14px;bottom:7px}
+.rt{min-width:0}
+.rt .ri{position:relative;display:block;width:100%;aspect-ratio:3/4;margin:0;padding:0;border:0;border-radius:9px;background:#14110F;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.26);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rt.yt .ri{aspect-ratio:16/9}
+.rt.big .ri{aspect-ratio:5/4}
+.rt .ri img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 34%;border-radius:9px;display:block}
+.rt.big .ri img{object-position:50% 20%}
+.rt.yt .ri img{object-position:50% 50%}
+.rt .pb{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1.5px var(--bone);display:grid;place-items:center}
+.rt .pb svg{width:13px;height:15px;margin-left:3px;fill:var(--bone)}
+.rt.big .pb{width:60px;height:60px;margin:-30px 0 0 -30px}
+.rt.big .pb svg{width:20px;height:23px;margin-left:5px}
+.rt .len{position:absolute;left:0;bottom:9px;background:var(--gold);color:var(--ink);font:900 15px/1 var(--stencil);font-style:normal;letter-spacing:.05em;padding:6px 8px 3px 7px;box-shadow:0 0 0 1.5px var(--ink)}
+.rt.big .len{font-size:21px;padding:7px 11px 3px 10px;bottom:13px}
+.rt .tab{position:absolute;right:-6px;top:-10px;background:var(--ink);padding:1.2px;transform:rotate(4deg);filter:drop-shadow(1.5px 2px 0 rgba(20,17,15,.35))}
+.rt .tab b{display:block;background:var(--t);color:var(--ink);font:700 11px/1 var(--hand);padding:5px 9px 4px}
+.rt p{margin:8px 1px 0;font-size:14px;line-height:1.25}
+.rt.big p{font-size:17px}
+.rt p span{color:#4B555C;white-space:nowrap}
+.rt .ra{display:flex;gap:8px;margin-top:9px;filter:drop-shadow(1.5px 2px 0 rgba(20,17,15,.3))}
+.rt .ra[hidden]{display:none}
+.rt .ra button{flex:1 1 0;min-width:0;margin:0;padding:1.5px;border:0;background:var(--ink);color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transform:rotate(-1.3deg)}
+.rt .ra button+button{transform:rotate(1.1deg)}
+.rt .ra button>span{min-height:39px;padding:4px 6px 2px 7px;background:var(--masking);display:flex;align-items:center;justify-content:center;gap:5px;font:700 12px/1.08 var(--road);letter-spacing:.01em;text-align:left}
+.rt .ra i{font-style:normal}
+.rt .ra button:active{transform:translateY(1.5px)}
+.rt .ri:active .pb{transform:scale(.95)}
+.rt .ra svg{flex:none;width:9px;height:10px;fill:currentColor}
+.rt .ra svg.go{width:12px;height:9px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.rt.big .ra{max-width:320px}
+.rt.big .ra button>span{font-size:13.5px}
+/* not found yet: under dust. The picture is washed out and speckled; it still plays */
+.rt.un .ri img{filter:grayscale(1) contrast(.62) brightness(1.2)}
+.rt.un .ri::after{content:"";position:absolute;inset:0;border-radius:9px;background:rgba(237,241,244,.34);background:var(--dust,rgba(237,241,244,.34)) 0 0/220px 220px}
+.rt .pb,.rt .len,.rt .tab{z-index:1}
+.rt.un .len{background:#DCE3E9}
+.rt.un .pb{background:#4B555C}
+.rt.un .tab{display:none}
+#reel .rft{position:absolute;z-index:2;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;height:calc(76px + env(safe-area-inset-bottom));background:var(--desk);box-shadow:0 -2px 0 var(--ink),0 -6px 0 rgba(20,17,15,.1);transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#reel.on .rft{transform:none}
+#rx{position:absolute;z-index:3;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));width:56px;height:56px;margin:0 0 0 -28px;border:0;border-radius:50%;background:var(--bone);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 2px var(--ink),3px 4px 0 2px rgba(20,17,15,.4);-webkit-tap-highlight-color:transparent;transform:translateY(120px);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#reel.on #rx{transform:none}
+#rx svg{width:22px;height:22px;stroke:var(--ink);stroke-width:2.8;stroke-linecap:round;fill:none}
+@media (prefers-reduced-motion:reduce){#reel,#reel .rsh,#reel .rft,#rx{transition:none}}
 
 /* ---------- the plain resume: one column, road-sign body, stencil headings ---------- */
 #plain{max-width:680px;margin:0 auto;padding:20px 20px 72px}
@@ -125,14 +222,14 @@ html.can #plain .play{display:block}
 #plain .reel .yt b{color:var(--ink);display:block}
 @media (min-width:640px){#plain .reel{grid-template-columns:repeat(10,minmax(0,1fr))}#plain .reel li,#plain .reel li:nth-child(2),#plain .reel li:nth-child(3){grid-column:span 2}#plain .reel .yt{grid-column:span 5}#plain .reel .big{grid-column:1/11}}
 
-@media (prefers-reduced-motion:reduce){.tape .tw,#tm.tick .blade,#tm .lamps i.on{animation:none}#pill,#three p.in{transition:none}}
+@media (prefers-reduced-motion:reduce){.tape .tw,#tm.tick .blade,#tm .lamps i.on{animation:none}#pill,#links,#three p.in{transition:none}}
 
 /* ---------- print: only the document, one page ---------- */
 @media print{
   @page{margin:11mm}
   html,html.g,html.g body{height:auto!important;overflow:visible!important}
   body,html.g body{background:#fff!important;position:static!important;font-size:10.5pt;line-height:1.3}
-  #stage,html.g #stage{display:none!important}
+  #stage,html.g #stage,#reel{display:none!important}
   #plain,html.g #plain{display:block!important;max-width:none;padding:0}
   #plain .play,#plain .reel video,#plain .reel img,#plain .reel .vt{display:none!important}
   #plain .reel .dur{display:inline}

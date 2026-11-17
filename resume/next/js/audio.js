@@ -43,7 +43,15 @@ function voice(track, f, t, vol = 1) {
 export function findNote(i, track) { if (!ok()) return; voice(track, hz(TUNE[i % TUNE.length]), ac.currentTime + 0.01); }
 export function trackNote(n) { if (!ok()) return; voice('wkv'[n], hz([0, 4, 7][n]), ac.currentTime + 0.01, 0.8); }      // D, F sharp, A
 export function chord() { if (!ok()) return; const t = ac.currentTime + 0.01; voice('w', hz(0), t, 0.6); voice('k', hz(4), t, 0.6); voice('v', hz(7), t, 0.6); voice('a', hz(12), t, 0.35); }
-export function ding() { if (!ok()) return; const t = ac.currentTime + 0.01; osc('sine', hz(24), t, 0.5, 0.16, out); osc('sine', hz(24) * 2.76, t, 0.2, 0.05, out); }
+// a card's ding. n = 0 as it flips up; 1..9 as it docks in the tray, climbing the scale one step a card
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+export function ding(n = 0) { if (!ok()) return; const t = ac.currentTime + 0.01, f = hz(24 + SCALE[Math.min(9, n)] - (n ? 12 : 0)); osc('sine', f, t, 0.5, 0.16, out); osc('sine', f * 2.76, t, 0.2, 0.05, out); }
+// all nine in: D, F sharp, A, D in the bell voice
+export function chime() { if (!ok()) return; const t = ac.currentTime + 0.01; [12, 16, 19, 24].forEach((st, i) => { osc('sine', hz(st), t + i * 0.07, 1.2, 0.2, out); osc('sine', hz(st) * 2.76, t + i * 0.07, 0.4, 0.05, out); }); }
+// a switch flipping itself: one short click
+export function tick() { if (!ok()) return; const t = ac.currentTime + 0.005; osc('square', 1900, t, 0.018, 0.09, out, 0.001); osc('square', 620, t + 0.012, 0.02, 0.07, out, 0.001); }
+// a bump that finds nothing yet: a low knock
+export function thud() { if (!ok()) return; const t = ac.currentTime + 0.005, o = osc('sine', 150, t, 0.16, 0.4, out, 0.003); o.frequency.exponentialRampToValueAtTime(70, t + 0.14); }
 
 // tape slap: a noise burst through a band-pass sweeping 3 kHz -> 600 Hz in 90 ms
 let noiseBuf = null;
@@ -55,3 +63,14 @@ export function slap() {
   g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
   s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + 0.16);
 }
+// filtered noise with a moving band: dur seconds, from f0 to f1 Hz
+function swish(f0, f1, dur, peak, q = 0.9) {
+  if (!ok()) return;
+  if (!noiseBuf) { noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.2, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const t = ac.currentTime + 0.005, s = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = noiseBuf; s.loop = true; bp.type = 'bandpass'; bp.Q.value = q; bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.05);
+}
+export function whip() { swish(900, 3600, 0.32, 0.12, 1.6); }      // a card leaving for the tray
+export function gust() { swish(400, 1500, 1.5, 0.3, 0.7); }        // the gust that clears the desk

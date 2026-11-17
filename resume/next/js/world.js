@@ -2,7 +2,7 @@
 // Everything here is data: no drawing. Units are world units (spec 4.1): +x east, +y south, origin = hub centre.
 
 export const MEDIA = '../media/';          // launch: move the tree up one level and set './media/'
-export const STAGE = 1;                    // finds with data-stage <= STAGE are live (1 = the hub slice)
+export const STAGE = 3;                    // finds with data-stage <= STAGE are live (1 = the hub slice, 2 = the whole desk, 3 = the whole mat)
 
 export const PAL = {
   floor: '#23282B', floorSeam: '#1B1F22',
@@ -12,6 +12,7 @@ export const PAL = {
   flour: '#F7F3EA', flourShade: '#D9CDB8',
   blue: '#2F6BDE', blueTape: '#78AEEB',
   mat: '#0C1614', matGrid: '#1B2B27', matLit: '#1E322D', matLitGrid: '#3F6358', matThing: '#142220',
+  woods: '#0B231B', woodsGrid: '#133629', woodsLit: '#1F6B4A', woodsLitGrid: '#3C9A70', pine: '#154D36', pineLit: '#2E8A60',
   pink: '#FF4D7D', pinkTape: '#FF6F91',
   masking: '#E6D7AE', ink: '#14110F',
   van: '#F4F1E8', glass: '#1D2A30', rack: '#C9CED2',
@@ -26,27 +27,25 @@ export const TRACK = {
   c: { tape: PAL.masking, strong: PAL.masking }
 };
 
-// Rects are [x0, y0, x1, y1]. FULL is the spec (4.2); G is what the hub slice builds: the same tables cut
-// about 650 units from the hub. Later stages only have to swap G for FULL and add the plank.
+// Rects are [x0, y0, x1, y1]. FULL is the spec (4.2); G is what is built so far: the desk and the mat whole (stages 2
+// and 3), the block still cut about 650 units from the hub. The last stage only has to swap G for FULL and add the plank.
 export const FULL = {
   desk: [-460, -1480, 460, -110], block: [-820, -110, -110, 520], mat: [110, -110, 1040, 1100],
   strip: [-110, 110, 110, 520], plank: [-820, 520, 110, 650]
 };
 export const G = {
-  desk: [-460, -800, 460, -110], block: [-700, -110, -110, 520], mat: [110, -110, 700, 520],
+  desk: [-460, -1480, 460, -110], block: [-700, -110, -110, 520], mat: [110, -110, 1040, 1100],
   strip: [-110, 110, 110, 520]
 };
+export const WOODS = [560, 620, 1040, 1100];         // the green mat that lies on the dark one (spec 4.2)
 export const HUB_R = 160;
-export const BOX = [-700, -800, 700, 520];           // world box of everything drivable in this stage
+export const BOX = [-700, -1480, 1040, 1100];        // world box of everything drivable in this stage
 // Where the slice cuts through a bigger table the edge is taped off, and a ghost of the table carries on beyond it.
 // GHOST: each table's rect grown past its cut edges. CUTS: the tape bands [x0, y0, x1, y1, vertical, onMat].
-export const GHOST = { desk: [-460, -964, 460, -110], block: [-864, -110, -110, 684], strip: [-110, 110, 110, 684], mat: [110, -110, 864, 684] };
+export const GHOST = { desk: [-460, -1480, 460, -110], block: [-864, -110, -110, 684], strip: [-110, 110, 110, 684], mat: [110, -110, 1040, 1100] };
 export const CUTS = [
-  [-472, -820, 472, -796, 0, 0],                     // desk, north
   [-720, -122, -696, 532, 1, 0],                     // block, west
-  [696, -122, 720, 532, 1, 1],                       // mat, east
-  [-712, 516, 110, 540, 0, 0],                       // block and strip, south
-  [110, 516, 712, 540, 0, 1]                         // mat, south
+  [-712, 516, 110, 540, 0, 0]                        // block and strip, south
 ];
 export const EDGE = 26;                              // the van's centre stops this far inside an edge: its nose reaches the tape
 export const SPAWN = { x: 0, y: 20 };
@@ -82,10 +81,46 @@ export function collDist(c, x, y) {
   return Math.hypot(x - qx, y - qy);
 }
 
-// Waypoint graph (spec 9.4): the nodes inside the slice. Used when the autopilot is stuck.
+// Waypoint graph (spec 9.4): the hand-placed nodes; the mat adds its own once its props stand (addNode). The autopilot
+// joins two nodes whenever the van can drive the straight line between them (van.js), so only the nodes are kept here.
 export const WAYPOINTS = [
-  [0, 20], [0, -230], [-140, -420], [140, -420], [0, -700], [-300, 160], [0, 250], [300, 160]
+  [0, 20], [0, -150], [0, -230], [-140, -420], [140, -420], [0, -700], [-250, -900], [250, -700], [0, -1050], [0, -1240], [-300, -1180], [300, -1150],
+  [-130, 100], [-300, 160], [0, 190], [0, 250], [140, -60], [300, 160],
+  [-292, -1335], [-270, -1444]                           // round the west end of the tall boxes, and in behind them
 ];
+export const FIXED_NODES = WAYPOINTS.length;         // the hand-placed ones (van.js joins these over longer runs)
+export function addNode(x, y) { WAYPOINTS.push([x, y]); }
+
+// ---- spatial hash on a 256-unit grid (spec 9.6): things are bucketed once, and a frame only looks in the cells it shows ----
+export const CELL = 256;
+const cellKey = (cx, cy) => (cx + 512) * 1024 + cy + 512;
+export function gridAdd(g, x, y, o) {
+  const k = cellKey(Math.floor(x / CELL), Math.floor(y / CELL)); let a = g.get(k);
+  if (!a) g.set(k, a = []); a.push(o); return a;
+}
+// the cell arrays that overlap a rect, pushed into out (a reused array)
+export function gridCells(g, x0, y0, x1, y1, out) {
+  out.length = 0;
+  const cx1 = Math.floor(x1 / CELL), cy1 = Math.floor(y1 / CELL);
+  for (let cy = Math.floor(y0 / CELL); cy <= cy1; cy++) for (let cx = Math.floor(x0 / CELL); cx <= cx1; cx++) { const a = g.get(cellKey(cx, cy)); if (a && a.length) out.push(a); }
+  return out;
+}
+// Colliders: each sits in every cell its box touches; one that moves (the cake) is kept in a short list of its own.
+const cgrid = new Map(), roamers = [], cellBuf = [];
+let cstamp = 0;
+export function addCollider(c, roams) {
+  S.colliders.push(c);
+  if (roams) { roamers.push(c); return; }
+  const x0 = c.t === 'c' ? c.x - c.r : c.x0, x1 = c.t === 'c' ? c.x + c.r : c.x1, y0 = c.t === 'c' ? c.y - c.r : c.y0, y1 = c.t === 'c' ? c.y + c.r : c.y1;
+  for (let cy = Math.floor(y0 / CELL); cy <= Math.floor(y1 / CELL); cy++) for (let cx = Math.floor(x0 / CELL); cx <= Math.floor(x1 / CELL); cx++) gridAdd(cgrid, cx * CELL, cy * CELL, c);
+}
+// the colliders within reach of a point, each once, into out
+export function collidersNear(x, y, reach, out) {
+  out.length = 0; cstamp++;
+  for (const c of roamers) out.push(c);
+  for (const a of gridCells(cgrid, x - reach, y - reach, x + reach, y + reach, cellBuf)) for (const c of a) if (c.stamp !== cstamp) { c.stamp = cstamp; out.push(c); }
+  return out;
+}
 
 export function mulberry32(a) {
   return function () {
@@ -119,16 +154,34 @@ export function readCards(doc = document) {
 }
 
 // ---- paper: piles and singles on the desk (seeded, the same for everyone) ----
-// the first pile sits between the hub and the first-ad phone; card piles sit on their cards
+// 12 piles: the first one between the hub and the first-ad phone, one on each of the nine cards, one on the taped
+// sheet, and a decoy that hides only a paperclip chain. Plus about 30 single sheets.
 export const FIRST_PILE = { x: 0, y: -216, r: 50, n: 16 };
+export const LINE_PILE = { x: -340, y: -1250, r: 94, n: 22 };      // it covers the taped sheet, 168 x 210
+export const DECOY_PILE = { x: 170, y: -1180, r: 62, n: 12 };      // on the east side: no screenful anywhere on the desk holds more than five piles
+// where no single sheet may lie: under the standing things [x0, y0, x1, y1]
+const NO_SHEET = [
+  [-110, -400, 110, -240],                             // the first-ad phone and its boxes
+  [-452, -664, -306, -596], [280, -964, 440, -884],    // the easel, the phone on its cube
+  [-124, -1424, 124, -1322], [268, -1310, 412, -1206], // the app phone, the bench and its stool
+  [-262, -1456, -100, -1300], [-316, -1440, -252, -1326],   // the tall boxes, what is behind them and where two of them land; the printer's paper
+  [-436, -1366, -244, -1134],                          // the taped sheet (its own pile covers it)
+  [-330, -980, -270, -940], [-460, -1134, -366, -1066], [214, -1198, 286, -1102], [128, -1016, 174, -976]   // the tape dispenser, the organiser, the clipboard, the mug
+];
+// Sheets the gust cannot take: each is caught under or against something [x, y, turn, kind]. They still fly when the van hits them.
+export const MUG = [150, -995];
+const CAUGHT = [
+  [157, -988, 0.5, 0], [-232, -1377, -0.2, 1], [126, -1353, 1.3, 3], [-446, -613, 0.9, 6], [-291, -951, -0.7, 4],
+  [-366, -1088, 0.35, 7], [291, -1240, -1.1, 2], [283, -895, 0.6, 5], [224, -1126, -0.4, 9]
+];
 export function makeSheets(cards) {
   const rnd = mulberry32(SEED), sheets = [], piles = [];
-  const add = (pile, x, y) => sheets.push({
-    x, y, a: (rnd() - 0.5) * 2.4, v: (rnd() * 4) | 0, vx: 0, vy: 0, spin: 0, lift: 0, loose: false,
-    gone: 0, ox: x, oy: y, pile, moved: false, twitch: 0
-  });
+  const add = (pile, x, y) => {
+    const s = { i: sheets.length, x, y, a: (rnd() - 0.5) * 2.4, v: (rnd() * 4) | 0, vx: 0, vy: 0, spin: 0, lift: 0, loose: false, gone: 0, ox: x, oy: y, pile, moved: false, cool: 0, gx: 0, gy: 0, cell: null };
+    sheets.push(s); if (pile) pile.sheets.push(s);
+  };
   const mkPile = (p, card) => {
-    const pile = { x: p.x, y: p.y, r: p.r, n: p.n, moved: 0, card, done: false };
+    const pile = { x: p.x, y: p.y, r: p.r, n: p.n, moved: 0, card, done: false, sheets: [], touched: false, pic: null, kind: p.kind || '' };
     piles.push(pile);
     for (let i = 0; i < p.n; i++) {
       const ang = rnd() * 6.283, rad = Math.pow(rnd(), 0.72) * p.r * (i < 5 ? 0.45 : 1);   // heaped toward the centre; a few always cover it
@@ -136,15 +189,28 @@ export function makeSheets(cards) {
     }
     return pile;
   };
+  const single = (x, y) => { for (const r of NO_SHEET) if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) return; add(null, x, y); };
+  const cardPile = (c, i) => { c.pile = mkPile({ x: c.x, y: c.y, r: 66, n: (i < 3 ? 12 : 11) + ((rnd() * (i < 3 ? 5 : 4)) | 0) }, c); };   // 12 to 16 sheets on the near three, 11 to 14 on the rest
+  // The order below is kept on purpose: the first pile, the three near cards and the twelve near singles draw the same
+  // random numbers as they did in the hub slice, so the opening frame's paperwork is exactly what was tuned there.
   mkPile(FIRST_PILE, null);
-  cards.forEach(c => { c.pile = mkPile({ x: c.x, y: c.y, r: 66, n: 12 + ((rnd() * 5) | 0) }, c); });
-  // loose singles on the near desk
-  const d = G.desk;
-  for (let i = 0; i < 12; i++) {
-    const x = d[0] + 40 + rnd() * (d[2] - d[0] - 80), y = d[1] + 60 + rnd() * (d[3] - d[1] - 110);
-    if (Math.abs(x) < 110 && y > -400 && y < -240) continue;           // not on the phone and its boxes
-    add(null, x, y);
+  cards.slice(0, 3).forEach((c, i) => cardPile(c, i));
+  for (let i = 0; i < 12; i++) single(-420 + rnd() * 840, -740 + rnd() * 580);        // the near desk
+  cards.slice(3).forEach((c, i) => cardPile(c, i + 3));
+  mkPile({ ...LINE_PILE, kind: 'line' }, null);
+  mkPile({ ...DECOY_PILE, kind: 'decoy' }, null);
+  const far = sheets.length;
+  for (let i = 0; i < 20; i++) single(-420 + rnd() * 840, -1440 + rnd() * 660);       // the far desk
+  for (const [x, y, a, v] of CAUGHT) { add(null, x, y); const s = sheets[sheets.length - 1]; s.a = a; s.v = v; s.stay = true; }
+  // Kinds of paper (art.sheetSprites). The first pile, JOBS and the near singles keep the letter sheets they always had;
+  // each other named pile leans its own way, so the piles differ at a glance. No new random numbers are drawn for this.
+  const LEAN = { INVOICES: [6, 70], 'CARD PAYMENTS': [4, 70], CLIENTS: [5, 70], CALENDAR: [8, 70], 'SMS REMINDERS': [9, 70], QUOTES: [2, 70], QUICKBOOKS: [7, 40], 'WORKS OFFLINE': [7, 22] };
+  const hash = i => (Math.imul(i + 1, 2654435761) >>> 0) % 100;
+  for (const p of piles) {
+    const l = p.card && LEAN[p.card.word]; if (l) for (const s of p.sheets) if (hash(s.i) < l[1]) s.v = l[0];
+    if (p.kind === 'decoy') for (const s of p.sheets) if (hash(s.i) < 50) s.v = 4 + hash(s.i * 7 + 3) % 6;
   }
+  for (let i = far; i < sheets.length; i++) { const s = sheets[i]; if (!s.pile && !s.stay && hash(i) < 45) s.v = 4 + hash(i * 7 + 3) % 6; }
   return { sheets, piles };
 }
 
@@ -154,6 +220,12 @@ export const DRIFTS = [
   { x: -385, y: 255, r: 58 }, { x: -585, y: 95, r: 50 }, { x: -205, y: 410, r: 52 }, { x: -600, y: 415, r: 58 },
   { x: -474, y: 104, r: 26 }, { x: -432, y: -74, r: 34 }
 ];
+
+// how much of a world rect is on the screen this frame, 0..1 (by area)
+export function shown(x0, y0, x1, y1) {
+  const v = S.vr, w = Math.min(x1, v[2]) - Math.max(x0, v[0]), h = Math.min(y1, v[3]) - Math.max(y0, v[1]);
+  return w <= 0 || h <= 0 ? 0 : (w * h) / ((x1 - x0) * (y1 - y0) || 1);
+}
 
 // ---- shared, mutable game state ----
 export const S = {
@@ -165,6 +237,8 @@ export const S = {
   props: [], colliders: [],
   sheets: [], piles: [],
   adPlayed: false, threeDone: false, firstInput: false,
+  vr: [0, 0, 0, 0],     // the world rect on screen this frame [x0, y0, x1, y1]
+  inkUntil: 0,          // game time until which the tyre line is drawn in black ink (the ad 2 toy)
   slow: 0,              // seconds of slow motion left (real time)
   reduced: false
 };

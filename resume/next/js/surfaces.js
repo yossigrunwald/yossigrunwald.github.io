@@ -1,15 +1,22 @@
 // surfaces.js — the three ways a table clears: paper bodies (desk), the flour canvas (block),
 // the trail canvas and the headlight wedge (mat). Plus the particle pool.
-import { G, BOX, PAL, DRIFTS, HUB_R, S, mulberry32, SEED, surfaceAt } from './world.js';
+import { G, PAL, DRIFTS, HUB_R, S, mulberry32, SEED, surfaceAt, gridAdd, gridCells } from './world.js';
 import { mk, rgba } from './art.js';
 
 export const TR = 0.5;                       // trail canvas: pixels per world unit (half resolution)
 const FR = 1;                                // flour canvas: one pixel per unit, so its edges are as crisp as the sprites
 const rnd = mulberry32(SEED ^ 0x9e37);
 
-// ---------------- trail: one persistent canvas, stamped, never cleared, never faded ----------------
-export let trail = null;
+// ---------------- trail: persistent, stamped, never cleared, never faded ----------------
+// One canvas for each table (desk, block, strip, mat) at half resolution, each covering exactly its own table: the
+// floor between the tables can hold no line, and a canvas over the whole floor spent a third of its memory there.
+export const trails = {};
 let tg = null, last = null;
+const onto = k => { const t = trails[k]; if (!t) return false; tg = t.g; return true; };      // the table whose canvas is drawn on next
+export function drawTrails(ctx, x0, y0, x1, y1) {
+  for (const k in trails) { const t = trails[k], r = t.r; if (r[0] < x1 && r[2] > x0 && r[1] < y1 && r[3] > y0) ctx.drawImage(t.c, r[0], r[1], r[2] - r[0], r[3] - r[1]); }
+}
+export function trailCanvases() { return Object.values(trails).map(t => t.c); }
 // ---------------- flour: the block only ----------------
 export let flour = null;
 let fg = null, wiped = null, cw = 0, ch = 0;
@@ -79,11 +86,19 @@ function drift(g, d, r) {
 }
 
 export function initSurfaces() {
-  trail = mk((BOX[2] - BOX[0]) * TR, (BOX[3] - BOX[1]) * TR); tg = trail.getContext('2d');
-  tg.setTransform(TR, 0, 0, TR, -BOX[0] * TR, -BOX[1] * TR); tg.lineCap = 'round'; tg.lineJoin = 'round';
+  initPaper();
+  for (const k of ['desk', 'block', 'strip', 'mat']) {
+    const r = G[k], c = mk((r[2] - r[0]) * TR, (r[3] - r[1]) * TR), g = c.getContext('2d');
+    g.setTransform(TR, 0, 0, TR, -r[0] * TR, -r[1] * TR); g.lineCap = 'round'; g.lineJoin = 'round'; trails[k] = { c, g, r };
+  }
   // two old tyre tracks on the plywood, leading out of the garage mouth
-  tg.strokeStyle = 'rgba(74,38,16,.2)'; tg.lineWidth = 3.2; tg.setLineDash([9, 3.5]);
+  onto('strip'); tg.strokeStyle = 'rgba(74,38,16,.2)'; tg.lineWidth = 3.2; tg.setLineDash([9, 3.5]);
   for (const x of [-11.5, 11.5]) { tg.beginPath(); tg.moveTo(x, 448); tg.lineTo(x, 508); tg.stroke(); }
+  tg.setLineDash([]); onto('mat'); tg.setLineDash([9, 3.5]);
+  // and two in the woods, faint on the green: someone has driven from the fire round behind the densest pines
+  // before (the tell for the most hidden sheet; the trees in front of it are solid)
+  tg.strokeStyle = 'rgba(190,232,205,.13)'; tg.lineWidth = 3;
+  for (const o of [-11.5, 11.5]) { tg.beginPath(); tg.moveTo(826, 876 + o); tg.bezierCurveTo(866, 884 + o, 884, 912 + o, 930, 914 + o); tg.lineTo(1000, 914 + o); tg.stroke(); }
   tg.setLineDash([]);
 
   const b = G.block, w = b[2] - b[0], h = b[3] - b[1], r = mulberry32(SEED ^ 0xf10);
@@ -176,22 +191,31 @@ export function stamp(x, y, hx, hy) {
   const sL = surfaceAt(L[0], L[1]), sR = surfaceAt(Rr[0], Rr[1]);
   let ploughed = 0;
   if (surfaceAt(x, y) === 'block') { ploughed = flourAt(x + hx * NOSE, y + hy * NOSE); wipe(x, y, hx, hy, ploughed); }   // what the nose is pushing into
-  if (last && Math.hypot(L[0] - last.L[0], L[1] - last.L[1]) < 30) { mark(last.L, L, last.sL, sL); mark(last.R, Rr, last.sR, sR); }
-  last = { L, R: Rr, sL, sR };
+  // The ad 2 toy: for a few seconds the van draws one line in black ink from the middle of its rear axle, in place of
+  // its two tyre marks. (Not on the mat, which keeps its line of light.)
+  const sC = surfaceAt(bx, by), ink = S.t < S.inkUntil && sC && sC !== 'mat' && sC !== 'hub';
+  if (last && Math.hypot(L[0] - last.L[0], L[1] - last.L[1]) < 30) {
+    if (ink && last.ink && onto(sC)) { tg.lineCap = 'round'; tg.strokeStyle = PAL.ink; tg.lineWidth = 3.4; tg.beginPath(); tg.moveTo(last.C[0], last.C[1]); tg.lineTo(bx, by); tg.stroke(); }
+    else if (!ink) { mark(last.L, L, last.sL, sL); mark(last.R, Rr, last.sR, sR); }
+  }
+  last = { L, R: Rr, sL, sR, C: [bx, by], ink };
   return ploughed;
 }
 // One tyre's mark from a to c. Its colour comes from the surface under that tyre, at both ends, never from the surface
 // under the middle of the van: so no pink runs out onto the desk, and no grey onto the mat.
 function mark(a, c, s0, s1) {
-  if (!s1 || s1 === 'hub' || s0 !== s1) return;
+  if (!s1 || s1 === 'hub' || s0 !== s1 || !onto(s1)) return;
   const seg = () => { tg.beginPath(); tg.moveTo(a[0], a[1]); tg.lineTo(c[0], c[1]); tg.stroke(); };
   if (s1 === 'mat') {                        // the line of light
     tg.lineCap = 'butt'; tg.strokeStyle = rgba(PAL.pink, 0.2); tg.lineWidth = 15; seg();
     tg.strokeStyle = rgba(PAL.pink, 0.5); tg.lineWidth = 7; seg();
     tg.lineCap = 'round'; tg.strokeStyle = '#FFE3EB'; tg.lineWidth = 2.8; seg();
   } else {
-    tg.lineCap = 'round'; tg.lineWidth = 3.2;
-    tg.strokeStyle = s1 === 'desk' ? 'rgba(96,110,128,.22)' : 'rgba(74,38,16,.2)'; seg();
+    // On the desk a mark is the solid colour one pass used to make, with square ends: joints do not double and any
+    // number of passes equals one, so a corridor crossed six times is still two light lines and never a dark band.
+    tg.lineWidth = 3.2;
+    if (s1 === 'desk') { tg.lineCap = 'butt'; tg.strokeStyle = '#CED4DB'; } else { tg.lineCap = 'round'; tg.strokeStyle = 'rgba(74,38,16,.2)'; }
+    seg();
   }
 }
 
@@ -206,30 +230,49 @@ export function sectorPath(ctx, van, r) {
   ctx.moveTo(ax, ay); ctx.arc(ax, ay, r, a - d, a + d); ctx.closePath();
 }
 // ---------------- paper: point bodies. Pushed, they fly, slide off the desk edge and are gone for good ----------------
-export const paper = { inPile: false, hits: 0 };
+// Sheets at rest are bucketed on the 256-unit grid. A sheet that has been pushed moves to the short `loose` list until
+// it has left the desk. So a frame touches the resting sheets in the cells it shows (or the van is in) and the loose
+// ones, never the whole desk. paper.drawn: how many sheets the last frame drew one by one.
+export const paper = { inPile: false, hits: 0, drawn: 0 };
+const rest = new Map(), loose = [], cellBuf = [], vis = [];
+export function initPaper() { for (const s of S.sheets) s.cell = gridAdd(rest, s.x, s.y, s); }
+
+function take(s) {                                     // from rest to loose
+  const a = s.cell, i = a ? a.indexOf(s) : -1; if (i >= 0) a.splice(i, 1);
+  s.cell = null; s.loose = true; loose.push(s);
+  if (s.pile && !s.pile.touched) { s.pile.touched = true; s.pile.pic = null; }      // its pile is no longer whole: from here its sheets are drawn one by one
+}
+function kick(s, van, dx, dy, d2) {
+  const d = G.desk, dd = Math.sqrt(d2) || 1, k = 190 + rnd() * 190;
+  s.vx = van.vx * 0.8 + dx / dd * k + (rnd() - 0.5) * 110; s.vy = van.vy * 0.8 + dy / dd * k + (rnd() - 0.5) * 110;
+  s.spin = (rnd() - 0.5) * 18; s.lift = 1; s.cool = 0.3;
+  // Which edge it leaves by: the one it is already heading for, never back toward the hub. The north edge only when
+  // it is within 520 units: from further down the desk a sheet peels off to the side instead of gliding the whole length.
+  const sp = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / sp, uy = s.vy / sp, dn = s.y - d[1];
+  const cW = (s.x - d[0]) / Math.max(0.25, 1 - ux), cE = (d[2] - s.x) / Math.max(0.25, 1 + ux), cN = dn > 520 ? 1e9 : dn / Math.max(0.25, 1 - uy) * 1.15;
+  if (cW <= cE && cW <= cN) { s.gx = -1; s.gy = 0; } else if (cE <= cN) { s.gx = 1; s.gy = 0; } else { s.gx = 0; s.gy = -1; }
+}
 export function updatePaper(dt, van) {
-  const d = G.desk; let near = 0; paper.hits = 0;
-  const fast = van.speed > 30;
-  for (const s of S.sheets) {
-    if (s.gone >= 1) continue;
-    if (s.gone > 0) { s.gone += dt / 0.4; s.x += s.vx * dt; s.y += s.vy * dt + 70 * dt; s.a += s.spin * dt; continue; }
-    const dx = s.x - van.x, dy = s.y - van.y, d2 = dx * dx + dy * dy;
-    if (d2 < 1444) {                                   // inside 38 units of the van
-      if (!s.loose) near++;
-      if (fast && !s.pinned && (!s.loose || s.cool <= 0)) {
-        const dd = Math.sqrt(d2) || 1, k = 190 + rnd() * 190;
-        s.vx = van.vx * 0.8 + dx / dd * k + (rnd() - 0.5) * 110; s.vy = van.vy * 0.8 + dy / dd * k + (rnd() - 0.5) * 110;
-        s.spin = (rnd() - 0.5) * 18; s.lift = 1; s.cool = 0.3;
-        if (!s.loose) { s.loose = true; paper.hits++; }
-        // which edge it leaves by: the one it is already heading for, never back toward the hub
-        const sp = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / sp, uy = s.vy / sp;
-        const cW = (s.x - d[0]) / Math.max(0.25, 1 - ux), cE = (d[2] - s.x) / Math.max(0.25, 1 + ux), cN = (s.y - d[1]) / Math.max(0.25, 1 - uy) * 1.15;
-        if (cW <= cE && cW <= cN) { s.gx = -1; s.gy = 0; } else if (cE <= cN) { s.gx = 1; s.gy = 0; } else { s.gx = 0; s.gy = -1; }
-      }
+  const d = G.desk, fast = van.speed > 30; let near = 0; paper.hits = 0;
+  for (const p of S.piles) if (p.tw > 0) p.tw = Math.max(0, p.tw - dt / 0.7);      // a pile that twitches (desk.nudge)
+  for (const a of gridCells(rest, van.x - 38, van.y - 38, van.x + 38, van.y + 38, cellBuf)) {
+    for (let i = a.length - 1; i >= 0; i--) {          // resting sheets inside 38 units of the van
+      const s = a[i], dx = s.x - van.x, dy = s.y - van.y, d2 = dx * dx + dy * dy;
+      if (d2 >= 1444) continue;
+      near++;
+      if (fast) { take(s); kick(s, van, dx, dy, d2); paper.hits++; }
     }
-    if (!s.loose) continue;
+  }
+  for (let i = loose.length - 1; i >= 0; i--) {
+    const s = loose[i];
+    if (s.gone > 0) {                                  // over the edge: it falls, shrinks and fades in 0.4 s
+      s.gone += dt / 0.4; s.x += s.vx * dt; s.y += s.vy * dt + 70 * dt; s.a += s.spin * dt;
+      if (s.gone >= 1) { loose[i] = loose[loose.length - 1]; loose.pop(); }
+      continue;
+    }
+    if (fast && s.cool <= 0) { const dx = s.x - van.x, dy = s.y - van.y, d2 = dx * dx + dy * dy; if (d2 < 1444) kick(s, van, dx, dy, d2); }   // run into again
     s.cool -= dt;
-    let sp = Math.hypot(s.vx, s.vy) || 1;
+    const sp = Math.hypot(s.vx, s.vy) || 1;
     s.vx += s.gx * 520 * dt; s.vy += s.gy * 520 * dt;                     // the draught carries it to its edge
     const ns = Math.max(165, sp - sp * 3.5 * dt), sp2 = Math.hypot(s.vx, s.vy) || 1;   // friction 3.5 per second, down to a glide
     s.vx *= ns / sp2; s.vy *= ns / sp2;
@@ -241,18 +284,79 @@ export function updatePaper(dt, van) {
   }
   paper.inPile = near >= 2;
 }
+// The gust (spec 5, app): every sheet still lying in this pile takes off toward one side of the desk.
+export function blowPile(pile, side) {
+  for (const s of pile.sheets) {
+    if (s.loose) continue;
+    take(s);
+    s.vx = side * (250 + rnd() * 260); s.vy = -50 - rnd() * 190; s.spin = (rnd() - 0.5) * 20; s.lift = 1; s.cool = 0.6; s.gx = side; s.gy = 0;
+  }
+}
+// ...and the single sheets lying within r of a point go with it
+export function blowNear(x, y, r) {
+  for (const a of gridCells(rest, x - r, y - r, x + r, y + r, cellBuf)) for (let i = a.length - 1; i >= 0; i--) {
+    const s = a[i]; if (s.pile || s.stay || Math.hypot(s.x - x, s.y - y) > r) continue;      // (a caught sheet stays)
+    const side = s.x < x ? -1 : 1;
+    take(s);
+    s.vx = side * (230 + rnd() * 240); s.vy = -40 - rnd() * 150; s.spin = (rnd() - 0.5) * 20; s.lift = 1; s.cool = 0.6; s.gx = side; s.gy = 0;
+  }
+}
+// A pile nothing has touched yet is drawn as ONE picture of itself (the same sheets, the same shadows, at the sprites'
+// own two pixels a unit), made when the pile first comes into view and dropped when it is 70 units off screen or when
+// its first sheet is pushed (so at most the five piles of one screenful are held). So the sheets drawn one by one are the singles, what is left of a ploughed pile, and what
+// is in the air: about 30 in ordinary play, and never more than MAX_DRAWN (spec 9.6: at most about 80 sheets drawn).
+// (While the camera is far up, showing the whole table, the pictures are made at a quarter of that: twelve piles are in view at once then.)
+const PIC = 2, MAX_DRAWN = 80;
+function pilePic(p, spr, PIC) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const s of p.sheets) { x0 = Math.min(x0, s.x - 32); y0 = Math.min(y0, s.y - 32); x1 = Math.max(x1, s.x + 33); y1 = Math.max(y1, s.y + 33); }
+  x0 = Math.floor(x0); y0 = Math.floor(y0);
+  const c = mk((x1 - x0) * PIC, (y1 - y0) * PIC), g = c.getContext('2d');
+  for (const s of p.sheets) {
+    const cs = Math.cos(s.a) * PIC, sn = Math.sin(s.a) * PIC, q = spr.v[s.v];
+    g.setTransform(cs, sn, -sn, cs, (s.x - x0 + 1.16) * PIC, (s.y - y0 + 0.77) * PIC); g.drawImage(q.sh, -q.w / 2, -q.h / 2, q.w, q.h);
+    g.setTransform(cs, sn, -sn, cs, (s.x - x0) * PIC, (s.y - y0) * PIC); g.drawImage(q.c, -q.w / 2, -q.h / 2, q.w, q.h);
+  }
+  p.pic = { c, x: x0, y: y0, w: c.width / PIC, h: c.height / PIC, res: PIC };
+}
 // v: { s, tx, ty } the world-to-canvas transform. Leaves the context on the world transform.
 export function drawPaper(ctx, spr, v, x0, y0, x1, y1) {
-  const img = spr.v, sh = spr.sh.c, K = v.s;
-  for (const s of S.sheets) {
-    if (s.gone >= 1 || s.x < x0 - 40 || s.x > x1 + 40 || s.y < y0 - 40 || s.y > y1 + 40) continue;
-    const sc = s.gone > 0 ? 1 - s.gone * 0.45 : 1 + (s.loose ? s.lift * 0.07 : 0), c = Math.cos(s.a) * sc * K, n = Math.sin(s.a) * sc * K;
-    const off = s.loose ? 1.4 + s.lift * 8 : 1.4, ex = v.tx + s.x * K, ey = v.ty + s.y * K;
+  const img = spr.v, K = v.s, res = K < 1 ? 0.5 : PIC;
+  const ax = x0 - 32, ay = y0 - 32, bx = x1 + 32, by = y1 + 32;         // a sheet reaches 31 units from its middle
+  ctx.setTransform(K, 0, 0, K, v.tx, v.ty);
+  for (const p of S.piles) {                                            // the whole piles (twelve bounding boxes, no sheet is looked at)
+    if (p.touched) continue;
+    const rx = p.r + 32, ry = p.r * 0.8 + 32;
+    if (p.x - rx < bx && p.x + rx > ax && p.y - ry < by && p.y + ry > ay) { if (!p.pic || p.pic.res !== res) { if (p.pic) p.pic.c.width = p.pic.c.height = 0; pilePic(p, spr, res); }
+      if (p.tw > 0) { const a = Math.sin(p.tw * 26) * 0.07 * p.tw, k = 1 + 0.05 * p.tw; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a); ctx.scale(k, k); ctx.translate(-p.x, -p.y); ctx.drawImage(p.pic.c, p.pic.x, p.pic.y, p.pic.w, p.pic.h); ctx.restore(); }
+      else ctx.drawImage(p.pic.c, p.pic.x, p.pic.y, p.pic.w, p.pic.h); }
+    else if (p.pic && (p.x + rx < ax - 70 || p.x - rx > bx + 70 || p.y + ry < ay - 70 || p.y - ry > by + 70)) { p.pic.c.width = p.pic.c.height = 0; p.pic = null; }
+  }
+  vis.length = 0;
+  for (const a of gridCells(rest, ax, ay, bx, by, cellBuf)) for (const s of a) {
+    if (s.x < ax || s.x > bx || s.y < ay || s.y > by || (s.pile && !s.pile.touched)) continue;
+    vis.push(s);
+  }
+  for (const s of loose) if (s.x >= ax && s.x <= bx && s.y >= ay && s.y <= by) vis.push(s);
+  for (let i = 1; i < vis.length; i++) {               // in the order they were laid down (the lists are nearly sorted already)
+    const s = vis[i]; let j = i - 1;
+    while (j >= 0 && vis[j].i > s.i) { vis[j + 1] = vis[j]; j--; }
+    vis[j + 1] = s;
+  }
+  // The ceiling. Only the gust can reach it (seven piles in the air at once): then the sheets already falling off the
+  // edge are left out first, then every other one of those still flying. In that storm nobody misses them.
+  let over = vis.length - MAX_DRAWN, n = 0;
+  for (const s of vis) {
+    if (over > 0 && s.loose && (s.gone > 0 || (s.i & 1))) { over--; continue; }
+    n++;
+    const sc = s.gone > 0 ? 1 - s.gone * 0.45 : 1 + (s.loose ? s.lift * 0.07 : 0), c = Math.cos(s.a) * sc * K, m = Math.sin(s.a) * sc * K;
+    const off = s.loose ? 1.4 + s.lift * 8 : 1.4, ex = v.tx + s.x * K, ey = v.ty + s.y * K, q = img[s.v], hw = q.w / 2, hh = q.h / 2;
     if (s.gone > 0) ctx.globalAlpha = Math.max(0, 1 - s.gone);
-    else { ctx.setTransform(c, n, -n, c, ex + off * 0.83 * K, ey + off * 0.55 * K); ctx.drawImage(sh, -17, -22, 34, 44); }
-    ctx.setTransform(c, n, -n, c, ex, ey); ctx.drawImage(img[s.v].c, -17, -22, 34, 44);
+    else { ctx.setTransform(c, m, -m, c, ex + off * 0.83 * K, ey + off * 0.55 * K); ctx.drawImage(q.sh, -hw, -hh, q.w, q.h); }
+    ctx.setTransform(c, m, -m, c, ex, ey); ctx.drawImage(q.c, -hw, -hh, q.w, q.h);
     if (s.gone > 0) ctx.globalAlpha = 1;
   }
+  paper.drawn = n;
   ctx.setTransform(K, 0, 0, K, v.tx, v.ty);
 }
 
