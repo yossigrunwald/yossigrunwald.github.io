@@ -1,7 +1,7 @@
-// finds.js — the hub's props and colliders, find rules, wake animations, the three-track moment and the idle tour.
+// finds.js — the hub's props and colliders, find rules, wake animations, the second look, the moment and the idle tour.
 // The far desk (stage 2) lives in desk.js, the rest of the mat and the woods (stage 3) in mat.js; the prop registry,
 // the sprite shelf and the looping screens are in kit.js.
-import { S, PAL, TRACK, HUB_R, readFinds, readCards, makeSheets, collDist } from './world.js';
+import { S, PAL, TRACK, HUB_R, readFinds, readSays, readCards, makeSheets, collDist } from './world.js';
 import * as art from './art.js';
 import { van, auto, input, goTo, stopAuto, R } from './van.js';
 import { emit, burst } from './surfaces.js';
@@ -13,7 +13,7 @@ import * as audio from './audio.js';
 
 export { spr, flats, lit, loops, pauseLoops, resumeLoops };
 export const matLines = mat.drawLines;
-export const three = { on: false, t: 0, lift: false, n: 0, hold: 0 };
+export const three = { on: false, t: 0, lift: false, n: 0, hold: 0, tr: [], marks: [] };      // tr: the sections named, in order · marks: when each strip lands
 const vanState = { lights: false, gold: false, ladder: false, loaf: false, cam: false };
 let vanKey = '', frames = null, vanUse = null, vanN = 0;
 const VAN_KEEP = 30;                         // of the 64 headings, at most this many are held (spec 9.6): the one unused longest goes first
@@ -40,11 +40,11 @@ export function extraCanvases() { return [desk.canvases(), mat.canvases(), art.k
 
 // ---------- building the stage ----------
 export function readWorld() {
-  S.finds = readFinds(); S.byId = {}; S.finds.forEach(f => { S.byId[f.id] = f; });
+  S.finds = readFinds(); S.byId = {}; S.finds.forEach(f => { S.byId[f.id] = f; }); S.says = readSays();
   S.live = S.finds.filter(f => f.live);
   S.cards = readCards().filter(c => c.live);
   const ps = makeSheets(S.cards); S.sheets = ps.sheets; S.piles = ps.piles;
-  desk.init(wake); mat.init();
+  desk.init(wake, () => three.on || three.hold > 0); mat.init();
   const ad = S.byId.ad1; ad.scr = [-67.5, -545, 67.5, -305];
   const L = addScreen('ad1', makeLoop(ad.video), ad, ad.scr); L.on = true; startLoop(L);      // moving at first paint
 }
@@ -55,7 +55,7 @@ export function rebakeLettering() {
   art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, roles), 0, 0);
   art.retire(spr.adTape); spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);
   desk.rebakeLettering(); mat.rebakeLettering();
-  S.live.concat(S.byId.home).forEach(fd => { if (fd.tabSp) fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
+  S.live.forEach(fd => { if (fd.tabSp) fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
 }
 
 // sprites needed for the first frame: hub, van, the three lures, the first pile (spec 9.4)
@@ -66,7 +66,7 @@ export function bakeFirst() {
   spr.sheets = art.sheetSprites();
   spr.phone = art.keep(() => art.giantPhone(), 0, -300);
   const ad = S.byId.ad1;
-  spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);      // the MY FIRST AD tape across its top
+  spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);      // the tape across its top: what it is, and how long
   spr.play = art.playMark();
   const f = S.byId, sk = f.skit1;
   spr.skit = art.keep(() => art.skitPhone(), 150, -200, 650, 60);      // one sprite for the three skit phones along the mouth of the mat
@@ -82,10 +82,12 @@ export function bakeFirst() {
   const L1 = loops.ad1;
   f.ad1.prop = prop({
     x: 0, y: -300, sp: spr.phone, sortY: -298, find: f.ad1, coll: cbox(-102, -374, 84, -298), tall: [-104, 86, -560],
-    // while the full label is up it stands where the MY FIRST AD tape is, so that tape is left off: one gold banner on the phone, never two
-    draw(ctx, p) { art.drawSpr(ctx, p.sp, p.x, p.y); grab(L1); drawScreen(ctx, L1, p.x - 67.5, p.y - 245, 135, 240); glass(ctx, p.x, p.y, 135, 240, 13); if (p.find.tabOn !== false) art.drawSpr(ctx, spr.adTape, p.x + 1, p.y - 246); }
+    // (its own tape, what it is and how long, stays across its top always: the find's label goes under the van)
+    draw(ctx, p) { art.drawSpr(ctx, p.sp, p.x, p.y); grab(L1); drawScreen(ctx, L1, p.x - 67.5, p.y - 245, 135, 240); glass(ctx, p.x, p.y, 135, 240, 13); art.drawSpr(ctx, spr.adTape, p.x + 1, p.y - 246); }
   });
-  f.ad1.lab = { up: [0, -546], down: [0, -546], mid: true }; f.ad1.tabAt = [-66, -317, -0.09];      // the label is centred on the phone's top edge, where its tape was
+  // The label never covers the phone: it is the first thing found and its line says "Start with the ad". It goes under
+  // the van (below: the phone's own face is a no-go for labels, so from its foot the label drops to just past the van's tail).
+  f.ad1.lab = { up: [0, -286], down: [0, -286], below: true }; f.ad1.tabAt = [-66, -317, -0.09];
   // --- the loaf on its rack, under the arm lamp ---
   f.bread.bake = 0;
   f.bread.prop = prop({
@@ -124,19 +126,23 @@ export function bakeFirst() {
     }
   });
   sk.lab = { up: [kx, ky - 168], down: [kx, ky + 46] }; sk.tabAt = [kx - 25, ky - 8, -0.08];
-  // --- home: live in a later stage. Until then a bump gets a hello and a way to the contact links; it is not counted ---
+  // --- home: the garage. A find like any other (bump it anywhere); its buttons are the contact links ---
   // The collider reaches north to where the roof's back edge is drawn, so a van coming down the strip stops nose-on
-  // against the roof it can see and is never behind the box: the garage stays solid at the moment it says hello.
+  // against the roof it can see and is never behind the box. Bumped again from that side, the back of the box says
+  // where he is and what he speaks (a small thing: S.says.back).
   const hm = f.home;
   hm.prop = prop({
-    x: 0, y: 400, sp: spr.garage, sortY: 446, say: hm, coll: cbox(-60, 282, 60, 445),
+    x: 0, y: 400, sp: spr.garage, sortY: 446, find: hm, coll: cbox(-60, 282, 60, 445),
     draw(ctx, p) {
       art.drawSpr(ctx, p.sp, p.x, p.y);
-      const a = ctx.globalAlpha, warm = Math.max(0, 1 - (S.rt - (hm.saidAt || -9)) / 1.2);          // the bulb warms when the van says hello
-      ctx.globalAlpha = a * Math.min(1, 0.7 + 0.2 * Math.sin(S.rt * 1.7) + warm * 0.6); art.drawSpr(ctx, spr.bulb, p.x, p.y + 9); ctx.globalAlpha = a;
+      const a = ctx.globalAlpha, warm = Math.max(0, 1 - (S.rt - (hm.saidAt || -9)) / 1.2);          // the bulb warms when the van comes home
+      ctx.globalAlpha = a * Math.min(1, (hm.found ? 0.82 : 0.7) + 0.2 * Math.sin(S.rt * 1.7) + warm * 0.6); art.drawSpr(ctx, spr.bulb, p.x, p.y + 9); ctx.globalAlpha = a;
     }
   });
-  hm.lab = { up: [0, 288], down: [0, 464] }; hm.tabAt = [-34, 387, -0.05];
+  const bk = S.says.back; if (bk) { bk.prop = hm.prop; bk.lab = { up: [0, 226], down: [0, 464], flip: true }; }
+  // Its tape never lies across the garage: met from the mouth it goes over the roof; met from the strip (the van at the
+  // roof's back edge) it goes over the van, on the bare strip, as the back's own line does.
+  hm.lab = { up: [0, 288], down: [0, 464], pick(v) { const north = v.y < 292; this.flip = north; this.up = north ? [0, 222] : [0, 288]; } }; hm.tabAt = [-34, 387, -0.05];
 }
 
 // light lying on the ground, drawn under every prop: the lamp pool over the flour, the skit phone's pink on the mat
@@ -156,12 +162,12 @@ const MAJOR = { w: 'ad1', k: 'bread', v: 'skit1' };
 const dash = { tr: null, t: 0, ux: 0, uy: 0, o: null };
 // The nearest thing still to find, and whether any of them is in sight. A thing: every live find not found yet but the
 // app (that one is found by its cards), and every card pile not ploughed yet. vis(x, y): is that spot on the screen?
-// In sight = on the screen and near enough to be made out: the cake shows only from beside the sack, the printer from
-// behind its boxes, and a thing on the dark mat from about a headlight's reach (the first skit phone and the camp's ember glow).
+// In sight = on the screen and near enough to be made out: a thing on the dark mat from about a headlight's reach (but
+// the first skit phone and the camp's ember glow from anywhere), and the three sheets hidden in the woods only from close by.
 export function seek(vis) {
   let best = null, bd = 1e9, seen = false;
   const one = (x, y, tr, o, see) => { const d = Math.hypot(x - van.x, y - van.y); if (d < bd) { bd = d; best = { x, y, tr, o }; } if (!seen && d < see && vis(x, y)) seen = true; };
-  for (const f of S.live) { if (f.found || f.id === 'app') continue; one(f.x, f.y - 30, f.track, f, f.id === 'cake' ? 150 : f.id === 'ai' ? 220 : f.x > 110 && f.id !== 'skit1' && f.id !== 'camp' ? 330 : 1e9); }
+  for (const f of S.live) { if (f.found || f.id === 'app') continue; one(f.x, f.y - 30, f.track, f, f.hid ? 150 : f.track === 'v' && f.id !== 'skit1' && f.id !== 'camp' ? 330 : 1e9); }
   for (const p of S.piles) if (p.card && !p.done) one(p.x, p.y, 'w', p, 1e9);
   return { best, seen };
 }
@@ -198,40 +204,9 @@ export function bakeJobs() {
   const f = S.byId, jobs = [];
   jobs.push(() => { spr.loafGold = art.keep(() => art.loafSprite(true), -228, 35); });
   jobs.push(() => {
-    // The sack turns see-through whenever the van is anywhere behind it, near the cake, or while the dome is lifting,
-    // so the cake is never found without being seen. Until then the dome's knob glints over the top of the sack: the tell.
+    // the flour sack: it turns see-through whenever the van is anywhere behind it
     spr.sack = art.keep(() => art.sackSprite(), -420, 60);
-    const ck = f.cake;
-    prop({
-      x: -420, y: 60, sp: spr.sack, sortY: 96, coll: cbox(-476, 24, -364, 96), tall: [-500, -340, -112],
-      fade: (vx, vy) => (vx > -500 && vx < -340 && vy > -112 && vy < 25) || (!ck.found && Math.hypot(vx + 420, vy + 10) < 70) || (ck.found && S.rt - ck.foundAt < 1),
-      draw(ctx, p) {
-        art.drawSpr(ctx, p.sp, p.x, p.y);
-        if (ck.found) return;
-        const u = (S.rt * 0.42) % 1, k = u < 0.2 ? Math.sin(u / 0.2 * Math.PI) : 0;
-        if (k > 0) {
-          const x = -416.5, y = -48.5, s = 7.5 * k, t = 1.5 * k;
-          ctx.fillStyle = '#FFFFFF'; ctx.beginPath();
-          ctx.moveTo(x, y - s); ctx.lineTo(x + t, y - t); ctx.lineTo(x + s, y); ctx.lineTo(x + t, y + t); ctx.lineTo(x, y + s); ctx.lineTo(x - t, y + t); ctx.lineTo(x - s, y); ctx.lineTo(x - t, y - t);
-          ctx.closePath(); ctx.fill();
-        }
-      }
-    });
-  });
-  jobs.push(() => {
-    spr.cake = art.cakeSprite(false); spr.cakeCut = art.cakeSprite(true); spr.slice = art.sliceSprite(); spr.dome = art.domeSprite();
-    const ck = f.cake; ck.lift = 0; ck.from = [ck.x, ck.y]; ck.to = [-512, -4];
-    ck.prop = prop({
-      x: ck.x, y: ck.y, sp: spr.cake, sortY: ck.y + 27, find: ck, coll: ccirc(ck.x, ck.y, 26), roam: true,
-      draw(ctx, p) {
-        // once found, 1.5 s: the dome lifts (0.3 s), plate and cake slide out from behind the sack (0.4 s), then the slice slides out
-        const t = p.find.lift, a = ctx.globalAlpha, cut = t > 0.5;
-        art.drawSpr(ctx, cut ? spr.cakeCut : spr.cake, p.x, p.y);
-        if (cut) { const s = ease((t - 0.5) / 0.3); art.drawSpr(ctx, spr.slice, p.x + 15 * s, p.y + 22 * s + 4.2); }
-        if (t < 0.5) { const u = ease(t / 0.2); ctx.globalAlpha = a * (1 - ease((t - 0.1) / 0.3)); art.drawSpr(ctx, spr.dome, p.x, p.y - u * 46); ctx.globalAlpha = a; }
-      }
-    });
-    ck.lab = { up: [ck.x, ck.y - 74], flip: true, min: 3 }; ck.lab.down = ck.lab.up; ck.tabAt = [ck.x, ck.y + 33, 0.05];      // min: the cake slides away from the van, so its label holds a little longer
+    prop({ x: -420, y: 60, sp: spr.sack, sortY: 96, coll: cbox(-476, 24, -364, 96), tall: [-500, -340, -112], fade: (vx, vy) => vx > -500 && vx < -340 && vy > -112 && vy < 25 });
   });
   jobs.push(desk.cardsJob);                                 // the nine gold cards: the three near ones are ploughed within seconds
   jobs.push(() => {                                         // dressing on the near desk and the block
@@ -248,7 +223,7 @@ export function bakeJobs() {
   });
   jobs.push(() => {                                         // dressing on the mat: dark until the headlights cross it
     const m = (x, y, sp, o) => prop({ x, y, flat: true, onMat: true, sp, dark: art.darkTwin(sp), ...o });
-    m(332, 196, art.clapperSprite(0.3)); m(256, 146, art.sdCard(0.4)); m(270, 158, art.sdCard(-0.9)); m(430, 70, art.cableSprite());
+    m(256, 146, art.sdCard(0.4)); m(270, 158, art.sdCard(-0.9)); m(430, 70, art.cableSprite());      // (the slate lies just east of these: mat.js)
     spr.rollP = art.tapeRoll(PAL.pinkTape);
     rollPink = m(318, -52, S.tracks.v ? spr.rollP : art.tapeRoll(PAL.pinkTape, true), { coll: ccirc(318, -52, 12) });
   });
@@ -256,7 +231,7 @@ export function bakeJobs() {
   jobs.push(...desk.jobs());                                // the far desk
   jobs.push(...mat.jobs());                                 // the rest of the mat, and the woods
   jobs.push(() => {                                         // one-word tabs that stay on found things
-    S.live.concat(f.home).forEach(fd => { fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
+    S.live.forEach(fd => { fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
   });
   return jobs;
 }
@@ -298,7 +273,8 @@ export function bump(c, impact) {
   const p = c.prop; if (!p) return;
   squash(p);
   const nx = van.x + Math.cos(van.a) * 20, ny = van.y + Math.sin(van.a) * 20, f = p.find;
-  if (f && f.live) { if (f.found) again(f); else if (f.noBump) desk.nudge(f); else wake(f); }
+  // (inside: a thing that is found only from one side, the weekly recap from inside its room; met from anywhere else it is a wall)
+  if (f && f.live) { if (!f.found) { if (f.inside && !f.inside(van)) { /* not from here */ } else if (f.noBump) desk.nudge(f); else wake(f); } else if (f.id === 'home' && van.y < 292 && S.says.back) hello(S.says.back); else again(f); }
   else if (p.say) hello(p.say);
   else if (impact > 120 && p.x < -110 && p.y > -110) burst(0, nx, ny, 4, 150, 0.45, 3.4);   // on the block a bump shakes flour loose
 }
@@ -307,7 +283,7 @@ export function arrived(p) {
   if (!p) return;
   if (p.coll && collDist(p.coll, van.x, van.y) > R + 6) return;
   const f = p.find;
-  if (f && f.live && !f.found) { squash(p); if (f.noBump) desk.nudge(f); else wake(f); }
+  if (f && f.live && !f.found) { if (f.inside && !f.inside(van)) return; squash(p); if (f.noBump) desk.nudge(f); else wake(f); }
   else if (f && f.live && f.found) again(f);                // a found video: its Play pill comes up
   else if (p.say && S.rt - (p.say.saidAt || -9) > 1) { squash(p); hello(p.say); }
 }
@@ -318,11 +294,24 @@ export function goBump(p) {
   if (fr && Math.hypot(van.x - fr[0], van.y - fr[1]) > 46) goTo(fr[0], fr[1], { done: () => goTo(p.cx, p.cy, { prop: p, done }) });
   else goTo(p.cx, p.cy, { prop: p, done });
 }
-function again(f) { ui.pill(f); ui.addLabel(f, van); if (f.scr && (f.video || f.yt)) { framing.f = f; framing.at = S.rt; } }
-// a thing that is not live yet (home): its tape and a pill to the contact links, a note, nothing counted
+// Bumped again. If the van has been away since (the second look), its tape opens with the line it gains.
+function again(f) { if (f.left) { f.left = false; f.again = true; } ui.pill(f); ui.addLabel(f, van); if (f.scr && (f.video || f.yt)) { framing.f = f; framing.at = S.rt; } }
+// a small thing that is never counted (the power strip, the slate, the back of the garage): its tape, and what it does
 function hello(f) {
-  if (S.rt - (f.saidAt || -9) > 1.5) { audio.slap(); audio.findNote(S.found.length, f.track); }
-  f.saidAt = S.rt; ui.addLabel(f, van); if (f.go) ui.pill(f);
+  if (S.rt - (f.saidAt || -9) > 1.5) { audio.slap(); if (f.act) f.act(); }
+  f.saidAt = S.rt; ui.addLabel(f, van);
+}
+// The second look (CONTENT-v2, A): some finds gain one line when the van comes back to them. Back = the van has been
+// 220 units away since, and is now within 64 of the thing again. Its tape opens by itself, with the added line.
+let seconds = null;
+function tickSecond() {
+  if (!seconds) seconds = S.live.filter(f => f.gains.some(g => g.when === 'again'));
+  for (const f of seconds) {
+    if (!f.found || !f.prop || !f.prop.coll) continue;
+    const d = collDist(f.prop.coll, van.x, van.y);
+    if (d > 220) f.left = true;
+    else if (f.left && d < 64 && !holdOn() && !ui.playerOpen()) { f.left = false; f.again = true; audio.slap(); ui.pill(f); ui.addLabel(f, van); }
+  }
 }
 
 export function wake(f) {
@@ -334,7 +323,8 @@ export function wake(f) {
   // (the app's moment begins with the whole desk on screen: its label is slapped on when the camera reaches the phone)
   const show = f.id === 'app' && !S.reduced && !three.on && !ui.playerOpen();
   ui.setCount(S.found.length); ui.lampOn(f.track); if (!show) ui.addLabel(f, van);
-  if (f.video || f.yt) { ui.pill(f); if (f.scr) { framing.f = f; framing.at = S.rt; } } else ui.pillYield(van);             // a pill left over from an earlier find, far behind, steps aside
+  // its Play pill, or its buttons (the app's are offered when the van is at the phone: desk.js). A pill left over from an earlier find, far behind, steps aside
+  if (f.id === 'app' || !ui.pill(f)) ui.pillYield(van); else if (f.scr && (f.video || f.yt)) { framing.f = f; framing.at = S.rt; }
   // (only once the visitor has really touched the page: the idle tour and a deep link must not ask, the browser logs a blocked call)
   try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive && /Android/i.test(navigator.userAgent)) navigator.vibrate(10); } catch (e) { /* not allowed */ }
   if (f.id === 'ad1') {
@@ -346,16 +336,18 @@ export function wake(f) {
       const a = i / 24 * 6.283 + Math.random() * 0.26, v = 90 + Math.random() * 170, cs = Math.cos(a), sn = Math.sin(a);
       emit(0, p.x + cs * 58, p.y + 6 + sn * 36, cs * v, sn * v * 0.8, 0.5 + Math.random() * 0.3, 2 + Math.random() * 3);
     }
-  } else if (f.id === 'cake') {
-    f.lift = 0.0001; f.to = van.x < p.x - 14 ? [-334, -4] : [-512, -4];            // it slides out on the side away from the van
-    burst(3, p.x, p.y - 30, 8, 90, 0.6, 4);
+  } else if (f.id === 'home') {
+    f.saidAt = S.rt; burst(3, p.x, p.y + 40, 10, 120, 0.7, 4);
   } else if (f.id === 'skit1') {
     vanState.cam = true; loops.skit1.on = true; startLoop(loops.skit1); lit.push([p.x, p.y, 110]);
   } else if (!desk.onWake(f, show)) mat.onWake(f);
   if (show) startCine(f);
   if (MAJOR[f.track] === f.id) pointOn();
   if (f.track === 'v' && rollPink) rollPink.sp = spr.rollP;
-  if (!S.threeDone && !three.on && !three.hold && S.tracks.w && S.tracks.k && S.tracks.v) three.hold = 0.9;
+  // the moment: once three of the main sections have a find (all of them, while only three are built). It belongs to
+  // the player: a find the idle tour makes counts on the counter but never starts it. It waits for a find the player makes.
+  const tr = ui.threeTracks();
+  if (!tour.on && !S.threeDone && !three.on && !three.hold && tr.filter(t => S.tracks[t]).length >= Math.min(3, tr.length)) three.hold = 0.9;
 }
 
 // ---------- per-frame updates (dt = game time, rdt = real time) ----------
@@ -368,17 +360,8 @@ export function update(dt, rdt) {
     if (b.bake >= 1 && spr.loafGold && b.prop) { b.prop.sp = spr.loafGold; art.retire(spr.loafPale, true); }      // baked: the pale loaf is not needed again
     if (Math.random() < dt * 22) emit(1, b.x + (Math.random() - 0.5) * 70, b.y - 30, (Math.random() - 0.5) * 16, -40 - Math.random() * 30, 1.3, 9 + Math.random() * 5);
   } else if (b.bake >= 1 && S.t - b.foundAt < 9 && Math.random() < dt * 5) emit(1, b.x + (Math.random() - 0.5) * 60, b.y - 34, (Math.random() - 0.5) * 10, -30, 1.5, 8);
-  const c = S.byId.cake;
-  if (c.lift > 0 && c.lift < 1) {
-    c.lift = Math.min(1, c.lift + dt / 1.5);
-    const u = (c.lift - 0.2) / 0.27, e = u <= 0 ? 0 : u >= 1 ? 1 : 1 - Math.pow(1 - u, 3), p = c.prop;      // ease-out
-    const x = c.from[0] + (c.to[0] - c.from[0]) * e, y = c.from[1] + (c.to[1] - c.from[1]) * e;
-    p.x = p.cx = p.coll.x = c.x = x; p.y = p.cy = p.coll.y = c.y = y; p.sortY = y + 27;
-    c.tabAt[0] = x; c.tabAt[1] = y + 33;
-    c.lab.up[0] = x + (c.to[0] < c.from[0] ? -62 : 62) * e; c.lab.up[1] = y - 74;      // the label leans away from the van, which is still beside the sack
-  }
-  desk.update(dt, rdt); mat.update(dt, rdt);
-  // The three-track moment starts 0.9 s after the find that completes the three, so that find is seen first. If the van is
+  desk.update(dt, rdt); mat.update(dt, rdt); tickSecond();
+  // The moment starts 0.9 s after the find that completes it, so that find is seen first. If the van is
   // being driven on meanwhile it starts within 0.35 s instead: the van is then held close to the thing it has just found.
   if (dash.tr) dash.t += rdt;
   // every time the van comes back onto the hub, the dashes point the way again (to a track with nothing found, else to the nearest thing still to find)
@@ -391,54 +374,72 @@ export function update(dt, rdt) {
     three.hold -= rdt; if (three.hold <= 0) { three.hold = 0; startThree(); }
   }
   if (three.on) tickThree(rdt);
+  if (back.f && S.rt >= back.at && !cine.on && !three.on && !(three.hold > 0)) tapeBack();
   tourTick();
 }
 
-// ---------- the three-track moment (spec 7.3): once ----------
-// The camera is up for 2.2 s. The four strips land in the empty band above the model a quarter second apart, the last
-// at 0.9 s, stay up together for 1.1 s, and start to go 0.2 s before the camera starts back down, so they never sit
-// across the table again. The Play pill tucks away meanwhile.
+// ---------- the moment (CONTENT-v2, A): once ----------
+// The camera lifts. Each main section that is built is outlined in turn and gets its own dated strip in the band above
+// the model, 0.9 s apart, so each is felt in turn: the camera shows each table as its strip lands, and the whole floor
+// only with the last of them (main.js). Then one strip across the middle, which is up for 3.7 s; then how many are
+// still to find. They start to go 0.2 s before the camera starts back down. The Play pill tucks away meanwhile.
+// A tap after the first 0.8 s skips it (threeTouch).
+const NOTE = { w: 0, k: 1, v: 2, g: 1 }, GAP = 0.9;
 function startThree() {
-  S.threeDone = true; Object.assign(three, { on: true, t: 0, lift: !S.reduced, n: 0, ended: false, bye: false });
-  stopAuto(); ui.threeShow(S.live.length - S.found.length); ui.pillTuck(true);
+  const tr = ui.threeTracks(), last = 0.15 + (tr.length - 1) * GAP;
+  S.threeDone = true; Object.assign(three, { on: true, t: 0, lift: !S.reduced, n: 0, ended: false, bye: false, tr, marks: tr.map((t, i) => 0.15 + i * GAP).concat([last + GAP, last + GAP + 0.5]), up: last + GAP + 3.9 });
+  keepTape(); stopAuto(); ui.threeShow(S.live.length - S.found.length, S.tracks); ui.pillTuck(true);
+}
+// A tape that a moment takes the screen from is put back when the camera is at the van again (if the van is still at
+// its thing): the moment interrupts a read, it does not end it. The app's own tape is the app moment's, not an interrupted one.
+const back = { f: null, at: 0 };
+function keepTape() { const f = ui.labelUp(); if (f && f.id !== 'app') back.f = f; }
+function tapeBack() {
+  const f = back.f; back.f = null;
+  if (!f || ui.playerOpen()) return;
+  const c = f.prop && f.prop.coll, d = c ? collDist(c, van.x, van.y) : Math.hypot(van.x - f.x, van.y - f.y) - 40;
+  if (d < 90) { ui.addLabel(f, van); ui.pill(f); }
 }
 function tickThree(rdt) {
   three.t += rdt;
-  const marks = [0.15, 0.4, 0.65, 0.9];
-  while (three.n < 4 && three.t >= marks[three.n]) {
-    if (three.n < 3) { audio.trackNote(three.n); audio.slap(); } else audio.chord();
+  const m = three.marks, k = three.tr.length;
+  while (three.n < m.length && three.t >= m[three.n]) {
+    if (three.n < k) { audio.trackNote(NOTE[three.tr[three.n]] || 0); audio.slap(); } else if (three.n === k) audio.chord();
     ui.threeStep(three.n); three.n++;
   }
-  if (!three.bye && three.t >= (three.ended ? three.endAt + 0.9 : S.reduced ? 4.2 : 2.0)) { three.bye = true; ui.threeBye(); }
-  if (three.lift && three.t >= 2.2) { three.lift = false; ui.pillTuck(false); }
-  if (three.t >= (three.ended ? three.endAt + 1.3 : S.reduced ? 4.6 : 3.2)) { three.on = false; ui.pillTuck(false); }
+  if (!three.bye && three.t >= (three.ended ? three.endAt + 0.9 : S.reduced ? three.up + 2 : three.up - 0.2)) { three.bye = true; ui.threeBye(); }
+  if (three.lift && three.t >= three.up) { three.lift = false; ui.pillTuck(false); }
+  if (three.t >= (three.ended ? three.endAt + 1.3 : S.reduced ? three.up + 2.4 : three.up + 1)) { three.on = false; ui.pillTuck(false); back.at = S.rt + 0.1; }
 }
 // ---------- the app's moment: the desk clears and the tray fills where it can be seen (once; never under reduced motion) ----------
 // It is the desk's payoff and it usually fires from far down the desk, where nothing of it would be seen. Three beats,
-// the van held meanwhile as in the three-track moment:
+// the van held meanwhile as in the moment:
 //   0 to 0.45 s    the camera lifts from the van to the whole desk (cine.wide)
 //   0.45 to 1.8 s  the gust, in that view: the piles go one after another from the hub end northward, their cards
 //                  flip up and streak north to the phone at the top of the frame, where each waits just short of the tray
 //   1.8 s on       the camera pushes in on the tray; the waiting cards dock 0.12 s apart as it arrives, the screen
-//                  turns gold, 0.8 s to look at it, and back to the van (by about 3.8 s; 4.4 s at the latest)
+//                  turns gold; the app's own tape is slapped on at 2.15 s and is given 4 s to be read there, then
+//                  back to the van (at about 6.2 s; 7 s at the latest)
 // A new touch after the first 0.6 s ends it. A thumb that was already down and steering does not, until the screen has
-// turned gold: the card takes a second and a half to fly, so that thumb is the usual case and not a wish to skip.
+// turned gold and the tape has had 2.4 s: the card takes a second and a half to fly, so that thumb is the usual case
+// and not a wish to skip.
+const LAB_AT = 2.15, LAB_READ = 4, LAB_HELD = 2.4;
 export const cine = { on: false, t: 0, x: 0, y: 0, z: 1.5, gold: 0, wide: false, lab: true, endAt: -9 };
 export const framing = { f: null, at: -9 };      // the screen found (or bumped again) last: the camera keeps the whole of it in view while the van is at it
 let wasHub = true;
 function startCine(f) {
   Object.assign(cine, { on: true, t: 0, x: f.x, y: f.y - 158, z: 1.5, gold: 0, wide: true, lab: false });
   Object.assign(desk.show, { on: true, t: 0, next: 0 });
-  stopAuto(); ui.pillTuck(true); ui.labelsDim(true);      // (the labels step back while the whole desk is on screen)
+  keepTape(); stopAuto(); ui.pillTuck(true); ui.labelsDim(true);      // (the labels step back while the whole desk is on screen)
 }
 function appLabel() { if (!cine.lab) { cine.lab = true; ui.addLabel(S.byId.app, van); } }
-function endCine() { cine.on = false; cine.wide = false; cine.endAt = S.rt; desk.show.on = false; ui.labelsDim(false); appLabel(); ui.pillTuck(false); }
+function endCine() { cine.on = false; cine.wide = false; cine.endAt = S.rt; back.at = S.rt + 0.9; desk.show.on = false; ui.labelsDim(false); appLabel(); ui.pillTuck(false); }
 function tickCine(rdt) {
   cine.t += rdt; desk.show.t = cine.t;
   if (cine.t >= 1.8) cine.wide = false;
-  if (cine.t >= 2.15 && !cine.lab) { ui.labelsDim(false); appLabel(); }
+  if (cine.t >= LAB_AT && !cine.lab) { ui.labelsDim(false); appLabel(); }
   if (desk.tray.gold >= 1 && !cine.gold) cine.gold = cine.t;
-  if (cine.t >= 4.4 || (cine.gold && cine.t > cine.gold + 0.8)) endCine();
+  if (cine.t >= 7 || (cine.gold && cine.t > Math.max(cine.gold + 0.8, LAB_AT + LAB_READ))) endCine();
 }
 // the van takes no steering: the camera is away from it
 export function holdOn() { return (three.on && three.lift) || cine.on; }
@@ -446,11 +447,11 @@ export function holdT() { return cine.on ? cine.t + 0.2 : three.t; }
 // Any touch after the first 0.8 s ends it early. 0 = not for the moment · 1 = swallowed (too early) · 2 = it ended the moment
 // fresh: a new touch-down, tap or key press (false: a thumb or a key that was already down and is still steering)
 export function threeTouch(fresh = true) {
-  if (cine.on) { if (cine.t < 0.6 || (!fresh && desk.tray.gold < 1)) return 1; endCine(); return 2; }
+  if (cine.on) { if (cine.t < 0.6 || (!fresh && (desk.tray.gold < 1 || cine.t < LAB_AT + LAB_HELD))) return 1; endCine(); return 2; }
   if (!three.on || three.ended || !three.lift) return 0;
   if (three.t < 0.8) return 1;
   three.ended = true; three.endAt = three.t; three.lift = false;
-  while (three.n < 4) { ui.threeStep(three.n); three.n++; }
+  while (three.n < three.marks.length) { ui.threeStep(three.n); three.n++; }
   ui.pillTuck(false);
   return 2;
 }
@@ -475,10 +476,11 @@ const tour = { on: false, step: 0, over: false };
 const drive = id => { const f = S.byId[id], p = f.prop; goTo(p.cx, p.cy, { prop: p, speed: 200, idle: true, done: () => arrived(p) }); };
 export function tourStart() { if (tour.on || tour.over || S.firstInput) return; tour.on = true; tour.step = 0; van.lights = true; drive('ad1'); }
 export function tourStop() { tour.over = true; if (!tour.on) return; tour.on = false; if (auto.idle) stopAuto(); }
+// (after the third find the tour waits for its tape to be read and goes home; it never plays the moment: that is the player's)
 function tourTick() {
   if (!tour.on || ui.playerOpen()) return;
   const f = S.byId;
   if (tour.step === 0 && f.ad1.found && S.rt >= 7) { tour.step = 1; drive('bread'); }
   else if (tour.step === 1 && f.bread.found && !auto.on) { tour.step = 2; drive('skit1'); }
-  else if (tour.step === 2 && f.skit1.found && S.threeDone && !three.on && !auto.on) { tour.step = 3; goTo(0, 20, { speed: 200, idle: true, done: () => { tour.on = false; tour.over = true; } }); }
+  else if (tour.step === 2 && f.skit1.found && !auto.on && S.rt - f.skit1.foundAt > 3.5) { tour.step = 3; goTo(0, 20, { speed: 200, idle: true, done: () => { tour.on = false; tour.over = true; } }); }
 }

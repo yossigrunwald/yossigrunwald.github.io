@@ -1,4 +1,4 @@
-// art.js — the slab baker (spec 8.1), ground tiles, prop recipes, van headings.
+// art.js — the slab routine that bakes every sprite (spec 8.1), ground tiles, prop recipes, van headings.
 // Everything is drawn once into offscreen sprites. Nothing in this file runs per frame except drawSpr/drawShadow.
 import { PAL, mulberry32, SEED } from './world.js';
 
@@ -124,7 +124,7 @@ export function bake(slabs, o = {}) {
 export function drawSpr(ctx, sp, x, y) {
   if (sp.make) {
     if (!sp.c) {
-      // the whole table is on screen (the three-track moment): a let-go sprite is shown by its small stand-in, not baked again
+      // the whole table is on screen (the moment): a let-go sprite is shown by its small stand-in, not baked again
       if (LOW && sp.lo) { const q = sp.res || SS; ctx.drawImage(sp.lo, 0, 0, sp.cw / 4, sp.ch / 4, x - sp.ox / q, y - sp.oy / q, sp.cw / q, sp.ch / q); return; }
       wake(sp); wakes.draw++;
     }
@@ -325,20 +325,20 @@ export function hubSprite(name, roles) {
     g.strokeStyle = 'rgba(74,38,16,.42)'; g.lineWidth = 1.4; g.beginPath(); g.arc(0, 0, R - 9, 0, 6.2832); g.stroke();
     g.strokeStyle = 'rgba(255,225,180,.3)'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, R - 7.6, 0, 6.2832); g.stroke();
     // routed lettering: a dark cut with a light lower lip
-    const routed = (txt, y, width, spacing) => {
+    const routed = (txt, y, width, spacing, fill = PAL.routed) => {
       g.textAlign = 'center'; g.textBaseline = 'alphabetic';
       let fs = 60; g.font = `900 ${fs}px ${STENCIL}`;
       try { g.letterSpacing = spacing + 'px'; } catch (e) { /* older engines: no tracking */ }
       fs *= width / g.measureText(txt).width; g.font = `900 ${fs}px ${STENCIL}`;
       try { g.letterSpacing = (spacing * fs / 60) + 'px'; } catch (e) { /* same */ }
       g.fillStyle = 'rgba(255,226,178,.5)'; g.fillText(txt, 0.9, y + 1.1);
-      g.fillStyle = PAL.routed; g.fillText(txt, 0, y);
+      g.fillStyle = fill; g.fillText(txt, 0, y);
       const m = g.measureText(txt), asc = m.actualBoundingBoxAscent || fs * 0.72;
       try { g.letterSpacing = '0px'; } catch (e) { /* same */ }
       return { cy: y - asc / 2 - 8 * HK, w: width, h: asc };          // the top of the hub is 8 units up
     };
     hubText.name = routed(name.toUpperCase(), -50, 254, 1);
-    hubText.roles = routed(roles.toUpperCase(), 85, 244, 4);
+    hubText.roles = routed(roles.toUpperCase(), 85.6, 244, 1, '#34180A');      // the headline: set tight, so it is as large as its chord of the disc allows, and cut a step darker than the name
     // four tape arrows at the rim: gold north, pink east, masking south, blue west
     const arrow = (ang, col) => {
       g.save(); g.rotate(ang); g.translate(0, -126);
@@ -663,7 +663,7 @@ export function lampSprite() {
 // the pool of warm lamp light: one hard-edged ellipse and a hot spot. Origin = the loaf's centre.
 // a decal: drawn last, over the finished slabs, in the prop's own coordinates (the screen, not the plan)
 export const decal = fn => ({ path: () => { }, b: [0, 0, 0, 0], z0: 0, z1: 0, top: 'rgba(0,0,0,0)', side: null, hl: 0, ns: 1, front: g => fn(g) });
-// flour sack, 112 x 72, tall: it hides the cake. Four slabs so it bulges: foot, belly, shoulder, and a rolled fold stitched shut.
+// flour sack, 112 x 72, tall. Four slabs so it bulges: foot, belly, shoulder, and a rolled fold stitched shut.
 export function sackSprite() {
   const T = '#F1ECDD', S = '#DCD3BE', print = 'rgba(64,74,92,.72)';
   const front = g => {
@@ -696,50 +696,6 @@ export function sackSprite() {
     decal(front)
   ]);
 }
-// one cake on a plate: 48 round. cut = a slice is out
-export function cakeSprite(cut) {
-  const a0 = 0.55, a1 = 1.45;                                   // the missing wedge faces the viewer, lower right
-  const pth = r => g => { if (cut) { g.moveTo(0, 0); g.arc(0, 0, r, a1, a0 + 6.2832); g.closePath(); } else { g.moveTo(r, 0); g.arc(0, 0, r, 0, 6.2832); } };
-  const lay = (r, z0, z1, top, side, o) => ({ path: pth(r), b: [-r, -r, r, r], z0, z1, top, side, ...o });
-  const dots = g => {
-    g.fillStyle = '#F3DDB4';
-    for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; if (cut && a > a0 - 0.1 && a < a1 + 0.1) continue; g.beginPath(); g.arc(Math.cos(a) * 15.5, Math.sin(a) * 15.5, 2.9, 0, 6.2832); g.fill(); }
-    g.fillStyle = '#B9483A'; g.beginPath(); g.arc(-2, -3, 3.4, 0, 6.2832); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(-3.4, -4.8, 1.5, 1.5);
-  };
-  return bake([
-    cyl(0, 0, 27, 0, 2.2, '#FBFCFD', '#C5D0DA'),
-    cyl(0, 0, 9, 2.2, 5, '#E4EAEE', '#C5D0DA', { hl: 0, ns: 1 }),
-    cyl(0, 0, 25, 5, 7, '#FBFCFD', '#CBD5DD', { ns: 1 }),
-    lay(21, 7, 13.5, '#E3B671', '#D9A85E', { hl: 0 }),
-    lay(21, 13.5, 16, '#FFF6E3', '#FBEFD6', { hl: 0, ns: 1 }),
-    lay(21, 16, 22.5, '#E3B671', '#D9A85E', { hl: 0, ns: 1 }),
-    lay(21.6, 22.5, 26.5, '#FFF8EA', '#F6E8CB', { det: dots, ns: 1 })
-  ]);
-}
-export function sliceSprite() {
-  const a0 = 0.6, a1 = 1.4, lay = (r, z0, z1, top, side, o) => ({ path: g => { g.moveTo(0, 0); g.arc(0, 0, r, a0, a1); g.closePath(); }, b: [-r, -r, r, r], z0, z1, top, side, ...o });
-  return bake([
-    lay(21, 0, 6.5, '#E3B671', '#D9A85E', { hl: 0 }), lay(21, 6.5, 9, '#FFF6E3', '#FBEFD6', { hl: 0, ns: 1 }),
-    lay(21, 9, 15.5, '#E3B671', '#D9A85E', { hl: 0, ns: 1 }), lay(21.6, 15.5, 19.5, '#FFF8EA', '#F6E8CB', { ns: 1 })
-  ]);
-}
-// a clear dome: an outline, a faint fill, two highlight arcs and a knob
-export function domeSprite() {
-  const R = 25, H = 26;            // base radius (units), dome rise (px)
-  return flat(64, 76, 32, 60, g => {
-    g.translate(32, 60 - 4.2);
-    const p = () => { g.beginPath(); g.moveTo(-R, 0); g.bezierCurveTo(-R, -H * 1.5, R, -H * 1.5, R, 0); g.ellipse(0, 0, R, R * 0.62, 0, 0, Math.PI); g.closePath(); };
-    p(); g.fillStyle = 'rgba(235,244,250,.2)'; g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.3; g.stroke();
-    g.beginPath(); g.ellipse(0, 0, R, R * 0.62, 0, Math.PI, 6.2832); g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 1; g.stroke();
-    g.lineCap = 'round'; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 2.6;
-    g.beginPath(); g.moveTo(-17.5, -6); g.quadraticCurveTo(-16.5, -21, -6, -26.5); g.stroke();
-    g.lineWidth = 1.7; g.beginPath(); g.moveTo(-11.5, -5); g.quadraticCurveTo(-10.5, -14, -5, -18); g.stroke();
-    g.fillStyle = '#E4EAEE'; g.beginPath(); g.arc(0, -H * 1.13 - 2.5, 3.6, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(20,17,15,.35)'; g.lineWidth = 0.8; g.stroke();
-  }, 0);
-}
-
 // ---------- home: a cardboard box on its side, flaps open, a warm bulb inside ----------
 export function garageSprite() {
   const T = '#CDB286', S = '#A98B5D', D = '#96794E';
@@ -802,13 +758,6 @@ export function scraperSprite(a) {
   return bake([
     box(-24, -14, 48, 26, 0, 1.4, '#B8C0C3', '#7E8689', { det: g => { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-24, 8, 48, 1.6); } }),
     rbox(-25, -19, 50, 9, 3, 0, 8, '#B8743B', '#8F5426', { det: g => { g.fillStyle = PAL.steel; for (const x of [-15, 0, 15]) { g.beginPath(); g.arc(x, -14.5, 1.5, 0, 6.2832); g.fill(); } } })
-  ], { rot: a });
-}
-export function clapperSprite(a) {
-  const stripes = g => { g.fillStyle = '#F4F1E8'; for (let i = -30; i < 30; i += 11) { g.beginPath(); g.moveTo(i, -19); g.lineTo(i + 5.5, -19); g.lineTo(i + 1.5, -12); g.lineTo(i - 4, -12); g.fill(); } };
-  return bake([
-    box(-23, -12, 46, 30, 0, 3, '#2A2E31', '#17191B', { det: g => { g.strokeStyle = 'rgba(244,241,232,.55)'; g.lineWidth = 0.9; for (const y of [-4, 4, 11]) { g.beginPath(); g.moveTo(-19, y); g.lineTo(19, y); g.stroke(); } g.beginPath(); g.moveTo(-4, -4); g.lineTo(-4, 11); g.stroke(); } }),
-    box(-23, -19, 46, 7, 0, 4.5, '#17191B', '#0D0E0F', { det: stripes, hl: 0 })
   ], { rot: a });
 }
 export function sdCard(a) {

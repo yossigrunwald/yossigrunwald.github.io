@@ -1,8 +1,9 @@
-// deskart.js — prop recipes for the far desk (stage 2): the app phone, the taped sheet, the bench, the easel, the
-// cube, the tall boxes and the printer behind them, and the desk's dressing. Same slab baker, same hard light and the
+// deskart.js — prop recipes for the desk: the app phone, the feature cards' big faces, the taped sheet, the bench, the
+// easel, the cube, the stamp and its pad, the receipt spike and its tally counter, the three small screens, the tall boxes and the power strip
+// behind them, and the desk's dressing. The same slab routine, same hard light and the
 // same tape as art.js; nothing here runs per frame.
 import { PAL, mulberry32 } from './world.js';
-import { bake, box, rbox, cyl, ring, poly, face, flat, decal, rr, drawTape, shade, rgba, mixHex, phoneFace, HK, HAND, STENCIL } from './art.js';
+import { mk, bake, box, rbox, cyl, ring, poly, face, flat, decal, rr, drawTape, shade, rgba, mixHex, phoneFace, HK, HAND, STENCIL } from './art.js';
 
 // ---------- cardboard file boxes (the same boxes the first-ad phone leans on) ----------
 const CB = { T: '#CFB488', T2: '#D8BF95', S1: '#B29263', S2: '#A5865A' };
@@ -119,16 +120,17 @@ export function tickMark() {
     g.strokeStyle = PAL.ink; g.lineWidth = 5; g.beginPath(); g.moveTo(-10.5, 1); g.lineTo(-3.5, 8.5); g.lineTo(10.5, -9); g.stroke();
   }, 0.4);
 }
-// ---------- the taped sheet: 168 x 210, gold tape over its four corners ----------
-// Face down it is a blank back with the writing showing through, mirrored and faint. Face up it carries his sentence.
-// up: which side to bake. Bake after the fonts are in.
-export const LINE = { w: 168, h: 210 };
-export function lineSheet(text, up) {
-  const W = LINE.w, H = LINE.h, pad = 17, M = 14;
-  const wrap = (g, fs) => {
-    g.font = `700 ${fs}px ${HAND}`;
+// ---------- the taped sheet: 180 x 244, gold tape over its four corners ----------
+// Face down it is a blank back with the writing showing through, mirrored and faint. Face up it carries his sentence
+// in full, his name under it, and one small line at the foot. t = { quote, sign, small } · up: which side to bake.
+// Bake after the fonts are in.
+export const LINE = { w: 180, h: 244 };
+export function lineSheet(t, up) {
+  const W = LINE.w, H = LINE.h, pad = 17, M = 14, IW = W - 2 * pad;
+  const wrap = (g, text, font) => {
+    g.font = font;
     const lines = []; let cur = '';
-    for (const w of text.split(/\s+/)) { const t = cur ? cur + ' ' + w : w; if (cur && g.measureText(t).width > W - 2 * pad) { lines.push(cur); cur = w; } else cur = t; }
+    for (const w of text.split(/\s+/)) { const q = cur ? cur + ' ' + w : w; if (cur && g.measureText(q).width > IW) { lines.push(cur); cur = w; } else cur = q; }
     if (cur) lines.push(cur);
     return lines;
   };
@@ -137,13 +139,27 @@ export function lineSheet(text, up) {
     g.fillStyle = 'rgba(112,128,146,.5)'; g.fillRect(-W / 2 + 1.6, -H / 2 + 2, W, H);                  // it lies flat: a thin shadow
     g.fillStyle = up ? PAL.sheet : '#F3F5F7'; g.fillRect(-W / 2, -H / 2, W, H);
     g.strokeStyle = 'rgba(150,163,176,.85)'; g.lineWidth = 0.8; g.strokeRect(-W / 2 + 0.4, -H / 2 + 0.4, W - 0.8, H - 0.8);
-    let fs = 19, lines;
-    do { fs -= 0.5; lines = wrap(g, fs); } while (fs > 9 && lines.length * fs * 1.24 > H - 2 * pad - 10);
-    const lh = fs * 1.24, y0 = -lines.length * lh / 2 + fs * 0.86;
+    // the small line and the name keep their sizes; the sentence is as large as the room above them allows
+    const sf = 10.5, sl = wrap(g, t.small, `700 ${sf}px ${HAND}`), sh = sl.length * sf * 1.24, nf = 15, top = -H / 2 + pad + 6, foot = H / 2 - pad - 4;
+    // his name, signed at the right: on one line, or (too long for the sheet) broken after its comma, the second line smaller
+    g.font = `700 ${nf}px ${HAND}`;
+    const cm = t.sign.indexOf(', '), sg = g.measureText(t.sign).width > IW && cm > 0 ? [t.sign.slice(0, cm + 1), t.sign.slice(cm + 2)] : [t.sign];
+    const room = foot - sh - 12 - nf * (sg.length > 1 ? 2.5 : 1.5) - top;
+    let fs = 20.5, lines;
+    do { fs -= 0.5; lines = wrap(g, t.quote, `700 ${fs}px ${HAND}`); } while (fs > 9 && lines.length * fs * 1.24 > room);
+    const lh = fs * 1.24;
     g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.save();
-    if (!up) { g.scale(-1, 1); g.fillStyle = 'rgba(150,163,176,.2)'; } else g.fillStyle = PAL.ink;
-    lines.forEach((ln, i) => g.fillText(ln, -W / 2 + pad, y0 + i * lh));
+    const ink = c => { g.fillStyle = up ? c : 'rgba(150,163,176,.2)'; };
+    if (!up) g.scale(-1, 1);
+    ink(PAL.ink); g.font = `700 ${fs}px ${HAND}`;
+    lines.forEach((ln, i) => g.fillText(ln, -W / 2 + pad, top + fs * 0.86 + i * lh));
+    const ny = top + lines.length * lh + nf * 1.1;
+    g.font = `700 ${nf}px ${HAND}`; g.textAlign = 'right'; g.fillText(sg[0], W / 2 - pad, ny);
+    g.fillRect(W / 2 - pad - g.measureText(sg[0]).width, ny + 3.4, g.measureText(sg[0]).width, 1.2);      // underlined, as a name is signed
+    if (sg[1]) { g.font = `700 ${nf - 2.5}px ${HAND}`; g.fillText(sg[1], W / 2 - pad, ny + nf * 1.05); }
+    ink('#4B555C'); g.font = `700 ${sf}px ${HAND}`; g.textAlign = 'left';
+    sl.forEach((ln, i) => g.fillText(ln, -W / 2 + pad, foot - sh + sf * 0.9 + i * sf * 1.24));
     g.restore();
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) drawTape(g, sx * (W / 2 - 5), sy * (H / 2 - 5), 36, 12, sx * sy * 45, PAL.gold, 1)();
   }, 0.5);
@@ -240,145 +256,48 @@ export function cubeFrames(first) {
   out.push(bake([box(-25, -38, 50, 38, 0, 60, G0, G1, { hl: 0 })], { grain: 0 }));
   if (first) return out;                                 // only the plain cube: the rest are baked when it starts to round off
   [[7, 0.2], [12, 0.48], [17, 0.76]].forEach(([r, t], i) => {
-    const a = mixHex(G0, '#F5BC22', t), b = mixHex(G1, '#C28A08', t), top = 54 - i * 4, q = r * 0.36;
+    const a = mixHex(G0, '#444A51', t), b = mixHex(G1, '#2B2F34', t), top = 54 - i * 4, q = r * 0.36;
     out.push(bake([
       rbox(-25, -38, 50, 38, r, 0, top, a, b, { hl: 0 }),
-      rbox(-25 + q, -38 + q, 50 - 2 * q, 38 - 2 * q, r * 0.85, top, 60 - i * 3, shade(a, 12), a, { hl: 0, ns: 1 })
+      rbox(-25 + q, -38 + q, 50 - 2 * q, 38 - 2 * q, r * 0.85, top, 60 - i * 3, shade(a, 10), a, { hl: 0, ns: 1 })
     ], { grain: 0 }));
   });
-  // The ball: the round mascot of the ad. Its body is the stack of discs that gives it its shadow; over that it is shaded
-  // in three hard steps like everything else here (gold, a darker side away from the light, one hard highlight: no
-  // gradient), and it has a face: two ink eyes and a smile. Seen from here a ball of radius 25 is an ellipse 25 x 29.2.
-  const R = 25, N = 16, sl = [], cy = -21 - R * HK, ry = R * Math.sqrt(1 + HK * HK);
+  // What it becomes: the mascot of the ad itself. A charcoal egg (widest a third of the way up), two gold eyes, a gold
+  // beak, the small gold mark under it, two feet. Its body is the stack of discs that gives it its shadow; over that it
+  // is shaded in three hard steps like everything else here (a lit body, a darker side away from the light, one hard
+  // highlight: no gradient).
+  const R = 25, N = 18, ZC = 24, ZT = 70, sl = [], C0 = '#474D55', C1 = '#2A2E33';
+  const rad = z => R * Math.sqrt(Math.max(0, 1 - Math.pow(z <= ZC ? (ZC - z) / ZC : (z - ZC) / (ZT - ZC), 2)));
   for (let i = 0; i < N; i++) {
-    const z0 = 2 * R * i / N, z1 = 2 * R * (i + 1) / N, zm = (z0 + z1) / 2, r = Math.sqrt(R * R - (zm - R) * (zm - R));
-    sl.push(cyl(0, -21, r, z0, z1, PAL.gold, PAL.gold, { hl: 0 }));
+    const z0 = ZT * i / N, z1 = ZT * (i + 1) / N;
+    sl.push(cyl(0, -21, Math.max(2, rad((z0 + z1) / 2)), z0, z1, C0, C0, { hl: 0 }));
   }
+  const cy = -21 - ZT * HK / 2 - 3, ry = ZT * HK / 2 + 14;
   sl.push(decal(g => {
-    g.save(); g.beginPath(); g.ellipse(0, cy, R + 0.4, ry + 0.4, 0, 0, 6.2832); g.clip();
-    g.fillStyle = '#C28A08'; g.fillRect(-R - 2, cy - ry - 2, 2 * R + 4, 2 * ry + 4);                              // the side away from the light
-    g.fillStyle = PAL.gold; g.beginPath(); g.ellipse(-5, cy - 5.5, R, ry, 0, 0, 6.2832); g.fill();                // the lit body: the same shape, moved toward the light
-    g.fillStyle = '#FFDB6A'; g.beginPath(); g.ellipse(-11, cy - 16.5, 6.4, 3.4, -0.5, 0, 6.2832); g.fill();       // one hard highlight
-    g.restore();
-    g.fillStyle = PAL.ink;
-    for (const x of [-9, 6.5]) { g.beginPath(); g.ellipse(x, cy - 0.5, 2.5, 3.5, 0, 0, 6.2832); g.fill(); }       // two eyes
-    g.fillStyle = '#FFFFFF'; for (const x of [-9.8, 5.7]) g.fillRect(x, cy - 2.6, 1.3, 1.3);
-    g.strokeStyle = PAL.ink; g.lineWidth = 2.1; g.lineCap = 'round'; g.beginPath(); g.arc(-1.2, cy + 3.4, 7.4, 0.5, 2.64); g.stroke();      // and a smile
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = C1; g.fillRect(-R - 4, cy - ry - 6, 2 * R + 8, 2 * ry + 12);                                    // the side away from the light
+    g.fillStyle = C0; g.beginPath(); g.ellipse(-5, cy - 5, R, ry, 0, 0, 6.2832); g.fill();                        // the lit body: the same shape, moved toward the light
+    g.fillStyle = '#6A727B'; g.beginPath(); g.ellipse(-11, cy - 19, 6.6, 3.6, -0.5, 0, 6.2832); g.fill();         // one hard highlight
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = C1; for (const [x, y] of [[-10, -8.6], [9.5, -7.8]]) { g.beginPath(); g.ellipse(x, y, 7.4, 3.4, 0, 0, 6.2832); g.fill(); }      // two feet
+    g.fillStyle = PAL.gold;
+    g.beginPath(); g.ellipse(-10.5, cy - 6.5, 3.5, 2.9, -0.2, 0, 6.2832); g.fill();                              // two gold eyes
+    g.beginPath(); g.ellipse(6.5, cy - 8, 3.9, 3, 0.1, 0, 6.2832); g.fill();
+    g.beginPath(); g.moveTo(-6.2, cy + 0.6); g.quadraticCurveTo(-2.2, cy - 1.2, 1.8, cy + 0.2); g.quadraticCurveTo(-0.6, cy + 6.4, -2.6, cy + 7.2); g.quadraticCurveTo(-4.6, cy + 5, -6.2, cy + 0.6); g.fill();      // the beak, point down
+    g.beginPath(); g.ellipse(0.5, cy + 19, 2.3, 2, 0, 0, 6.2832); g.fill();                                      // the small mark under it
+    g.beginPath(); g.ellipse(1.8, cy + 23.4, 1.2, 2.3, -0.3, 0, 6.2832); g.fill();
+    g.fillStyle = '#C28A08'; g.fillRect(-12.6, cy - 4.6, 4.6, 0.9); g.fillRect(4.2, cy - 6, 5, 0.9);              // each eye's lower lid: a hard step
   }));
   out.push(bake(sl));
   return out;
 }
 
-// ---------- the tall file boxes, and what is behind them ----------
-// Two stacks of two. Origin = the middle of their front edge. low: only the bottom row (what is left once the find
-// has knocked the top two off).
-export function tallBoxes(low) {
-  const sl = [...fileBox(-60, -34, 58, 34, 0, 60, 14, 0)];
-  if (!low) sl.push(...fileBox(-58, -33, 54, 32, 74, 58, 14, 1, false));
-  sl.push(...fileBox(2, -34, 58, 34, 0, 66, 14, 1));
-  if (!low) sl.push(...fileBox(5, -33, 52, 31, 80, 52, 14, 0));
-  return bake(sl);
-}
-// One of the top boxes on its way down: standing, origin = the middle of its front edge. i: 0 west, 1 east.
-const LOOSE = [[54, 32, 58], [52, 31, 52]];
-export function looseBox(i) { const [w, dp, h] = LOOSE[i]; return bake(fileBox(-w / 2, -dp, w, dp, 0, h, 14, i ? 0 : 1, !!i)); }
-// ...and where the two end: tipped forward onto their faces in front of the row, lids toward the viewer.
-// Origin = the middle of the stack's front edge.
-export function fallenBoxes() {
-  const sl = [];
-  LOOSE.forEach(([w, dp, h], i) => {
-    const cx = i ? 32 : -31, y0 = i ? 7 : 2, x = cx - w / 2;
-    const back = g => { flute(g, x, y0, w, h); g.fillStyle = 'rgba(20,17,15,.1)'; g.fillRect(x, y0 + h * 0.5, w, 1); };
-    const lidEnd = (g, X, Y, W, H) => {                  // the lid's top, now facing out: its centre line, and the tape if it had one
-      g.fillStyle = 'rgba(20,17,15,.12)'; g.fillRect(X, Y + H / 2 - 0.6, W, 1.2);
-      if (i) { g.fillStyle = rgba(PAL.masking, 0.95); g.fillRect(X + W / 2 - 7, Y, 14, H); g.strokeStyle = 'rgba(20,17,15,.3)'; g.lineWidth = 0.8; g.strokeRect(X + W / 2 - 7, Y, 14, H); }
-      g.fillStyle = 'rgba(20,17,15,.3)'; g.fillRect(X + 1.5, Y + H - 1.6, W - 3, 1.6);
-    };
-    sl.push(box(x, y0, w, h, 0, dp, CB.T, CB.S2, { det: back }), box(x - 2, y0 + h, w + 4, 14, 0, dp + 4, CB.T2, CB.S1, { front: lidEnd }));
-  });
-  return bake(sl);
-}
-// The small printer and the panel of five switches beside it, on a steel cart tall enough to clear the boxes that
-// stay in front of it. Origin = the find's own spot. The levers and the lamps over them are drawn per frame
-// (SWITCH: where each one sits on screen, from the origin). Its paper falls from the west end to the desk.
-export const CART = 80;
-export const SWITCH = { x0: 13.5, dx: 9.2, y: -8.4 - CART * HK };
-export function printerRig() {
-  const B = '#E6E3DA', BS = '#C3BFB2', P = '#3A4046', PS = '#23272B', ST = '#9AA3A6', SD = '#7D878A', Z = CART;
-  const top = g => {
-    g.fillStyle = 'rgba(20,17,15,.14)'; g.fillRect(-56, -3, 54, 1);                                    // the lid line
-    g.fillStyle = '#2B2F33'; g.beginPath(); rr(g, -50, -13, 30, 7, 1.5); g.fill();                     // the window on the roll
-    g.fillStyle = '#FBFCFD'; g.fillRect(-48, -11.6, 26, 4.2); g.fillStyle = 'rgba(20,17,15,.14)'; g.fillRect(-48, -9.6, 26, 0.8);
-    g.fillStyle = '#9AA3A6'; for (const x of [-14, -8.5]) { g.beginPath(); g.arc(x, -9.5, 1.8, 0, 6.2832); g.fill(); }   // two buttons
-    g.strokeStyle = PAL.ink; g.lineWidth = 3; g.beginPath(); rr(g, -56, -16, 54, 26, 3); g.stroke();   // an ink keyline (half of it is clipped away)
-  };
-  const front = (g, x, y, w, h) => {
-    g.fillStyle = 'rgba(20,17,15,.5)'; for (let i = 0; i < 7; i++) g.fillRect(x + 18 + i * 3.4, y + 4, 1.6, h - 8);   // a grille
-    g.fillStyle = '#1B1D20'; g.fillRect(x + 2, y + h - 5.4, 13, 2.6);                                   // the slot the paper leaves by
-    g.strokeStyle = PAL.ink; g.lineWidth = 1.5; g.strokeRect(x + 0.75, y - 0.2, w - 1.5, h - 0.55);
-  };
-  const plate = g => {
-    g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(4, -16, 54, 2);
-    for (let i = 0; i < 5; i++) {
-      const x = SWITCH.x0 + i * SWITCH.dx;
-      g.fillStyle = '#0F1113'; g.beginPath(); g.arc(x, -13.4, 1.9, 0, 6.2832); g.fill();              // the lamp's socket
-      g.fillStyle = '#AEB6BB'; g.beginPath(); g.arc(x, -3, 3, 0, 6.2832); g.fill();                    // the switch's collar
-      g.fillStyle = '#5E676B'; g.beginPath(); g.arc(x, -3, 1.5, 0, 6.2832); g.fill();
-    }
-  };
-  const leg = (x, y) => box(x, y, 3.4, 3.4, 0, Z - 4, ST, SD, { hl: 0 });
-  const paper = (g, x, y, w, h) => {                                                                   // the paper on its way down: feed holes, a fold
-    g.fillStyle = 'rgba(150,163,176,.9)'; g.fillRect(x, y, 0.8, h); g.fillRect(x + w - 0.8, y, 0.8, h);
-    g.fillStyle = '#B9C4CE'; for (let yy = 3; yy < h - 1; yy += 6) { g.beginPath(); g.arc(x + 2.4, y + yy, 0.95, 0, 6.2832); g.arc(x + w - 2.4, y + yy, 0.95, 0, 6.2832); g.fill(); }
-    g.fillStyle = 'rgba(150,163,176,.5)'; g.fillRect(x, y + h * 0.5, w, 0.7);
-  };
+// ---------- the tall file boxes: two stacks of two. Origin = the middle of their front edge ----------
+export function tallBoxes() {
   return bake([
-    decal(g => { g.fillStyle = PAL.ink; for (const x of [-55, 57]) { g.beginPath(); g.arc(x, 9.5, 3.2, 0, 6.2832); g.fill(); } }),      // two castors
-    leg(-58, -34), leg(56.6, -34),
-    box(-56, -32, 114, 40, 22, 25, ST, SD, { hl: 0 }),                                                  // a shelf
-    leg(-58, 6.6), leg(56.6, 6.6),
-    box(-58, -34, 118, 44, Z - 4, Z, ST, SD, { det: g => { g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(-58, -34, 118, 2); } }),
-    rbox(-56, -16, 54, 26, 3, Z, Z + 22, B, BS, { det: top, front }),
-    box(4, -16, 54, 24, Z, Z + 9, P, PS, { det: plate, hl: 0 }),
-    face(-54, 10.5, 16, (Z + 3) * HK, PAL.sheet, { det: paper, sz: 0 })
+    ...fileBox(-60, -34, 58, 34, 0, 60, 14, 0), ...fileBox(-58, -33, 54, 32, 74, 58, 14, 1, false),
+    ...fileBox(2, -34, 58, 34, 0, 66, 14, 1), ...fileBox(5, -33, 52, 31, 80, 52, 14, 0)
   ]);
-}
-// The printer's paper: a strip of continuous form with feed holes down both edges, lying where it has snaked out past
-// the boxes. Returns { sp, pts } — pts is its centre line sampled every 3 units, [x, y, nx, ny], from the same origin.
-export function paperStrip() {
-  const ctl = [[-40, 15], [-47, 14], [-80, 6], [-106, 14], [-110, 38], [-92, 62], [-103, 84], [-121, 90], [-135, 92]];
-  const raw = [];
-  for (let i = 1; i < ctl.length - 2; i++) {                             // Catmull-Rom through the control points
-    const p0 = ctl[i - 1], p1 = ctl[i], p2 = ctl[i + 1], p3 = ctl[i + 2];
-    for (let k = 0; k < 16; k++) {
-      const t = k / 16, t2 = t * t, t3 = t2 * t;
-      raw.push([0.5 * (2 * p1[0] + (p2[0] - p0[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (3 * p1[0] - p0[0] - 3 * p2[0] + p3[0]) * t3),
-        0.5 * (2 * p1[1] + (p2[1] - p0[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (3 * p1[1] - p0[1] - 3 * p2[1] + p3[1]) * t3)]);
-    }
-  }
-  const pts = []; let acc = 0, prev = raw[0];
-  pts.push([prev[0], prev[1], 0, 1]);
-  for (const q of raw) { acc += Math.hypot(q[0] - prev[0], q[1] - prev[1]); prev = q; if (acc >= 3) { acc = 0; pts.push([q[0], q[1], 0, 1]); } }
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    pts[i][2] = -(b[1] - a[1]) / l; pts[i][3] = (b[0] - a[0]) / l;
-  }
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
-  x0 -= 12; y0 -= 12; x1 += 12; y1 += 12;
-  const line = (g, off) => { g.beginPath(); pts.forEach((p, i) => { const x = p[0] + p[2] * off, y = p[1] + p[3] * off; i ? g.lineTo(x, y) : g.moveTo(x, y); }); };
-  const sp = flat(x1 - x0, y1 - y0, -x0, -y0, g => {
-    g.translate(-x0, -y0); g.lineJoin = 'round'; g.lineCap = 'butt';
-    g.save(); g.translate(1.3, 1.7); g.strokeStyle = 'rgba(112,128,146,.5)'; g.lineWidth = 17.4; line(g, 0); g.stroke(); g.restore();
-    g.strokeStyle = 'rgba(150,163,176,.9)'; g.lineWidth = 17.4; line(g, 0); g.stroke();
-    g.strokeStyle = PAL.sheet; g.lineWidth = 16; line(g, 0); g.stroke();
-    g.fillStyle = '#B9C4CE';
-    pts.forEach((p, i) => {
-      if (i % 2 === 0) for (const sd of [-6.1, 6.1]) { g.beginPath(); g.arc(p[0] + p[2] * sd, p[1] + p[3] * sd, 0.95, 0, 6.2832); g.fill(); }   // feed holes
-      if (i % 9 === 4) { g.strokeStyle = 'rgba(150,163,176,.55)'; g.lineWidth = 0.7; g.setLineDash([1.4, 1.2]); g.beginPath(); g.moveTo(p[0] - p[2] * 8, p[1] - p[3] * 8); g.lineTo(p[0] + p[2] * 8, p[1] + p[3] * 8); g.stroke(); g.setLineDash([]); }   // a fold
-    });
-  }, 0.5);
-  return { sp, pts };
 }
 
 // ---------- what the decoy pile hides: a chain of five paperclips, nothing else ----------
@@ -495,4 +414,291 @@ export function rulerSprite(a) {
       g.fillStyle = 'rgba(20,17,15,.34)'; g.beginPath(); g.arc(63.5, -2, 2, 0, 6.2832); g.fill();
     }
   })], { rot: a });
+}
+
+// ---------- the big face of a feature card: its stencilled word and its short gloss, as it is held up at its pile ----------
+// 116 x 66: at 0.47 it is the size of the card that flies to the tray (art.cardSprite), which carries the word alone.
+export const BIG = { w: 116, h: 66, k: 54 / 116 };
+export function cardBig(word, gloss) {
+  const W = BIG.w, H = BIG.h;
+  return bake([rbox(-W / 2, -H / 2, W, H, 6, 0, 2.2, PAL.gold, PAL.goldDeep, {
+    hl: 0, det: g => {
+      g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-W / 2, -H / 2, W, 17);
+      g.lineWidth = 4; g.strokeStyle = PAL.ink; g.beginPath(); rr(g, -W / 2, -H / 2, W, H, 6); g.stroke();
+      g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+      // the gloss, in his hand: one line if it fits, else two
+      let gs = 11.5, lines = [gloss]; g.font = `700 ${gs}px ${HAND}`;
+      while (gs > 10 && g.measureText(gloss).width > W - 16) { gs -= 0.5; g.font = `700 ${gs}px ${HAND}`; }
+      if (g.measureText(gloss).width > W - 16) {
+        const ws = gloss.split(' '); let best = 1, bd = 1e9;
+        for (let i = 1; i < ws.length; i++) { const d = Math.abs(g.measureText(ws.slice(0, i).join(' ')).width - g.measureText(ws.slice(i).join(' ')).width); if (d < bd) { bd = d; best = i; } }
+        lines = [ws.slice(0, best).join(' '), ws.slice(best).join(' ')];
+      }
+      const gh = lines.length * (gs + 1.5), sp = word.indexOf(' '), room = H - 14 - gh;
+      // the word, stencilled: on one line, or (two words) one above the other
+      const parts = sp > 0 && room >= 30 ? [word.slice(0, sp), word.slice(sp + 1)] : [word];
+      let fs = parts.length > 1 ? Math.min(19, room / 2) : Math.min(31, room); g.font = `900 ${fs}px ${STENCIL}`;
+      const mw = Math.max(...parts.map(p => g.measureText(p).width)); if (mw > W - 18) { fs *= (W - 18) / mw; g.font = `900 ${fs}px ${STENCIL}`; }
+      const wh = parts.length * fs * 0.84, top = -H / 2 + 6 + (room - wh) / 2;
+      parts.forEach((p, i) => g.fillText(p, 0, top + fs * 0.74 + i * fs * 0.86));
+      g.font = `700 ${gs}px ${HAND}`;
+      lines.forEach((ln, i) => g.fillText(ln, 0, H / 2 - 7 - gh + gs * 0.86 + i * (gs + 1.5)));
+    }
+  })]);
+}
+
+// ---------- quality: a rubber stamp on its ink pad, the tin's lid standing open behind it ----------
+// Origin = the middle of the pad's front edge. The stamp itself is its own sprite (it hops to the slip and back).
+export function padSprite() {
+  const T = '#3A4046', TS = '#23272B', L = '#4A5056';
+  const felt = g => {
+    g.fillStyle = '#17191B'; g.beginPath(); rr(g, -24, -30, 48, 26, 2); g.fill();
+    g.fillStyle = '#1D2550'; g.beginPath(); rr(g, -22, -28, 44, 22, 1.5); g.fill();
+    g.fillStyle = 'rgba(150,170,255,.22)'; g.beginPath(); g.moveTo(-22, -28); g.lineTo(-2, -28); g.lineTo(-16, -6); g.lineTo(-22, -6); g.fill();      // wet ink: one hard glint
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-28, -34, 56, 1.6);
+  };
+  const lidIn = (g, x, y, w, h) => {
+    g.fillStyle = '#5B6268'; g.fillRect(x + 2.5, y + 2.5, w - 5, h - 4);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x + 2.5, y + 2.5, w - 5, 1.4);
+    g.fillStyle = '#FBFCFD'; g.fillRect(x + 9, y + 7, 26, 9); g.fillStyle = PAL.scribble; g.fillRect(x + 12, y + 9.6, 17, 1.4); g.fillRect(x + 12, y + 12.4, 11, 1.4);      // the maker's label, no word
+  };
+  return bake([
+    rbox(-28, -34, 56, 34, 3, 0, 7, T, TS, { det: felt, hl: 0 }),
+    box(-28, -37.4, 56, 3.4, 5, 37, L, TS, { front: lidIn, hl: 0 })
+  ]);
+}
+export function stampSprite() {
+  const W1 = '#C8935A', W2 = '#96683A';
+  return bake([
+    rbox(-13, -8, 26, 16, 2, 0, 3, '#7A2E28', '#5A211D', { hl: 0 }),                               // the rubber
+    rbox(-14, -9, 28, 18, 2.5, 3, 11, W1, W2, { det: g => { g.fillStyle = 'rgba(255,225,180,.3)'; g.fillRect(-14, -9, 28, 2); } }),      // its wooden mount
+    cyl(0, 0, 4.4, 11, 22, '#B8743B', '#8F5426', { hl: 0, ns: 1 }),                                // the neck
+    cyl(0, 0, 7.6, 22, 25, W1, W2, { hl: 0, ns: 1 }),
+    cyl(0, 0, 9.6, 25, 32, W1, W2, { hl: 0, ns: 1 }),
+    cyl(0, 0, 7.8, 32, 35.5, '#D7A56C', W2, { ns: 1, det: g => { g.fillStyle = 'rgba(255,240,210,.5)'; g.beginPath(); g.ellipse(-2.6, -2.6, 2.6, 1.6, -0.6, 0, 6.2832); g.fill(); } })      // the knob
+  ]);
+}
+// the slips beside the pad: three, a little askew, the top one with a box where the stamp goes (the two under it show theirs)
+export function slipStack() {
+  return flat(64, 70, 32, 35, g => {
+    g.translate(32, 35);
+    const slip = (dx, dy, a, done) => {
+      g.save(); g.translate(dx, dy); g.rotate(a);
+      g.fillStyle = 'rgba(112,128,146,.5)'; g.fillRect(-18.4, -24, 40, 50);
+      g.fillStyle = PAL.sheet; g.fillRect(-20, -26, 40, 50); g.strokeStyle = 'rgba(150,163,176,.85)'; g.lineWidth = 0.8; g.strokeRect(-19.6, -25.6, 39.2, 49.2);
+      g.strokeStyle = PAL.scribble; g.lineCap = 'round'; g.lineWidth = 2.8; g.beginPath(); g.moveTo(-14, -18); g.lineTo(2, -18); g.stroke();
+      g.lineWidth = 1.3; for (const [y, x1] of [[-10, 13], [-4.5, 9], [1, 12]]) { g.beginPath(); g.moveTo(-14, y); g.lineTo(x1, y); g.stroke(); }
+      g.setLineDash([2, 1.6]); g.lineWidth = 0.9; g.strokeRect(-3, 6, 19, 14); g.setLineDash([]);
+      if (done) stampMark(g, 6.5, 13, 0.9);
+      g.restore();
+    };
+    slip(4, 3, 0.2, true); slip(-2, -1, -0.12, true); slip(1, 0, 0.05, false);
+  }, 0.5);
+}
+// the mark the stamp leaves: the app's tick in a ring, in ink, a little uneven as a stamp is
+export function stampMark(g, x, y, k = 1) {
+  g.save(); g.translate(x, y); g.rotate(-0.16); g.scale(k, k);
+  g.strokeStyle = 'rgba(20,17,15,.82)'; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.lineWidth = 1.5; g.beginPath(); g.arc(0, 0, 6.6, 0.5, 6.1); g.stroke();
+  g.lineWidth = 2.2; g.beginPath(); g.moveTo(-3.4, 0.4); g.lineTo(-0.8, 3); g.lineTo(3.8, -3); g.stroke();
+  g.restore();
+}
+// The tape arrow that points from the stamp at the next table over (it is laid down only once that table is built).
+// A strip of gold tape with the hub's own two-strip arrow head; its words in his hand. Origin = its middle.
+export function tapeArrow(text) {
+  const m = mk(4, 4).getContext('2d'); m.font = `700 11.5px ${HAND}`;
+  const tw = m.measureText(text).width, L = tw + 30, W = L + 34, H = 44;
+  return flat(W, H, W / 2, H / 2, g => {
+    g.translate(W / 2, H / 2);
+    const done = drawTape(g, -8, 0, L, 19, -1.2, PAL.gold, 1.2);
+    g.font = `700 11.5px ${HAND}`; g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 0, 0.8);
+    done();
+    for (const sg of [-1, 1]) drawTape(g, L / 2 - 4, sg * 6.6, 24, 8, -sg * 38, PAL.gold, 1.2)();      // its head: two strips meeting at the point, east
+  }, 0.5);
+}
+
+// ---------- scale: a receipt spike stacked with change slips, a hand tally counter lying beside it ----------
+// Origin = the middle of the spike's round steel base, which shows all round under the paper. A TALL spike: eleven
+// till-roll slips (34 x 22), each skewered through its middle and turned its own way (FAN), with air between them so
+// every slip is seen as a sheet of its own, one above another, the last three sitting looser as slips just put on do.
+// The pin stands 24 units clear of the top slip and ends in a ball.
+// The counter lies on its back: a chrome body, four windows in a dark bezel, a finger ring. TALLY: where it lies, and
+// where its windows are (their figures, and the thumb lever, are drawn per frame from baked sprites). It is big enough
+// for its figure to be read from the driving view: each numeral stands 10 px tall on a phone.
+export const TALLY = { x: 53, y: 3, w: 52, h: 36, z: 7, pitch: 11.2, dw: 10, dh: 15.6 };
+export function spikeSprite() {
+  const sl = [], N = 11, W = 17, H = 11, Z0 = 3.4, TH = 1.7, GOLD = { 2: 1, 5: 1, 8: 1 }, FAN = [0.22, -0.2, 0.08, -0.26, 0.17, -0.1, 0.25, -0.17, 0.2, -0.24, 0.05];
+  sl.push(cyl(0, 0, 21, 0, 0.7, PAL.ink, PAL.ink, { hl: 0 }));                                    // an ink line round the foot of the base
+  sl.push(cyl(0, 0, 20, 0, Z0, '#6A747C', '#2A2F34', {
+    hl: 0, det: g => {
+      g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 17.4, 2.2, 5.4); g.stroke();      // one hard light on the steel
+      g.strokeStyle = 'rgba(20,17,15,.4)'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, 14.2, 0, 6.2832); g.stroke();
+    }
+  }));
+  let z = Z0 + 1.6, zt = z;
+  for (let i = 0; i < N; i++) {
+    const a = FAN[i], cs = Math.cos(a), sn = Math.sin(a), gold = GOLD[i], last = i === N - 1;
+    const pts = [[-W, -H], [W, -H], [W, H], [-W, H]].map(([x, y]) => [x * cs - y * sn, x * sn + y * cs]);
+    sl.push(poly(pts, z, z + TH, last ? '#FFFFFF' : i % 2 ? '#EEF2F5' : '#FBFCFD', gold ? '#B98E22' : '#8795A3', {
+      hl: 0, det: g => {
+        g.save(); g.rotate(a);
+        g.strokeStyle = 'rgba(96,112,130,.7)'; g.lineWidth = 1.5; g.strokeRect(-W, -H, 2 * W, 2 * H);      // the paper's own edge, so each slip reads apart from the one under it
+        if (gold) { g.fillStyle = '#F2B411'; g.fillRect(-W, -H, 2 * W, 3.4); g.fillRect(-W, H - 3.4, 2 * W, 3.4); }
+        else { g.strokeStyle = PAL.scribble; g.lineWidth = 1.2; g.lineCap = 'round'; for (const y of [H - 2.6, H - 5.4]) { g.beginPath(); g.moveTo(-W + 3, y); g.lineTo(W - 4 - (i * 5) % 9, y); g.stroke(); } }      // two lines of print along the edge that shows
+        if (last) {                                                   // the top slip: a heading, three lines, a tick
+          g.strokeStyle = PAL.scribble; g.lineCap = 'round'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-13, -6.2); g.lineTo(-5, -6.2); g.stroke();
+          g.lineWidth = 1.2; for (const [y, x1] of [[-2, -4], [1.2, -6.4]]) { g.beginPath(); g.moveTo(-13, y); g.lineTo(x1, y); g.stroke(); }
+          g.strokeStyle = PAL.ink; g.lineWidth = 1.9; g.lineJoin = 'round'; g.beginPath(); g.moveTo(6.6, -1); g.lineTo(9, 1.8); g.lineTo(13.2, -5.2); g.stroke();
+          g.fillStyle = '#34302C'; g.beginPath(); g.arc(0, 0, 2.5, 0, 6.2832); g.fill();      // where the pin comes through
+        }
+        g.restore();
+      }
+    }));
+    zt = z + TH; z += i < N - 4 ? 4.4 : 6.4;
+  }
+  sl.push(cyl(0, 0, 1.8, zt - 1, zt + 24, '#2A2F34', '#2A2F34', { hl: 0 }));                      // the pin, clear above the stack
+  sl.push(cyl(0, 0, 3.2, zt + 24, zt + 25.8, '#3A4046', '#1B1F22', { hl: 0, ns: 1 }));            // and its ball: three discs
+  sl.push(cyl(0, 0, 4.2, zt + 25.8, zt + 29.2, '#4A5157', '#23272B', { hl: 0, ns: 1 }));
+  sl.push(cyl(0, 0, 3.2, zt + 29.2, zt + 31, '#6A747C', '#3A4046', { hl: 0, ns: 1, det: g => { g.fillStyle = '#FFFFFF'; g.fillRect(-2.4, -2, 2.2, 1.8); } }));
+  // the tally counter, on its back beside the spike
+  const T = TALLY, C = '#D2D7DA', CS = '#8C9598', x0 = T.x - T.w / 2, y0 = T.y - T.h / 2;
+  sl.push(ring(T.x + T.w / 2 + 6.6, T.y + 1, 9.4, 5.8, 0, 2.6, C, CS, { eo: 1, hl: 0 }));           // the finger ring
+  sl.push(rbox(x0 - 1.1, y0 - 1.1, T.w + 2.2, T.h + 2.2, 9, 0, 0.7, PAL.ink, PAL.ink, { hl: 0 }));
+  sl.push(rbox(x0, y0, T.w, T.h, 8, 0, T.z, C, CS, {
+    hl: 0, det: g => {
+      g.strokeStyle = PAL.ink; g.lineWidth = 2.4; g.beginPath(); rr(g, x0, y0, T.w, T.h, 8); g.stroke();      // ink keyline (its inner half shows)
+      g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x0 + 7, y0 + 2.4, T.w - 14, 1.8);
+      const bx = T.x - 1.5 * T.pitch - T.dw / 2 - 1.5, by = T.y + 1 - T.dh / 2 - 1.5;
+      g.fillStyle = '#17191B'; g.beginPath(); rr(g, bx, by, 3 * T.pitch + T.dw + 3, T.dh + 3, 2); g.fill();      // the bezel
+      g.fillStyle = '#FBFCFD'; for (let i = 0; i < 4; i++) g.fillRect(T.x + (i - 1.5) * T.pitch - T.dw / 2, T.y + 1 - T.dh / 2, T.dw, T.dh);      // four windows
+      g.fillStyle = 'rgba(20,17,15,.14)'; for (let i = 0; i < 4; i++) g.fillRect(T.x + (i - 1.5) * T.pitch - T.dw / 2, T.y + 1 - T.dh / 2, T.dw, 1.8);      // the shade under each window's top edge
+    }
+  }));
+  return bake(sl);
+}
+// the counter's figures, 0 to 9, in ink in the stencil face: baked once, drawn in the four windows each frame
+export function tallyDigits() {
+  const T = TALLY;
+  return '0123456789'.split('').map(ch => flat(T.dw, T.dh, T.dw / 2, T.dh / 2, g => {
+    g.font = `900 ${T.dh}px ${STENCIL}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = PAL.ink; g.fillText(ch, T.dw / 2, T.dh / 2 + T.dh * 0.365);
+  }, 0));
+}
+
+// ---------- live: three small screens in a row. A browser window, an Android phone, an iPhone wearing a tag ----------
+// Origin = the middle of the row's front edge. lit: how many are showing the app (0, 1 = the browser, 2 = the browser
+// and the Android phone). The iPhone never lights: it wears a paper tag on a loop of twine (tag = its words).
+export function liveScreens(lit, tag) {
+  const K = '#2A2D31', K2 = '#1B1D20', OFF = '#0E161A';
+  const app = (g, x, y, w, h, bar) => {                              // the app, as bars: a gold header with its tick, rows under it
+    g.fillStyle = '#FBFCFD'; g.fillRect(x, y, w, h);
+    g.fillStyle = PAL.gold; g.fillRect(x, y, w, bar);
+    g.fillStyle = PAL.ink; g.beginPath(); rr(g, x + 2.2, y + bar / 2 - 2.8, 5.6, 5.6, 1.4); g.fill();
+    g.strokeStyle = PAL.gold; g.lineWidth = 1; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(x + 3.6, y + bar / 2 + 0.1); g.lineTo(x + 4.7, y + bar / 2 + 1.2); g.lineTo(x + 6.5, y + bar / 2 - 1.3); g.stroke();
+    g.fillStyle = PAL.ink; g.fillRect(x + 10, y + bar / 2 - 1.2, Math.min(14, w - 14), 2.4);
+    for (let i = 0, yy = y + bar + 3.4; yy < y + h - 5; i++, yy += 7.4) { g.fillStyle = '#EDF1F4'; g.fillRect(x + 2.4, yy, w - 4.8, 5.4); g.fillStyle = i % 2 ? PAL.scribble : '#8795A3'; g.fillRect(x + 4.4, yy + 1.7, (w - 9) * (0.5 + 0.2 * ((i * 7) % 3)), 1.6); }
+  };
+  const browser = (g, x, y, w, h) => {
+    const on = lit >= 1;
+    g.fillStyle = on ? '#DCE3E9' : '#30363B'; g.fillRect(x + 2, y + 2, w - 4, 8);                 // the window's own bar: three dots, an address
+    for (let i = 0; i < 3; i++) { g.fillStyle = on ? ['#C4483A', PAL.gold, '#3C9A70'][i] : '#596066'; g.beginPath(); g.arc(x + 6 + i * 4.4, y + 6, 1.4, 0, 6.2832); g.fill(); }
+    g.fillStyle = on ? '#FBFCFD' : '#454C50'; g.beginPath(); rr(g, x + 20, y + 3.6, w - 26, 4.8, 2.4); g.fill();
+    if (on) app(g, x + 2, y + 10, w - 4, h - 14, 8); else { g.fillStyle = OFF; g.fillRect(x + 2, y + 10, w - 4, h - 14); }
+    g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.moveTo(x + 2, y + 2); g.lineTo(x + w * 0.5, y + 2); g.lineTo(x + 2, y + h * 0.7); g.fill();
+  };
+  const phone = (on, notch) => (g, x, y, w, h) => {
+    g.fillStyle = '#34302C'; g.fillRect(x + w - 1.6, y + 3, 1.6, h - 6);
+    g.save(); g.beginPath(); rr(g, x + 2, y + 2, w - 4, h - 4, 3.4); g.clip();
+    if (on) app(g, x + 2, y + 2, w - 4, h - 4, 9); else { g.fillStyle = OFF; g.fillRect(x + 2, y + 2, w - 4, h - 4); g.fillStyle = 'rgba(255,255,255,.06)'; g.beginPath(); g.moveTo(x + 2, y + 2); g.lineTo(x + w * 0.6, y + 2); g.lineTo(x + 2, y + h * 0.5); g.fill(); }
+    g.restore();
+    g.fillStyle = '#07090A'; if (notch) { g.beginPath(); rr(g, x + w / 2 - 5, y + 3.4, 10, 3.2, 1.6); g.fill(); } else { g.beginPath(); g.arc(x + w / 2, y + 5, 1.3, 0, 6.2832); g.fill(); }
+  };
+  const tagged = g => {                                              // the tag: a loop of twine over the iPhone's corner, a paper tag with a punched hole
+    g.strokeStyle = '#B58A52'; g.lineWidth = 1.1; g.lineCap = 'round'; g.beginPath(); g.moveTo(60, -56); g.quadraticCurveTo(70, -62, 72.5, -47); g.stroke();
+    g.save(); g.translate(72.5, -47); g.rotate(0.24);
+    g.fillStyle = 'rgba(20,17,15,.25)'; g.beginPath(); g.moveTo(1.4, -6.2); g.lineTo(5.4, -9.2); g.lineTo(45.4, -9.2); g.lineTo(45.4, 10.8); g.lineTo(5.4, 10.8); g.lineTo(1.4, 7.8); g.closePath(); g.fill();
+    g.fillStyle = '#F6EFD9'; g.beginPath(); g.moveTo(0, -7); g.lineTo(4, -10); g.lineTo(44, -10); g.lineTo(44, 10); g.lineTo(4, 10); g.lineTo(0, 7); g.closePath(); g.fill();
+    g.strokeStyle = PAL.ink; g.lineWidth = 1; g.lineJoin = 'round'; g.stroke();
+    g.fillStyle = '#9AA3A6'; g.beginPath(); g.arc(5, 0, 2.2, 0, 6.2832); g.fill(); g.fillStyle = '#34302C'; g.beginPath(); g.arc(5, 0, 1, 0, 6.2832); g.fill();
+    let fs = 10.5; g.font = `700 ${fs}px ${HAND}`; const w = g.measureText(tag).width; if (w > 33) { fs *= 33 / w; g.font = `700 ${fs}px ${HAND}`; }
+    g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tag, 26, 0.8);
+    g.restore();
+  };
+  return bake([
+    box(-66, -13, 36, 12, 0, 2.4, '#8C9598', '#6E7679', { hl: 0 }),                                 // the monitor's foot and neck
+    box(-51, -9, 6, 4, 2.4, 16, '#9AA3A6', '#6E7679', { hl: 0, ns: 1 }),
+    box(-5, -13, 10, 9, 0, 30, K, K2, { hl: 0 }), box(37, -13, 10, 9, 0, 30, K, K2, { hl: 0 }),     // a kickstand block behind each phone
+    face(-82, -5, 68, 48, K, { lift: 12, r: 3, det: browser, sz: 50, sd: 4 }),
+    face(-16, -2, 32, 58, PAL.ink, { r: 5, det: phone(lit >= 2, false), sz: 40, sd: 4 }),
+    face(26, -2, 32, 58, PAL.ink, { r: 6.5, det: phone(false, true), sz: 40, sd: 4 }),
+    { path: () => { }, b: [58, -4, 122, 2], z0: 0, z1: 100, top: 'rgba(0,0,0,0)', side: null, hl: 0, ns: 1 },      // room for the tag
+    decal(tagged)
+  ]);
+}
+
+// ---------- the power strip beside the tall boxes: two chunky plugs in it, their cables running off the desk ----------
+// Origin = its own spot. It lies in the open beside the boxes' west end, along the desk's far edge, all of it seen
+// from the open desk. A bone body with an ink keyline, darker than the desk it lies on; six sockets, two of them taken. LAMP: where its rocker's lamp is on screen (it blinks when it is bumped).
+export const STRIP_LAMP = { x: -47.5, y: -4 - 9 * HK };
+export function powerStrip() {
+  const B = '#E2D9C2', BS = '#A99E83', K = '#2A2D31', K2 = '#17191B', X0 = -55, Y0 = -13, W = 110, D = 22;
+  const top = g => {
+    g.strokeStyle = PAL.ink; g.lineWidth = 3; g.beginPath(); rr(g, X0, Y0, W, D, 5); g.stroke();      // ink keyline (its inner half shows)
+    g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(X0 + 5, Y0 + 2, W - 10, 1.4);
+    g.fillStyle = PAL.ink; g.beginPath(); rr(g, -53, -9.5, 11, 15, 2.2); g.fill();                  // the rocker switch, lit
+    g.fillStyle = '#D93A26'; g.beginPath(); rr(g, -52, -8.5, 9, 13, 1.6); g.fill();
+    g.fillStyle = '#FF8E74'; g.fillRect(-52, -8.5, 9, 5);
+    for (let i = 0; i < 6; i++) {                                     // six socket faces: two slots and an earth pin each, in ink
+      const x = -31 + i * 15;
+      g.fillStyle = '#F7F4EC'; g.beginPath(); rr(g, x - 6, -9.5, 12, 15, 2.6); g.fill();
+      g.strokeStyle = 'rgba(20,17,15,.7)'; g.lineWidth = 0.9; g.stroke();
+      g.fillStyle = PAL.ink; g.fillRect(x - 3.4, -6.4, 2, 5.6); g.fillRect(x + 1.4, -6.4, 2, 5.6); g.beginPath(); g.arc(x, 2.4, 1.4, 0, 6.2832); g.fill();
+    }
+  };
+  const plug = (x, c, c2, key) => [
+    rbox(x - 12.5, -14, 25, 22, 5, 9, 27, c, c2, {
+      hl: 0, ns: 1, det: g => {
+        if (key) { g.strokeStyle = 'rgba(20,17,15,.75)'; g.lineWidth = 2; g.beginPath(); rr(g, x - 12.5, -14, 25, 22, 5); g.stroke(); }
+        g.fillStyle = 'rgba(255,255,255,.16)'; g.fillRect(x - 9, -12, 18, 2.6);
+        g.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -5; i <= 5; i += 5) g.fillRect(x + i - 0.9, -6, 1.8, 10);      // grip ribs
+      }
+    }),
+    rbox(x - 6, 5, 12, 8, 2.5, 9, 19, c, c2, { hl: 0, ns: 1 })      // the cable's boss, toward the viewer
+  ];
+  return bake([
+    rbox(X0 - 1.1, Y0 - 1.1, W + 2.2, D + 2.2, 6, 0, 0.7, PAL.ink, PAL.ink, { hl: 0 }),              // an ink line round its foot
+    rbox(X0, Y0, W, D, 5, 0, 9, B, BS, { det: top, hl: 0 }),
+    ...plug(-16, K, K2, false), ...plug(29, '#D9D2BF', '#A9A089', true)
+  ]);
+}
+// The two cables: out of the plugs toward the viewer, then west side by side along the desk's north end and over its
+// west edge (edge: how far west of the strip that edge is). A flat sprite; origin = the strip's own spot.
+export function stripCables(edge) {
+  const runs = [
+    [[[-16, 10], [-18, 18], [-32, 25], [-60, 27], [-104, 31], [-146, 26], [-188, 30], [-edge, 27]], '#2A2D31', '#4A5157'],
+    [[[29, 10], [27, 19], [10, 25], [-22, 23], [-60, 21.6], [-104, 25.6], [-146, 20.6], [-188, 24.6], [-edge, 21.6]], '#B4AC96', '#E3DDCC']
+  ];
+  const smooth = ctl => {                                                // Catmull-Rom through every point (its ends doubled)
+    const c = [ctl[0], ...ctl, ctl[ctl.length - 1]], pts = [];
+    for (let i = 1; i < c.length - 2; i++) {
+      const p0 = c[i - 1], p1 = c[i], p2 = c[i + 1], p3 = c[i + 2];
+      for (let k = 0; k < 10; k++) {
+        const t = k / 10, t2 = t * t, t3 = t2 * t;
+        pts.push([0.5 * (2 * p1[0] + (p2[0] - p0[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (3 * p1[0] - p0[0] - 3 * p2[0] + p3[0]) * t3),
+          0.5 * (2 * p1[1] + (p2[1] - p0[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (3 * p1[1] - p0[1] - 3 * p2[1] + p3[1]) * t3)]);
+      }
+    }
+    pts.push(ctl[ctl.length - 1]);
+    return pts;
+  };
+  const x0 = -edge, y0 = 0, x1 = 40, y1 = 44;
+  return flat(x1 - x0, y1 - y0, -x0, -y0, g => {
+    g.translate(-x0, -y0); g.lineJoin = 'round'; g.lineCap = 'butt';
+    for (const [ctl, c, c2] of runs) {
+      const pts = smooth(ctl), line = (dx, dy) => { g.beginPath(); pts.forEach((p, i) => { i ? g.lineTo(p[0] + dx, p[1] + dy) : g.moveTo(p[0] + dx, p[1] + dy); }); };
+      g.strokeStyle = 'rgba(112,128,146,.5)'; g.lineWidth = 4.4; line(1.2, 1.6); g.stroke();
+      g.strokeStyle = PAL.ink; g.lineWidth = 4.6; line(0, 0); g.stroke();
+      g.strokeStyle = c; g.lineWidth = 3.2; line(0, 0); g.stroke();
+      g.strokeStyle = c2; g.lineWidth = 0.9; line(0, -0.8); g.stroke();
+    }
+  }, 0.5);
 }

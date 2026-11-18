@@ -78,7 +78,7 @@ async function boot() {
   jobs.push(...F.bakeJobs());
   // "show me where" may be tapped before the idle bake has reached the thing (always so on #reel, where the loop has
   // not run yet): every job still waiting is run first, so the thing stands, with its collider, before the route is made
-  ui.initUI({ pause: stop, resume: start, live: () => running, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
+  ui.initUI({ pause: stop, resume: start, live: () => running, sound: () => audio.tabTap(), engine: engineTap, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
   ui.setViewport(view.w, view.h);
   onBump(F.bump); onEdge(() => audio.thud());
   const hnd = { first, tap, toWorld, w: () => view.w, live: () => running };
@@ -96,7 +96,11 @@ async function boot() {
   };
   cv.addEventListener('touchend', playTapped, { passive: false });
   cv.addEventListener('click', playTapped);
-  for (const ev of ['pointerup', 'touchend', 'click', 'keydown']) addEventListener(ev, audio.unlock, { passive: true });
+  // Sound (audio.js has its own listeners for every tap, click and key). The Start pill lies where the thumb rests too:
+  // a drag that begins on it drives, and only then counts as the first touch; a tap on it is its own click.
+  audio.init({ change: soundChange });
+  hnd.adopt(document.getElementById('startb'), { lazy: true, drive: () => { first(); dropStart(true); } });
+  soundBoot();
   cv.addEventListener('touchmove', e => e.preventDefault(), { passive: false });       // older iOS: no scroll, no bounce
   document.addEventListener('gesturestart', e => { if (running) e.preventDefault(); });   // no pinch
   addEventListener('resize', resize); addEventListener('orientationchange', resize);
@@ -105,6 +109,7 @@ async function boot() {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if ((e.key === 'p' || e.key === 'P') && running) window.ygView(false);
     else if ((e.key === 'r' || e.key === 'R') && html.classList.contains('g')) ui.toggleReel();
+    else if ((e.key === 'm' || e.key === 'M') && html.classList.contains('g') && !e.repeat) audio.tabTap();
   });
   if (S.reduced) { cam.zoom = 1; cam.anchor = 0.46; cam.x = van.x; cam.y = van.y; }
   else { const o = openCam(); cam.zoom = o.z; cam.y = o.y; }
@@ -117,7 +122,7 @@ async function boot() {
   else if (location.hash === '#reel') ui.openReel();
   start();
 }
-function fail(e) { console.error(e); stop(); if (window.ygDead) window.ygDead(); else html.classList.remove('g'); }    // the plain resume is the page
+function fail(e) { console.error(e); stop(); audio.view(false); if (window.ygDead) window.ygDead(); else html.classList.remove('g'); }    // the plain resume is the page
 
 // The first-paint HTML name does not just fade: each line shrinks onto the same words routed into the hub, so there is
 // one name that lands in the wood and never two names on top of each other.
@@ -145,10 +150,10 @@ function start() {
   if (running || !booted || document.hidden || ui.busy() || !html.classList.contains('g')) return;
   running = true; lastT = performance.now(); F.resumeLoops(); raf = requestAnimationFrame(frame);
 }
-function stop() { if (!running) return; running = false; cancelAnimationFrame(raf); F.pauseLoops(); input.keys.clear(); input.mag = 0; }
+function stop() { if (!running) return; running = false; cancelAnimationFrame(raf); F.pauseLoops(); input.keys.clear(); input.mag = 0; audio.rest(); }
 
 // ---------- input glue ----------
-// 0 an ordinary touch · 1 swallowed (the three-track moment has only just begun) · 2 it ended the moment
+// 0 an ordinary touch · 1 swallowed (the moment has only just begun) · 2 it ended the moment
 // fresh: a new touch-down or key press (not the repeat of a key that is held)
 function first(fresh) {
   const r = F.threeTouch(fresh !== false);
@@ -180,9 +185,9 @@ function frame(now) {
   const dt = rdt * (S.slow > 0 ? 0.3 : 1);
   S.t += dt;
 
-  if (AUTO && !S.firstInput && S.rt >= 1.5) F.tourStart();
+  if (AUTO && !S.firstInput && S.rt >= tourAt) F.tourStart();
   van.drag = sf.paper.inPile ? 0.8 : sf.flourAt(van.x + Math.cos(van.a) * sf.NOSE, van.y + Math.sin(van.a) * sf.NOSE) === 2 ? 0.85 : 1;
-  // The three-track moment holds the van still. A thumb that stayed down and keeps steering ends it early once the
+  // The moment holds the van still. A thumb that stayed down and keeps steering ends it early once the
   // first 0.8 s are over; when the moment is over, by itself or not, that thumb has the van again without having to move.
   // (The app's moment is not ended by that thumb until its screen has begun to turn: threeTouch(false) says so, and
   // the thumb's place is noted again, so it is asked once more only when it has moved again.)
@@ -204,6 +209,7 @@ function frame(now) {
   ui.tickPill(van);
   if (tapRing) { tapRing.t += rdt; if (tapRing.t > 0.45) tapRing = null; }
   tickTab(rdt);
+  try { soundTick(rdt); } catch (e) { /* sound never stops the loop */ }
   updateCamera(rdt);
   art.lowRes((F.three.on && F.three.lift) || cam.zoom < 0.8);      // the camera is up (or still coming down): no sprite is baked again for the overview
   render(acc / STEP);
@@ -212,7 +218,7 @@ function frame(now) {
   // idle baking: 4 ms slices
   if (jobs.length) { const t0 = performance.now(); do { jobs.shift()(); art.settle(); } while (jobs.length && performance.now() - t0 < 4); }
   // three times a second: sprites far from the view are let go, the ones coming back are queued to be baked again (spec 9.6)
-  // While the whole table is on screen (the three-track moment) nothing is baked again: let-go sprites show their small
+  // While the whole table is on screen (the moment) nothing is baked again: let-go sprites show their small
   // stand-ins. When the camera is about to go to the app phone, what stands there is made ready at once.
   if (F.cine.on && !cineWas) sweepT = 0;
   cineWas = F.cine.on;
@@ -250,9 +256,21 @@ function fitWhole() {
   const band = view.h >= 620 ? 300 : 0, room = view.h - band - 24, top = GHOST.desk[1] - 112, bw = BOX[2] - BOX[0] + 80, bh = BOX[3] - top + 50;
   return { zoom: Math.min(view.w / view.k / bw, room / view.k / bh), anchor: (band + room / 2) / view.h, y: (top + BOX[3]) / 2 };
 }
+// one table, fitted under the same band (the desk's phones stand 112 units past its north edge)
+function fitTable(r) {
+  const band = view.h >= 620 ? 300 : 0, room = view.h - band - 24, top = r[1] - (r === G.desk ? 112 : 30), bw = r[2] - r[0] + 80, bh = r[3] - top + 50;
+  return { zoom: Math.min(0.6, view.w / view.k / bw, room / view.k / bh), anchor: (band + room / 2) / view.h, x: (r[0] + r[2]) / 2, y: (top + r[3]) / 2 };
+}
 function updateCamera(dt) {
-  let tx, ty, tz, ta, wz = 3;
-  if (F.three.on && F.three.lift) { const f = fitWhole(); tx = (BOX[0] + BOX[2]) / 2; ty = f.y; tz = f.zoom; ta = f.anchor; wz = 7; }
+  let tx, ty, tz, ta, wz = 3, wp = 9;
+  if (F.three.on && F.three.lift) {
+    // The moment: the camera shows each section's table as its strip lands, and the whole floor only with the last
+    // strip, so the sections are met in turn and the widest view is the one all the strips are read over.
+    const th = F.three, r = th.n < th.tr.length ? { w: G.desk, k: G.block, v: G.mat, g: G.belt }[th.tr[Math.max(0, th.n - 1)]] : null;
+    if (r) { const f = fitTable(r); tx = f.x; ty = f.y; tz = f.zoom; ta = f.anchor; }
+    else { const f = fitWhole(); tx = (BOX[0] + BOX[2]) / 2; ty = f.y; tz = f.zoom; ta = f.anchor; }
+    wz = 10; wp = 11;
+  }
   else if (F.cine.on && F.cine.wide) { tx = 0; ty = -850; tz = Math.min(view.w / view.k / 960, view.h / view.k / 1420); ta = 0.5; wz = 7; }      // the app's moment: first the whole desk, while it clears
   else if (F.cine.on) { tx = F.cine.x; ty = F.cine.y; tz = Math.min(F.cine.z, view.h / view.k / 400); ta = 0.5; wz = 9; }      // then the tray, close enough to read
   else if (!S.firstInput && !S.reduced) { const o = openCam(); tx = 0; ty = o.y; tz = o.z; ta = 0.5; wz = 7; }
@@ -261,7 +279,7 @@ function updateCamera(dt) {
     // at the far end of the desk the view leans north, up to 96 units, so the app phone is in full view before the van reaches it
     if (van.y < -1040 && van.x > G.desk[0] && van.x < G.desk[2]) ty -= Math.min(140, (-1040 - van.y) * 0.6);
     tz = S.reduced ? 1 : 1 - 0.12 * Math.min(1, van.speed / 340);
-    if (S.rt - firstAt < 1.1 || (F.three.on && F.three.t < 3.2) || S.rt - (F.cine.endAt || -9) < 1.2) wz = 6;
+    if (S.rt - firstAt < 1.1 || F.three.on || S.rt - (F.cine.endAt || -9) < 1.2) wz = 6;
     // keep most of the screen on the tables: near an edge the van moves off-centre instead of the floor filling the view.
     // The tables make a cross, so the edges that count are the ones of the arm the van is on.
     const vw = view.w / (view.k * cam.zoom), vh = view.h / (view.k * cam.zoom), D = G.desk;
@@ -288,7 +306,7 @@ function updateCamera(dt) {
     }
   }
   if (S.look) { tx = S.look[0]; ty = S.look[1]; tz = S.look[2]; ta = 0.5; wz = 9; }      // ?debug=1: __g.look(x, y, zoom) holds the camera on a place
-  spring(cam, 'x', 'vx', tx, 9, dt); spring(cam, 'y', 'vy', ty, 9, dt); spring(cam, 'zoom', 'zv', tz, wz, dt);
+  spring(cam, 'x', 'vx', tx, wp, dt); spring(cam, 'y', 'vy', ty, wp, dt); spring(cam, 'zoom', 'zv', tz, wz, dt);
   cam.anchor += (ta - cam.anchor) * Math.min(1, dt * 5);
 }
 
@@ -300,7 +318,7 @@ function render(al) {
   S.vr[0] = x0; S.vr[1] = y0; S.vr[2] = x1; S.vr[3] = y1;
   const D = G.desk, B = G.block, M = G.mat, T = G.strip, Wd = WOODS, spr = F.spr;
   // before the first touch the van creeps forward and back once, in step with the ghost thumb under it
-  const gu = !S.firstInput && !S.reduced && S.rt > 0.75 && S.rt < 1.5 ? (S.rt - 0.75) / 0.75 : -1, creep = gu >= 0 ? Math.sin(gu * Math.PI) * 18 : 0;
+  const gu = !S.firstInput && !S.reduced && S.rt - hintAt > 0.75 && S.rt - hintAt < 1.5 ? (S.rt - hintAt - 0.75) / 0.75 : -1, creep = gu >= 0 ? Math.sin(gu * Math.PI) * 18 : 0;
   const vx = van.px + (van.x - van.px) * al + Math.cos(van.a) * creep, vy = van.py + (van.y - van.py) * al + Math.sin(van.a) * creep;
   const vsurf = surfaceAt(vx, vy), matOn = M[0] < x1 && M[2] + 30 > x0 && M[1] < y1 && M[3] + 30 > y0;
   const rect = r => ctx.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
@@ -423,7 +441,7 @@ function render(al) {
   }
   const hi = ((Math.round(van.a / 6.283185307 * 64) % 64) + 64) % 64, vsp = F.vanFrame(hi);
   // on the taped sheet, once it has turned over, the van goes 35% see-through like a tall thing with the van behind it: the sentence is the one long read
-  const ln = S.byId.line, onLine = ln && ln.found && Math.abs(vx - ln.x) < 96 && Math.abs(vy - ln.y) < 118;
+  const ln = S.byId.line, onLine = ln && ln.found && Math.abs(vx - ln.x) < 102 && Math.abs(vy - ln.y) < 135;
   vanA += ((onLine ? 0.35 : 1) - vanA) * 0.2;
   if (vsurf !== 'mat') { if (vanA < 0.99) ctx.globalAlpha = vanA; art.drawShadow(ctx, vsp, vx, vy); ctx.globalAlpha = 1; }
   // Off the mat the wedge is a faint warm shape, drawn plainly (adding light to a near-white table clips to a blank
@@ -435,8 +453,14 @@ function render(al) {
   // 6c. props and the van, sorted by the y of their base. Tall props turn 35% see-through while the van is behind them.
   const VAN = { sortY: vy + 9, van: true }; list.push(VAN); list.sort((a, b) => a.sortY - b.sortY);
   for (const p of list) {
-    if (p.van) { if (vanA < 0.99) ctx.globalAlpha = vanA; drawVan(vsp, vx, vy); ctx.globalAlpha = 1; continue; }
-    if (p.tall) { const t = p.tall, behind = p.fade ? p.fade(vx, vy) : vy < p.sortY - 4 && vx > t[0] - 6 && vx < t[1] + 6 && vy > t[2]; p.alpha += ((behind ? 0.35 : 1) - p.alpha) * 0.2; }
+    if (p.van) {
+      if (vanA < 0.99) ctx.globalAlpha = vanA; drawVan(vsp, vx, vy); ctx.globalAlpha = 1;
+      // (on the read sheet the van is a ghost, so the sentence is read through it: a thin ink line round it says where it is)
+      if (vanA < 0.9) { ctx.save(); ctx.translate(vx, vy - 9); ctx.rotate(van.a); ctx.globalAlpha = (1 - vanA) * 0.85; ctx.strokeStyle = PAL.ink; ctx.lineWidth = 1.4; ctx.beginPath(); art.rr(ctx, -30, -15.5, 60, 31, 6); ctx.stroke(); ctx.restore(); }
+      continue;
+    }
+    // (thru: how far a tall thing fades while the van is behind it; 35% unless it says otherwise)
+    if (p.tall) { const t = p.tall, behind = p.fade ? p.fade(vx, vy) : vy < p.sortY - 4 && vx > t[0] - 6 && vx < t[1] + 6 && vy > t[2]; p.alpha += ((behind ? p.thru || 0.35 : 1) - p.alpha) * 0.2; }
     if (p.alpha < 0.99) ctx.globalAlpha = p.alpha;
     const q = p.squash;
     if (q > 0) { ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1 + 0.05 * q, 1 - 0.08 * q); ctx.translate(-p.x, -p.y); }
@@ -466,11 +490,16 @@ function render(al) {
   // 8. particles
   sf.drawParts(ctx, spr, view);
 
-  // the three-track moment: each built table outlined in its colour, one after another, while the camera is up
-  if (F.three.on && F.three.t < 2.5) {
-    const n = F.three.n, lw = 7 / (view.k * cam.zoom) * 0.5 + 5, h = lw / 2; ctx.lineWidth = lw; ctx.lineJoin = 'round';
-    const box = (r, c) => { ctx.strokeStyle = c; ctx.strokeRect(r[0] + h, r[1] + h, r[2] - r[0] - lw, r[3] - r[1] - lw); };
-    if (n > 0) box(D, TRACK.w.strong); if (n > 1) box(B, TRACK.k.strong); if (n > 2) box(M, TRACK.v.strong);
+  // the moment: each main section's table outlined in its own colour, one after another, while the camera is up
+  // (a section with nothing found yet: a pencilled outline, dashed)
+  if (F.three.on && F.three.t < F.three.up + 0.3) {
+    const n = F.three.n, tr = F.three.tr, lw = 7 / (view.k * cam.zoom) * 0.5 + 5, h = lw / 2, RECT = { w: D, k: B, v: M, g: G.belt }; ctx.lineJoin = 'round';
+    for (let i = 0; i < tr.length && i < n; i++) {
+      const r = RECT[tr[i]]; if (!r) continue;
+      const pen = !S.tracks[tr[i]]; ctx.lineWidth = pen ? lw * 0.5 : lw; ctx.strokeStyle = pen ? '#8E969B' : TRACK[tr[i]].strong; ctx.setLineDash(pen ? [lw * 2, lw * 1.6] : []);
+      ctx.strokeRect(r[0] + h, r[1] + h, r[2] - r[0] - lw, r[3] - r[1] - lw);
+    }
+    ctx.setLineDash([]);
   }
   if (tapRing) { const u = tapRing.t / 0.45; ctx.globalAlpha = 1 - u; ctx.strokeStyle = PAL.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(tapRing.x, tapRing.y, 8 + u * 22, (8 + u * 22) * 0.8, 0, 0, 6.2832); ctx.stroke(); ctx.strokeStyle = PAL.van; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1; }
 
@@ -494,17 +523,72 @@ function render(al) {
   }
 }
 
+// ---------- sound: what the loop tells audio.js, the Start pill, the speaker tab's tape ----------
+// On an iPhone a drag cannot switch sound on, only a tap can (game/IOS-AUDIO.md). So the opening offers one tap first:
+// the Start pill. Driving is never held back by it: a drag, or a Play pill that needs its place, sends it away, and the
+// speaker tab then says "Tap for sound" for four seconds. Whatever tap unlocks sound first, the motor starts once.
+let sndT = 0, sndPaper = 0, startOn = false, started = false, flick = -1, hintAt = 0, tourAt = 1.5, lockT = 0, tipDone = false;
+function soundBoot() {
+  if (!audio.can()) return;
+  ui.soundTab(audio.live(), !audio.muted(), true);
+  if (!audio.muted() && !audio.live() && location.hash !== '#ad1') { startOn = true; ui.startPill(true); }
+  if (DEBUG) {                                       // one small line at the bottom left: what the audio is doing, and what unlocked it
+    const d = document.createElement('div'), a = audio.debug();
+    d.id = 'adbg'; d.style.cssText = 'position:absolute;z-index:30;left:calc(6px + env(safe-area-inset-left));bottom:calc(3px + env(safe-area-inset-bottom));max-width:calc(100% - 12px);font:700 8.5px/1.25 var(--road);letter-spacing:0;color:#F4F1E8;background:rgba(20,17,15,.72);padding:2px 5px 1px;border-radius:3px;pointer-events:none';
+    stage.appendChild(d);
+    setInterval(() => { try { d.textContent = a.line(); } catch (e) { /* the line is a help, never a cost */ } }, 250);
+  }
+}
+function soundChange(live, wanted) {
+  ui.soundTab(live, wanted);
+  if (live || !wanted) dropStart(false);
+}
+// the Start pill leaves. tip: the player went on without it, so the speaker tab says how to get sound
+function dropStart(tip) {
+  if (startOn) { startOn = false; ui.startPill(false); }
+  if (tip && !audio.live() && !audio.muted()) { tipDone = true; ui.soundTip(true); }
+}
+// A tap on the Start pill (audio.js has already asked for sound inside this same tap). The opening's own beat follows
+// it: the ghost thumb and the idle tour wait for the motor to have started, unless they were already under way.
+function engineTap() {
+  dropStart(false);
+  if (S.firstInput || S.rt >= tourAt) return;
+  if (S.rt - hintAt < 0.75) { hintAt = S.rt + 0.35; tourAt = hintAt + 1.5; } else tourAt = Math.max(tourAt, S.rt + 1.3);
+}
+const overLine = t => !!t && Math.abs(van.x) < t.w / 2 + 6 && Math.abs(van.y - t.cy - 6) < t.h / 2 + 8;      // the van is over a routed line of the hub
+function soundTick(rdt) {
+  const st = input.stick;
+  if (startOn && ((st && st.live) || ui.pillUp() || (S.firstInput && S.rt - firstAt > 0.6))) dropStart(true);
+  // sound is on but still locked, and the Start pill has gone: say so once (again only after sound has been heard and lost)
+  if (!startOn && S.firstInput && audio.can() && !audio.muted() && !audio.live()) { lockT += rdt; if (lockT > 0.7 && !tipDone) { tipDone = true; ui.soundTip(true); } }
+  else { lockT = 0; if (audio.live()) tipDone = false; }
+  // the first time sound is really running the motor is started: a cough, it catches, and the headlights flick
+  if (!started && audio.live()) { started = true; if (audio.starter() && van.speed < 30 && !auto.on) flick = 0; }
+  if (flick >= 0) { flick += rdt; van.lights = !(flick < 0.09 || (flick > 0.19 && flick < 0.26)); if (flick > 0.3) { flick = -1; van.lights = true; } }
+  sndPaper += sf.paper.hits; sndT += rdt;
+  if (sndT < 0.032) return;                          // the continuous voices are steered thirty times a second at most
+  const s = surfaceAt(van.x, van.y), woods = s === 'mat' && van.x > WOODS[0] && van.y > WOODS[1], hx = Math.cos(van.a), hy = Math.sin(van.a);
+  const groove = s === 'hub' && (overLine(art.hubText.name) || overLine(art.hubText.roles));      // over the routed name, or the roles under it
+  audio.drive({
+    dt: sndT, speed: van.speed, thr: van.thr || 0, surface: woods ? 'woods' : s || 'floor', groove, fire: mat.fireNear(),
+    flour: s === 'block' ? sf.flourAt(van.x + hx * sf.NOSE, van.y + hy * sf.NOSE) : 0,
+    paper: s === 'desk' ? sndPaper / 4 + (sf.paper.inPile && van.speed > 30 ? 0.3 : 0) : 0
+  });
+  sndT = 0; sndPaper = 0;
+}
+
 // ---------- the edge tab: one pointer at the edge of the screen (spec 7.2) ----------
 // When: 40 s after the first touch, toward the major of a track with nothing found yet (the spec's chevron); or, when
 // nothing still to find has been in sight for 6 s, toward the nearest thing still to find, in its track's colour.
 // What: the hub's own stemmed tape arrow, in that colour, on a bone tape tab of the top bar's family (torn short ends,
 // ink keyline, hard shadow), pinned to the edge of the screen in the direction of the thing: never inside the playfield.
 // How: it slides in from that edge, stays 2.4 s, bobbing, and is off for 6 s. It keeps away while a label is in its first
-// second and a half, while a pill is up, during the two moments, and whenever the hub is on screen (the hub's own
-// dashes point the way there).
+// second and a half, while a pill has only just come up (its first six seconds: after that the offer has been seen, and
+// the tab sits above it), during the two moments, and whenever the hub is on screen (the hub's own dashes point the
+// way there).
 const tab = { on: false, k: 0, t: 0, cool: 0, idle: 0, look: 0, tgt: null, x: 0, y: 0, a: 0, ex: 0, ey: 0, tr: 'w' };
 function tickTab(dt) {
-  const quiet = !S.firstInput || F.holdOn() || F.three.on || ui.pillShown() || ui.labelFresh() || shown(-110, -110, 110, 110) > 0.25;
+  const quiet = !S.firstInput || F.holdOn() || F.three.on || (ui.pillShown() && ui.pillAge() < 6) || ui.labelFresh() || shown(-110, -110, 110, 110) > 0.25;
   if ((tab.look -= dt) <= 0) {                                        // five times a second: is anything still to find in sight, and what is nearest
     tab.look = 0.2;
     const vis = (x, y) => { const p = toScreen(x, y); return p[0] > 10 && p[0] < view.w - 10 && p[1] > 100 && p[1] < view.h - 20; };
@@ -520,7 +604,7 @@ function tickTab(dt) {
   if (tab.on && tab.tgt) {
     // where the line from the van to the thing leaves the screen: the tab is pinned there, 10 px in from the sides,
     // under the top bar (never higher than y 104), above the bottom edge (or above a pill that is waiting, tucked)
-    const g = tab.tgt, v = toScreen(van.x, van.y), p = toScreen(g.x, g.y), lx = 32, hx = view.w - 32, ly = 119, hy = view.h - (ui.pillUp() ? 96 : 28) - 15;
+    const g = tab.tgt, v = toScreen(van.x, van.y), p = toScreen(g.x, g.y), lx = 32, hx = view.w - 32, ly = 119, hy = view.h - ui.pillH() - 15;
     const cx = Math.max(lx, Math.min(hx, v[0])), cy = Math.max(ly, Math.min(hy, v[1])), dx = p[0] - cx, dy = p[1] - cy;
     const k = Math.min(dx > 0 ? (hx - cx) / dx : dx < 0 ? (lx - cx) / dx : 1e9, dy > 0 ? (hy - cy) / dy : dy < 0 ? (ly - cy) / dy : 1e9);
     tab.x = cx + dx * k; tab.y = cy + dy * k; tab.a = Math.atan2(p[1] - v[1], p[0] - v[0]); tab.tr = g.tr;
@@ -584,7 +668,7 @@ function govern(raw, rdt) {
 // ---------- ?debug=1 ----------
 function debugHooks(fontsOk) {
   window.__g = {
-    van, found: S.found, S, cam, auto, input, view, three: F.three, cine: F.cine, wakes: art.wakes, loops: F.loops, spr: F.spr, flats: F.flats, fontsOk, audio: audio.state, tray: desk.tray, show: desk.show, tab, framing: F.framing, chase: mat.chase, paper: sf.paper,
+    van, found: S.found, S, cam, auto, input, view, three: F.three, cine: F.cine, wakes: art.wakes, loops: F.loops, spr: F.spr, flats: F.flats, fontsOk, audio: audio.debug(), tray: desk.tray, show: desk.show, tab, framing: F.framing, chase: mat.chase, paper: sf.paper,
     get fps() { return Math.round(fpsAvg); },
     // canvas memory held, in MB: every sprite and its shadow, the ground tiles, the trail, the flour, the loops' copies, the van's frames
     get canvasMB() { return this.canvasMem.total; },
@@ -620,6 +704,7 @@ function debugHooks(fontsOk) {
 
 // ---------- start, and the switch between the game and the plain resume ----------
 document.addEventListener('ygview', () => {
+  audio.view(html.classList.contains('g'));          // (inside the tap that switched: coming back to the game it may ask for sound)
   if (html.classList.contains('g')) { if (!booted) boot().catch(fail); else { resize(); start(); } }
   else stop();
 });

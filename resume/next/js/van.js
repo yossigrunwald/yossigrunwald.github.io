@@ -6,7 +6,7 @@ const VMAX = 340, ACC = 1500, BRAKE = 900, TURN = 720 * Math.PI / 180;
 
 export const van = {
   x: SPAWN.x, y: SPAWN.y, px: SPAWN.x, py: SPAWN.y, vx: 0, vy: 0, a: -Math.PI / 2, speed: 0,
-  lights: true, drag: 1, cn: null, cs: null, odo: 0, squash: 0, edgeAt: -9, slideC: null, slideSide: 0, push: 0, pin: 0, pinN: 0, leanC: null, leanT: 0
+  lights: true, drag: 1, thr: 0, cn: null, cs: null, odo: 0, squash: 0, edgeAt: -9, slideC: null, slideSide: 0, push: 0, pin: 0, pinN: 0, leanC: null, leanT: 0
 };
 const nearBuf = [];
 // hold: the van takes no steering for now (the three-track moment); the stick and the keys are read again when it lifts
@@ -180,6 +180,7 @@ export function step(dt) {
     }
   }
 
+  van.thr = mag;                                      // how hard it is being asked to go, 0..1 (the engine's sound reads it)
   // velocity toward the target, rate limited
   const f = van.drag, tvx = dx * mag * VMAX * f, tvy = dy * mag * VMAX * f;
   const rate = (mag > 0 ? ACC : BRAKE) * dt, ax = tvx - van.vx, ay = tvy - van.vy, al = Math.hypot(ax, ay);
@@ -309,7 +310,7 @@ export function bindInput(cv, h) {
       try { el.setPointerCapture(pid); } catch (err) { /* synthetic pointers cannot be captured */ }
       const w = h.toWorld(e.clientX, e.clientY);
       const s = input.stick = { cx: e.clientX, cy: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, live: false, wx: w[0], wy: w[1], dead: false, noTap: true, edge: false, from: el, o };
-      s.dead = h.first() === 1;
+      s.dead = o.lazy ? false : h.first() === 1;     // (lazy: touching it is not yet the first touch; o.drive says so when the touch has become a drive)
     });
     hook(el);
     el.addEventListener('click', e => { if (performance.now() - (el._drove || 0) < 500) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);      // the click a mouse sends after a drag is not a press of the pill

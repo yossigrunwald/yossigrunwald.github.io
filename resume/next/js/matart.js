@@ -1,9 +1,9 @@
-// matart.js — prop recipes for the mat and the woods (stage 3): the pines, the bedsheet screens, the bunting gate,
-// the director's chair and megaphone, the gear case, the camera on its tripod, the light stand, the campfire, the
-// flag pole, and the mat's dressing. Same slab baker and the same tape as art.js; nothing here runs per frame.
+// matart.js — prop recipes for the mat and the woods: the slate, the pines, the bedsheet screens, the bunting gate and
+// the short band of bunting, the folding chair and megaphone, the gear case, the camera on its tripod, the light stand,
+// the campfire, the flag pole, and the mat's dressing. The same slab routine and the same tape as art.js; nothing here runs per frame.
 // Nothing on the mat casts a shadow (spec 8.4), so every sprite is baked without one.
 import { PAL, mulberry32 } from './world.js';
-import { bake, box, rbox, cyl, poly, flat, decal, rr, rgba, shade, mixHex, HK, SS, STENCIL } from './art.js';
+import { mk, bake, box, rbox, cyl, poly, flat, decal, rr, rgba, shade, mixHex, HK, SS, STENCIL } from './art.js';
 
 const TAU = 6.2832, NS = { shadow: false };
 const PLY = '#C8975A', PLY2 = '#8F6535';            // the little plywood discs that model trees and posts stand on
@@ -43,18 +43,20 @@ export function pineSprite(k = 1, v = 0) {
 
 // ---------- a bedsheet screen: w x h is the picture, lift the air under the cloth (px) ----------
 // o.posts false: hung by ropes that run out to o.rope either side (the camp's sheet, between two pines)
+// o.side: the line runs on that far past the cloth's west end to its post, and a week's shoot schedule is pegged there
 // Returns { sp, px, py }: the picture's top-left corner from the anchor (the middle of the foot line).
 export function sheetSprite(w, h, lift, o = {}) {
-  const W = w + 12, T = -(lift + h + 12), B = -lift, L = -W / 2, R = W / 2, sag = o.sag || 4.5, post = w / 2 + 2, Z = (lift + h + 19) / HK;
+  const W = w + 12, T = -(lift + h + 12), B = -lift, L = -W / 2, R = W / 2, sag = o.sag || 4.5, post = w / 2 + 2, Z = (lift + h + 19) / HK, side = o.side || 0, PL = -post - side;      // PL: the west post
   const r = mulberry32(w * 31 + h + lift), sl = [];
-  if (o.posts !== false) for (const s of [-1, 1]) {
-    sl.push(cyl(s * post, -4, 7.5, 0, 2.4, PLY, PLY2, { hl: 0 }));
-    sl.push(cyl(s * post, -4, 2.3, 2.4, Z, AL, AL2, { hl: 0 }));
-    sl.push(cyl(s * post, -4, 2.9, 8, 15, REFL, '#EEF2F4', { hl: 0 }));        // one band of reflective tape on each post
-    sl.push(cyl(s * post, -4, 2.9, Z - 14, Z - 4, '#F4F1E8', '#E2E6E8', { hl: 0 }));   // and one round its top: what the headlights find first
+  if (o.posts !== false) for (const px of [PL, post]) {
+    sl.push(cyl(px, -4, 7.5, 0, 2.4, PLY, PLY2, { hl: 0 }));
+    sl.push(cyl(px, -4, 2.3, 2.4, Z, AL, AL2, { hl: 0 }));
+    sl.push(cyl(px, -4, 2.9, 8, 15, REFL, '#EEF2F4', { hl: 0 }));        // one band of reflective tape on each post
+    sl.push(cyl(px, -4, 2.9, Z - 14, Z - 4, '#F4F1E8', '#E2E6E8', { hl: 0 }));   // and one round its top: what the headlights find first
   } else sl.push(room(-o.rope - 2, -8, o.rope + 2, 2, Z));
   const folds = []; for (let i = 0; i < 5; i++) folds.push([L + 10 + (W - 30) * (i + r() * 0.7) / 5, 5 + r() * 9, (r() - 0.5) * 9]);
-  const lineY = x => T - 2.2 + sag * 2 * 2 * (0.5 + x / W) * (0.5 - x / W);                // the line it is pegged to, run between the two tops
+  const lineY = x => x < L ? T - 2.2 : T - 2.2 + sag * 2 * 2 * (0.5 + x / W) * (0.5 - x / W);                // the line it is pegged to, run between the two tops
+  const SW = 36, SH = 46, SX = L - 5 - SW, SY = T + 1.4;      // the schedule: a sheet of paper, 36 x 46, pegged to the line west of the cloth
   const pegs = [], np = Math.round(W / 44); for (let i = 0; i < np; i++) { const x = L + W * (i + 0.5) / np + (r() - 0.5) * 6; pegs.push([x, lineY(x)]); }
   const cloth = g => {
     const path = () => {
@@ -67,6 +69,7 @@ export function sheetSprite(w, h, lift, o = {}) {
     // what holds it up: twine from each top corner
     g.strokeStyle = '#B58A52'; g.lineWidth = 1.3;
     if (o.posts !== false) for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * (W / 2 - 1), T + 1); g.lineTo(s * post, T - 3); g.moveTo(s * (W / 2 - 1.5), B - 3); g.lineTo(s * post, B - 6); g.stroke(); }
+    if (side) { g.beginPath(); g.moveTo(L - 3, T - 2.2); g.lineTo(PL, T - 3); g.stroke(); }
     else for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * (W / 2 - 1), T + 1); g.quadraticCurveTo(s * (W / 2 + 8), T + 5, s * o.rope, T + 2); g.moveTo(s * (W / 2 - 1.5), B - 3); g.quadraticCurveTo(s * (W / 2 + 8), B + 1, s * o.rope, B - 8); g.stroke(); }
     g.strokeStyle = '#B58A52'; g.lineWidth = 1.1; g.beginPath(); for (let i = 0; i <= 12; i++) { const x = L - 3 + (W + 6) * i / 12; if (i) g.lineTo(x, lineY(x)); else g.moveTo(x, lineY(x)); } g.stroke();
     path(); g.fillStyle = '#EFEADF'; g.fill();
@@ -83,14 +86,29 @@ export function sheetSprite(w, h, lift, o = {}) {
     g.fillStyle = '#8E6A3A'; for (const s of [-1, 1]) { g.beginPath(); g.arc(s * (W / 2 - 1.5), T + 1.4, 1.9, 0, TAU); g.fill(); }      // the knots
     for (const [x, y] of pegs) { g.fillStyle = '#D2A76A'; g.fillRect(x - 1.5, y - 2.4, 3, 7.4); g.fillStyle = '#8F6535'; g.fillRect(x - 1.5, y + 1, 3, 0.9); g.fillRect(x - 0.3, y + 1.9, 0.6, 3.1); }      // wooden pegs along the line
     if (o.posts === false) { g.fillStyle = '#F4F1E8'; for (const s of [-1, 1]) g.fillRect(s * (W / 2 + 7) - 2.5, T + 0.6, 5, 6.4); }      // hung on ropes: a wrap of reflective tape on each, by the corner
+    if (side) {                                             // the week's shoot schedule: seven days across, four rows down, the shoots blocked in
+      g.fillStyle = 'rgba(20,17,15,.2)'; g.fillRect(SX + 1.4, SY + 1.8, SW, SH);
+      g.fillStyle = '#FBFCFD'; g.fillRect(SX, SY, SW, SH); g.strokeStyle = 'rgba(20,17,15,.4)'; g.lineWidth = 0.8; g.strokeRect(SX + 0.4, SY + 0.4, SW - 0.8, SH - 0.8);
+      g.fillStyle = '#33383D'; g.fillRect(SX + 2.5, SY + 3, SW - 5, 5.4);                                  // the heading bar, and the seven day marks on it
+      g.fillStyle = '#FBFCFD'; for (let i = 0; i < 7; i++) g.fillRect(SX + 2.5 + (i + 0.5) * (SW - 5) / 7 - 1.1, SY + 4.8, 2.2, 1.8);
+      const gx = SX + 2.5, gy = SY + 11, cw = (SW - 5) / 7, ch = 8;
+      const blk = (c, r0, n, col) => { g.fillStyle = col; g.fillRect(gx + c * cw + 0.7, gy + r0 * ch + 0.7, cw - 1.4, n * ch - 1.4); };
+      blk(0, 0, 2, PAL.pinkTape); blk(1, 1, 1, PAL.gold); blk(2, 0, 1, PAL.pinkTape); blk(3, 2, 2, PAL.pinkTape); blk(4, 0, 1, PAL.gold); blk(4, 2, 1, PAL.pinkTape); blk(5, 1, 2, PAL.pinkTape); blk(6, 3, 1, PAL.gold);
+      g.strokeStyle = 'rgba(20,17,15,.5)'; g.lineWidth = 0.6; g.beginPath();
+      for (let i = 0; i <= 7; i++) { g.moveTo(gx + i * cw, gy); g.lineTo(gx + i * cw, gy + 4 * ch); }
+      for (let j = 0; j <= 4; j++) { g.moveTo(gx, gy + j * ch); g.lineTo(gx + SW - 5, gy + j * ch); }
+      g.stroke();
+      for (const x of [SX + 8, SX + SW - 8]) { g.fillStyle = '#D2A76A'; g.fillRect(x - 1.5, SY - 4.6, 3, 7.4); g.fillStyle = '#8F6535'; g.fillRect(x - 1.5, SY - 1.2, 3, 0.9); }      // two pegs hold it to the line
+    }
   };
   sl.push(decal(cloth));
   // its outline again as a path, for the dark shape it is before the light finds it (no second sprite to hold)
   const dark = new Path2D(); dark.moveTo(L, T); dark.quadraticCurveTo(0, T + sag * 2, R, T); dark.lineTo(R - 1, B + 1.5); dark.lineTo(L, B + 1.5); dark.closePath();
-  if (o.posts !== false) for (const s of [-1, 1]) dark.rect(s * post - 2.3, T - 9, 4.6, -T + 5);
+  if (o.posts !== false) for (const px of [PL, post]) dark.rect(px - 2.3, T - 9, 4.6, -T + 5);
+  if (side) dark.rect(SX, SY, SW, SH);
   // In the dark only this much of it catches any light (spec 8.4): the rope, the pegs, the reflective bands [x, y, w, h].
-  const rope = new Path2D(); for (let i = 0; i <= 12; i++) { const x = L - 3 + (W + 6) * i / 12; if (i) rope.lineTo(x, lineY(x)); else rope.moveTo(x, lineY(x)); }
-  const by = -4 - (Z - 4) * HK, bands = o.posts !== false ? [[-post - 2.9, by, 5.8, 6.4], [post - 2.9, by, 5.8, 6.4]] : [[-(W / 2 + 7) - 2.5, T + 0.6, 5, 6.4], [W / 2 + 7 - 2.5, T + 0.6, 5, 6.4]];
+  const rope = new Path2D(); if (side) rope.moveTo(PL, T - 3); for (let i = 0; i <= 12; i++) { const x = L - 3 + (W + 6) * i / 12; if (i || side) rope.lineTo(x, lineY(x)); else rope.moveTo(x, lineY(x)); }
+  const by = -4 - (Z - 4) * HK, bands = o.posts !== false ? [[PL - 2.9, by, 5.8, 6.4], [post - 2.9, by, 5.8, 6.4]] : [[-(W / 2 + 7) - 2.5, T + 0.6, 5, 6.4], [W / 2 + 7 - 2.5, T + 0.6, 5, 6.4]];
   return { sp: bake(sl, NS), px: -w / 2, py: T + 8.5, folds, T, B, L, W, dark, rope, pegs, bands };
 }
 // the same folds again, to lay over the picture so it sits in the cloth and not on it
@@ -105,6 +123,24 @@ export function sheetOver(w, h, sh) {
   }, 0.5);
 }
 // snow on a screen with no signal: hard little blocks
+// The weekly recap's picture: a drawn title card, never a frame of the video (its frames are close-ups of campers).
+// lines: the card's two lines, from the document. An ink ground with a thin frame line, the first line big in the
+// stencil face with a strip of pink tape under it, the second line under that; the right fifth is left clear for the
+// play mark (px: where its middle goes).
+export const WEEK = { px: 0.82 };
+export function weekCard(w, h, lines) {
+  return flat(w, h, 0, 0, g => {
+    g.fillStyle = '#14110F'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(244,241,232,.28)'; g.lineWidth = 1; g.strokeRect(3.5, 3.5, w - 7, h - 7);
+    const x = w * 0.09, room = w * 0.6, big = lines[0] || '', small = lines[1] || '';
+    let fs = h * 0.44; g.font = `900 ${fs}px ${STENCIL}`; let tw = g.measureText(big).width; if (tw > room) { fs *= room / tw; g.font = `900 ${fs}px ${STENCIL}`; tw = room; }
+    const base = h * 0.5 + fs * 0.1;
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = '#F4F1E8'; g.fillText(big, x, base);
+    g.fillStyle = PAL.pinkTape; g.fillRect(x, base + fs * 0.13, tw, Math.max(2.4, fs * 0.1));
+    let ss = fs * 0.5; g.font = `900 ${ss}px ${STENCIL}`; const sw = g.measureText(small).width; if (sw > room) { ss *= room / sw; g.font = `900 ${ss}px ${STENCIL}`; }
+    g.fillStyle = '#F4F1E8'; g.fillText(small, x, base + fs * 0.13 + Math.max(2.4, fs * 0.1) + ss * 0.98);
+  }, 0);
+}
 export function staticSprite(w, h, seed) {
   const r = mulberry32(seed);
   return flat(w, h, 0, 0, g => {
@@ -140,7 +176,7 @@ export function gateSprite(colour) {
   return bake(sl, NS);
 }
 
-// ---------- the director's chair, at any heading (th = the way it faces). Its word is on the back of the back band ----------
+// ---------- the folding canvas chair of a film set, at any heading (th = the way it faces). Its word is on the back of the back band ----------
 export function chairSprite(th, word) {
   const W1 = '#D2A76A', W2 = '#A47B45', C1 = '#33383D', C2 = '#22262A', parts = [];
   const add = (cx, cy, z, s) => parts.push({ cx, cy, z, s });
@@ -408,5 +444,58 @@ export function twigs(seed) {
     g.lineCap = 'round';
     for (let i = 0; i < 9; i++) { const x = 6 + r() * 48, y = 5 + r() * 30, a = r() * TAU, l = 3 + r() * 4; g.strokeStyle = '#2E8A60'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
     for (let i = 0; i < 3; i++) { const x = 10 + r() * 40, y = 8 + r() * 24, a = r() * TAU, l = 7 + r() * 9; g.strokeStyle = '#3B2715'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); g.strokeStyle = '#8A5A2B'; g.lineWidth = 1.5; g.stroke(); }
+  }, 0.5);
+}
+
+// ---------- the slate: a clapperboard lying on the mat, lettered with the kinds of video ----------
+// Origin = the middle of the board. It lies a little askew (rot). rows: its lettering, one row to a field, in
+// reflective white (it flares in the headlights). The upper stick is drawn per frame (it claps): STICK is where its
+// hinge is and how long it is, in the board's own turned frame.
+export const SLATE = { w: 120, h: 80, rot: -0.07, hx: -60, hy: -52, len: 120, th: 12 };
+export function slateRows(kinds, width, font) {
+  const m = mk(4, 4).getContext('2d'); m.font = font;
+  const rows = []; let cur = '';
+  for (const k of kinds) { const t = cur ? cur + '  ·  ' + k : k; if (cur && m.measureText(t).width > width) { rows.push(cur); cur = k; } else cur = t; }
+  if (cur) rows.push(cur);
+  return rows;
+}
+export function slateSprite(kinds) {
+  const S = SLATE, W = S.w, H = S.h, fs = 13, font = `900 ${fs}px ${STENCIL}`, rows = slateRows(kinds, W - 14, font), top = -H / 2 + 5, rh = (H - 10) / rows.length;
+  const face = g => {
+    g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(-W / 2, -H / 2, W, 3);
+    g.strokeStyle = 'rgba(244,241,232,.5)'; g.lineWidth = 0.9;                                     // ruled fields, as a slate has
+    for (let i = 1; i < rows.length; i++) { g.beginPath(); g.moveTo(-W / 2 + 5, top + i * rh); g.lineTo(W / 2 - 5, top + i * rh); g.stroke(); }
+    g.strokeRect(-W / 2 + 2.5, -H / 2 + 2.5, W - 5, H - 5);
+    g.font = font; g.fillStyle = REFL; g.textAlign = 'center'; g.textBaseline = 'middle';
+    rows.forEach((r, i) => g.fillText(r, 0, top + (i + 0.5) * rh + 0.9));
+  };
+  return bake([
+    box(-W / 2, -H / 2, W, H, 0, 3.4, '#2A2E31', '#17191B', { det: face, hl: 0 }),
+    box(-W / 2, -H / 2 - S.th, W, S.th, 0, 4.6, '#17191B', '#0D0E0F', { det: g => stripes(g, -W / 2, -H / 2 - S.th, W, S.th, 1), hl: 0 })      // the lower stick, fixed along its top
+  ], { rot: S.rot, shadow: false });
+}
+// the sticks' slanted white bars. dir: which way they lean (the two sticks lean opposite ways, so they meet as chevrons)
+export function stripes(g, x, y, w, h, dir, col = '#F4F1E8') {
+  g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); g.fillStyle = col;
+  for (let i = -h; i < w + h; i += 19) { g.beginPath(); g.moveTo(x + i, y + (dir > 0 ? h : 0)); g.lineTo(x + i + 9.5, y + (dir > 0 ? h : 0)); g.lineTo(x + i + 9.5 + dir * h * 0.6, y + (dir > 0 ? 0 : h)); g.lineTo(x + i + dir * h * 0.6, y + (dir > 0 ? 0 : h)); g.closePath(); g.fill(); }
+  g.restore();
+}
+
+// ---------- a short band of bunting strung between two trees: w wide, sagging. colour: once its screen is found ----------
+// Origin = the middle of the line between its two ends.
+export function bandSprite(w, colour) {
+  const cols = colour ? [PAL.pink, PAL.gold, '#F4F1E8', PAL.blue] : ['#7E878A', '#99A2A5'], n = Math.round(w / 15);
+  return flat(w + 8, 40, w / 2 + 4, 8, g => {
+    g.translate(w / 2 + 4, 8);
+    const P = t => [-w / 2 + w * t, 4 * t * (1 - t) * 11];
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = '#B58A52'; g.lineWidth = 1.2; g.beginPath(); for (let i = 0; i <= 12; i++) { const p = P(i / 12); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); } g.stroke();
+    for (let i = 0; i < n; i++) {
+      const a = P((i + 0.12) / n), b = P((i + 0.88) / n), mx = (a[0] + b[0]) / 2, my = Math.max(a[1], b[1]) + 13.5;
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(mx, my); g.closePath();
+      g.fillStyle = cols[i % cols.length]; g.fill();
+      g.strokeStyle = REFL; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a[0] + 0.6, a[1] + 1); g.lineTo(mx, my - 1.2); g.lineTo(b[0] - 0.6, b[1] + 1); g.stroke();     // reflective trim
+      if (colour) { g.strokeStyle = rgba(PAL.ink, 0.55); g.lineWidth = 0.7; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(mx, my); g.closePath(); g.stroke(); }
+    }
   }, 0.5);
 }

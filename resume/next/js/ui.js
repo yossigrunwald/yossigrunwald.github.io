@@ -1,10 +1,10 @@
-// ui.js — the DOM on top of the canvas: counter, lamps, tape labels, the Play pill, the video player, the YouTube
-// player, the reel, the three-track strips, the first-ad chip. All words come from the plain resume in index.html.
-import { S, TRACK, MEDIA, collDist, shown } from './world.js';
+// ui.js — the DOM on top of the canvas: counter, lamps, tape labels, the Play pill and the buttons pill, the video
+// player, the YouTube player, the reel, the strips of the moment, the first-ad chip. All words come from index.html.
+import { S, TRACK, MEDIA, collDist, shown, on } from './world.js';
 import * as audio from './audio.js';
 
 const $ = id => document.getElementById(id);
-let el = null, hooks = {}, labels = [], pillFind = null, pillAt = 0, playing = null, poster = null, reelOn = false, reelMade = false, vw = 390, vh = 844, chipState = '', count = 0, chipX = 195, chipY = 26, plate = false, away = false;
+let el = null, hooks = {}, labels = [], pillFind = null, pillAt = 0, pillTall = false, playing = null, poster = null, reelOn = false, reelMade = false, vw = 390, vh = 844, chipState = '', count = 0, chipX = 195, chipY = 26, plate = false, away = false, strips = [], linksFor = null;
 const PLAY = '<svg viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg>';
 const GO = '<svg class="go" viewBox="0 0 20 12"><path d="M1 6h17M12.5 1 18.5 6l-6 5"/></svg>';
 const OUT = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4 10 10.5 3.5M5 3.2h5.8V9"/></svg>';
@@ -15,14 +15,17 @@ export function initUI(h) {
     tm: $('tm'), n: $('tmn'), tot: $('tmt'), blade: $('tm').querySelector('.blade'), labels: $('labels'),
     pill: $('pill'), pp: $('pill').querySelector('.pp'), pt: $('pill').querySelector('.pt'), player: $('player'), video: $('player').querySelector('video'),
     px: $('px'), chip: $('chip'), three: $('three'), more: $('more'), links: $('links'), stage: $('stage'), toplain: $('toplain'),
+    snd: $('snd'), startb: $('startb'),
     yt: $('yt'), ytf: $('ytf'), ytcap: $('ytcap'), ytopen: $('ytopen'), reel: $('reel'), reell: $('reell'), reeln: $('reeln'), reelb: $('reelb'), rx: $('rx')
   };
   el.tot.textContent = '/' + S.live.length;
   setCount(0, true);
+  threeInit();
   // The tap on the pill is the sound gesture: src and play() happen inside this handler (spec 6.3).
   el.pill.addEventListener('click', () => { if (pillFind && el.pill.classList.contains('up')) pillAct(); });
   // The gold chip is a real link to the file; once the game is loaded it opens the game's own player instead.
   el.chip.addEventListener('click', e => { e.preventDefault(); openPlayer(S.byId.ad1); });
+  el.links.addEventListener('click', linkTap);
   el.px.addEventListener('click', closePlayer);
   el.video.addEventListener('click', () => { if (poster) openPlayer(poster); });      // on the #ad1 poster, a tap on the poster plays it too
   el.reelb.addEventListener('click', toggleReel);
@@ -30,6 +33,10 @@ export function initUI(h) {
   el.reel.addEventListener('click', e => { if (e.target === el.reel) closeReel(); });      // a tap on the dark above the sheet closes it
   el.reell.addEventListener('click', reelTap);
   el.video.addEventListener('playing', () => { if (playing && playing.id === 'ad1') S.adPlayed = true; });
+  // sound: the speaker tab and the Start pill are plain buttons with plain click listeners (nothing on their path cancels an event)
+  el.snd.addEventListener('click', () => hooks.sound());
+  el.startb.addEventListener('click', () => hooks.engine());
+  for (const ev of ['pause', 'ended']) el.video.addEventListener(ev, audio.wake);      // iOS: the game's sound is asked back when a video stops
   // The first ad watched in the plain resume counts too: the page's own script flags it (before or after the game has loaded).
   const seen = () => { S.adPlayed = true; markPlayed(); };
   if (window.ygAd1) seen();
@@ -79,34 +86,62 @@ export function addLabel(f, van) {
   const old = labels.find(l => l.f === f && !l.out);
   if (old) {                                                       // already up: it stays, and is put again where it now belongs (the van has moved since)
     old.t = S.rt; f.labAt = S.rt;
+    if (stateOf(f) !== old.st) { old.st = stateOf(f); old.d.className = 'tape' + old.st + (f.lab.maxw ? ' nar' : ''); fit(old.d); old.w = old.d.offsetWidth; old.h = old.d.offsetHeight; old.read = readOf(f, old.st); old.placed = false; }      // it has gained a line since
     if (f.lab.pick) f.lab.pick(van);
     if (!f.lab.mid) { old.up = f.lab.flip ? true : f.lab.below ? false : van.y >= f.y - 4; old.at = old.up ? f.lab.up : f.lab.down; old.mid = false; old.placed = false; }
     return;
   }
   labels.forEach(dropLabel);
   const d = document.createElement('div');
-  d.className = 'tape' + (S.adPlayed ? ' played' : '');
+  const st = stateOf(f); d.className = 'tape' + st;
   d.style.setProperty('--t', TRACK[f.track].tape);
   d.style.setProperty('--r', (Math.random() * 6 - 3).toFixed(1) + 'deg');
   d.innerHTML = tapeHTML(f);
   if (f.lab.maxw) { d.style.maxWidth = f.lab.maxw + 'px'; d.classList.add('nar'); }
-  el.labels.appendChild(d);
+  el.labels.appendChild(d); fit(d);
   if (f.lab.pick) f.lab.pick(van);                                 // a thing may choose where its label goes by where the van is
   const up = f.lab.flip ? true : f.lab.below ? false : van.y >= f.y - 4;   // sit on the far side of the thing from the van
-  const L = { f, d, w: d.offsetWidth, h: d.offsetHeight, t: S.rt, up, at: up ? f.lab.up : f.lab.down, out: false, thru: false, mid: !!f.lab.mid, placed: false };
+  // stk: it wears a date sticker, which hangs 7 px past its right edge · read: how long it stays solid over the van
+  const L = { f, d, st, w: d.offsetWidth, h: d.offsetHeight, t: S.rt, up, at: up ? f.lab.up : f.lab.down, out: false, thru: false, mid: !!f.lab.mid, placed: false, stk: !!f.date && !f.lab.only, read: readOf(f, st) };
   labels.push(L); f.tabOn = false; f.labAt = S.rt;                 // labAt: the van does not slide off a thing whose label has only just gone up
 }
-// a find's words on its tape: head, line, the line it gains later, the date sticker
+// A tape whose words run to more than one line is drawn in to the width its longest line needs, so it hugs its words
+// and no line ends in half a tape of nothing (with text-wrap: balance in game.css, no word is left alone on a last
+// line). A head that is one word too long for one line is set a size or two smaller, if that brings it onto one.
+// (Layout is read here, a handful of times, when a label is slapped on or gains a line. Never per frame.)
+function fit(d) {
+  const h = d.querySelector('.h'); d.style.width = ''; if (h) h.style.fontSize = '';
+  const w0 = d.offsetWidth, cap = parseFloat(getComputedStyle(d).maxWidth) || 320;
+  if (w0 < cap - 0.5) return;                                      // nothing has wrapped
+  if (h && h.offsetHeight > 30) for (const fs of [19, 18, 17.5]) { h.style.fontSize = fs + 'px'; if (h.offsetHeight <= 30) break; if (fs === 17.5) h.style.fontSize = ''; }
+  const h0 = d.offsetHeight; let lo = w0 * 0.5, hi = w0;
+  for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; d.style.width = m + 'px'; if (d.offsetHeight > h0) lo = m; else hi = m; }
+  d.style.width = Math.ceil(hi) + 'px';
+}
+// How long a label stays solid when the van is under it: long enough to read what is on it (0.28 s a word, head and
+// the lines that are showing), never under a second and a half; a find may ask for longer (lab.read).
+const wc = e => e ? e.textContent.trim().split(/\s+/).filter(Boolean).length : 0;
+function readOf(f, st) {
+  let n = wc(f.head);
+  if (!(f.lab && f.lab.only)) { n += wc(f.line); if (f.gains) for (const g of f.gains) if (st.indexOf(' ' + g.when) >= 0) n += wc(g.el); }
+  return Math.max(1.5, 0.28 * n, (f.lab && f.lab.read) || 0);
+}
+// Which of the lines a tape gains later are showing: 'played' once the first ad has been played, 'full' once the
+// tray is full, 'again' when the van has come back to the thing (the second look).
+function stateOf(f) { return (S.adPlayed ? ' played' : '') + (f.full ? ' full' : '') + (f.again ? ' again' : ''); }
+// a find's words on its tape: head, line, the lines it gains later, the date sticker
 function tapeHTML(f) {
   let h = '<div class="tw"><div class="tb zig"><div class="ti zig">';
-  if (f.lab && f.lab.only) return h + '<span class="h">' + f.lab.only + '</span></div></div></div>';      // one word on the tape: the thing itself does the reading
+  if (f.lab && f.lab.only) return h + '<span class="h">' + f.lab.only + '</span></div></div></div>';      // only the head on the tape: the thing itself does the reading
   if (f.head) h += '<span class="h">' + f.head.innerHTML + '</span>';
   if (f.line) h += '<span class="l">' + (f.line.tagName === 'Q' ? '<q>' + f.line.innerHTML + '</q>' : f.line.innerHTML) + '</span>';
-  if (f.after) h += '<span class="l aft">' + f.after.innerHTML + '</span>';
+  if (f.gains) for (const g of f.gains) h += '<span class="l gn" data-g="' + g.when + '">' + g.el.innerHTML + '</span>';
   h += '</div></div>';
   if (f.date) h += '<small class="d">' + f.date.innerHTML + '</small>';
   return h + '</div>';
 }
+// a label that is up shows a line its find has just gained (the tray filled, the ad was played)
+export function relabel(f) { const L = labels.find(l => l.f === f && !l.out); if (L && stateOf(f) !== L.st) { L.st = stateOf(f); L.d.className = 'tape' + L.st + (f.lab.maxw ? ' nar' : ''); fit(L.d); L.w = L.d.offsetWidth; L.h = L.d.offsetHeight; L.read = readOf(f, L.st); } }
 function dropLabel(L) {
   if (L.out) return; L.out = true; L.d.classList.add('out');
   setTimeout(() => { L.d.remove(); labels = labels.filter(x => x !== L); if (!labels.some(x => x.f === L.f)) L.f.tabOn = true; }, 230);
@@ -117,7 +152,8 @@ function boxAt(L, at, up, mid, toScreen, top, bottom, loose) {
   const s = toScreen(at[0], at[1]);
   let x = s[0] - L.w / 2, y = mid ? s[1] - L.h / 2 : up ? s[1] - L.h : s[1];
   if (loose) return [x, y];
-  x = x < 8 ? 8 : x > vw - L.w - 8 ? vw - L.w - 8 : x;
+  const mr = L.stk ? 18 : 8;                                       // (a date sticker hangs past the label's right edge: it too stays on the screen)
+  x = x < 8 ? 8 : x > vw - L.w - mr ? vw - L.w - mr : x;
   y = y < top ? top : y > bottom - L.h ? bottom - L.h : y;
   // never under the reel chip (top right, down to y 96): a label that high keeps left of it or, too wide for that, sits just below it
   if (y < 102 && x + L.w > vw - 64) { if (vw - 64 - L.w >= 8) x = vw - 64 - L.w; else y = 102; }
@@ -139,7 +175,8 @@ function place(L, toScreen, v, top, bottom, vanY) {
   const add = (x0, y0, x1, y1) => { const a = toScreen(x0, y0), b = toScreen(x1, y1); if (b[0] > 0 && a[0] < vw && b[1] > 0 && a[1] < vh) rects.push([a[0], a[1], b[0], b[1]]); };
   for (const q of S.live) if (q.scr && (q.video || q.yt) && (q.found || (q.video && !(q.near < 0.3)))) add(q.scr[0], q.scr[1], q.scr[2], q.scr[3]);
   const ap = S.byId.app; if (ap && ap.found && ap.box) add(ap.box[0], ap.box[1], ap.box[2], ap.box[3]);
-  const ln = S.byId.line; if (ln && ln.found && ln !== f && !f.lab.onLine) add(ln.x - 74, ln.y - 95, ln.x + 74, ln.y + 95);      // the taped sheet, once it can be read (its written part: the margin may be touched)
+  const ln = S.byId.line; if (ln && ln.found && ln !== f && !f.lab.onLine) add(ln.x - 80, ln.y - 112, ln.x + 80, ln.y + 112);      // the taped sheet, once it can be read (its written part: the margin may be touched)
+  const sl = S.says.slate; if (sl && sl !== f && sl.box) add(sl.box[0], sl.box[1], sl.box[2], sl.box[3]);      // the slate's board: the one place the kinds of video are read
   const free = (at, up, mid) => { const [x, y] = boxAt(L, at, up, mid, toScreen, top, bottom); for (const r of rects) if (x < r[2] && x + L.w > r[0] && y < r[3] && y + L.h > r[1]) return false; return true; };
   const s = toScreen(f.x, f.y), side = s[0] > vw / 2 ? -1 : 1, k = Math.abs(toScreen(1, 0)[0] - toScreen(0, 0)[0]) || 1, dx = (L.w / 2 + 70) / k;
   // (after the two sides: under it, just past the van that is parked at its foot · then further below, clear of whatever lies under it)
@@ -149,7 +186,7 @@ function place(L, toScreen, v, top, bottom, vanY) {
 }
 // toScreen(wx, wy) -> [cssX, cssY]; no layout is read here
 export function updateLabels(toScreen, van, pillUp) {
-  const top = 92, bottom = vh - (pillUp ? 100 : 16), v = toScreen(van.x, van.y);
+  const top = 92, bottom = vh - (pillUp ? (pillTall ? 156 : 100) : 16), v = toScreen(van.x, van.y);
   for (const L of labels) {
     if (!L.placed) { L.placed = true; place(L, toScreen, v, top, bottom, van.y); }
     // A label is held in view only while at least half of its thing is on screen. Less than that and it leaves with the
@@ -158,13 +195,15 @@ export function updateLabels(toScreen, van, pillUp) {
     const [sx, sy] = toScreen(L.at[0], L.at[1]), [x, y] = boxAt(L, L.at, L.up, L.mid, toScreen, top, bottom, loose);
     L.d.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
     // the van is never hidden for long: once a label has had a second and a half to be read, it goes nearly clear while the van is under it
-    const age = S.rt - L.t, off = sx < -30 || sx > vw + 30 || sy < top - 70 || sy > vh + 40;       // its thing has left the screen
-    const thru = age > Math.max(1.5, L.f.lab.read || 0) && v[0] > x - 26 && v[0] < x + L.w + 26 && v[1] > y - 26 && v[1] < y + L.h + 26;
+    // (its thing, not the spot the label hangs from: a label put beside a wide thing hangs from a spot that may itself be past the screen's edge)
+    const age = S.rt - L.t, ts = L.mid ? toScreen(L.f.x, L.f.y) : [sx, sy], off = ts[0] < -30 || ts[0] > vw + 30 || ts[1] < top - 70 || ts[1] > vh + 40;       // its thing has left the screen
+    const thru = age > L.read && v[0] > x - 26 && v[0] < x + L.w + 26 && v[1] > y - 26 && v[1] < y + L.h + 26;
     if (thru !== L.thru) { L.thru = thru; L.d.classList.toggle('thru', thru); }
     const c = L.f.prop && L.f.prop.coll, far = c ? collDist(c, van.x, van.y) > 90 : Math.hypot(van.x - L.f.x, van.y - L.f.y) > 130;
     // every label gets time to be read first; but one that is leaving with its thing goes as soon as half of it is past the edge (never a cut-off strip of tape at the side of the screen)
     const gone = loose && Math.max(0, Math.min(x + L.w, vw) - Math.max(x, 0)) * Math.max(0, Math.min(y + L.h, vh) - Math.max(y, top)) < L.w * L.h * 0.5;
-    if (!L.out && (gone || (age > (L.f.lab.min || 1.6) && (far || off)))) dropLabel(L);
+    // (max: a label that would otherwise stay for as long as the van is parked at its thing, in front of what the thing shows, goes after that long; its tab stays, and a bump brings it back)
+    if (!L.out && (gone || (age > (L.f.lab.min || 1.6) && (far || off)) || (L.f.lab.max && age > Math.max(L.f.lab.max, L.read + 0.5)))) dropLabel(L);
   }
   // the top-bar first-ad chip steps aside when it would say the same thing twice: while the first-ad pill is up,
   // and while the MY FIRST AD tape on the phone itself has slid up next to it
@@ -173,47 +212,84 @@ export function updateLabels(toScreen, van, pillUp) {
     if (st !== chipState) { el.chip.classList.remove('gone2', 'faint'); if (st) el.chip.classList.add(st); chipState = st; }
   }
 }
-export function markPlayed() { labels.forEach(L => L.d.classList.add('played')); if (!el.chip.classList.contains('gone')) { el.chip.classList.add('gone'); fitBlade(); } }
+export function markPlayed() { labels.forEach(L => { if (L.st !== stateOf(L.f)) { L.d.classList.add('played'); L.st = stateOf(L.f); fit(L.d); L.w = L.d.offsetWidth; L.h = L.d.offsetHeight; L.read = readOf(L.f, L.st); } }); if (!el.chip.classList.contains('gone')) { el.chip.classList.add('gone'); fitBlade(); } }
 
-// ---------- the Play pill ----------
-// A video: one pill that plays it. A thing with a data-go: a pill that goes to its place in the plain resume. A thing
-// with links of its own in the plain resume (the app): one pill holding those links as buttons. They are real links
-// with target=_blank, built from the document's own, so each opens a new tab only when it is itself tapped.
+// ---------- the Play pill, and the buttons pill ----------
+// A video and nothing else: one pill that plays it. A thing with buttons of its own in the document (its .links): one
+// pill holding them, two to a row. A button is a real link with target=_blank, built from the document's own, so it
+// opens a new tab only when it is itself tapped; or the Email button (the address is put together on the first tap,
+// the next tap is a mail link); or a play button, for the find's own video or for a YouTube video named on the link
+// (data-yt): the player and the embed are made inside that tap, never before.
+const btns = f => f.el ? [...f.el.querySelectorAll(':scope > .links > a')].filter(on) : [];
+const parts = t => t.split(' · ').map(s => '<span class="part">' + (/^\d+:\d\d$/.test(s) ? '<b class="num">' + s + '</b>' : s) + '</span>').join('<span class="sep">·</span>');
 export function pill(f) {
-  const vid = f.video || f.yt, links = !vid && !f.go ? f.el.querySelectorAll(':scope > .links a[href^="http"]') : null, lk = !!(links && links.length);
-  if (!vid && !f.go && !lk) return;
-  if (pillFind === f) { pillAt = S.rt; return; }
+  const vid = f.video || f.yt, links = btns(f), lk = links.length > 0;
+  if (!vid && !lk) return false;
+  if (pillFind === f) { pillAt = S.rt; return true; }
   pillFind = f; pillAt = S.rt;
-  const on = lk ? el.links : el.pill, off = lk ? el.pill : el.links;
+  const up = lk ? el.links : el.pill, off = lk ? el.pill : el.links;
   off.classList.remove('up'); off.hidden = true;
+  // The buttons bar is one element shared by every find that has buttons. "Stepped down" (away) belongs to the find
+  // that asked for it, never to the bar: whoever takes the bar now starts with it in view.
+  linksFor = lk ? f : null; if (away) { away = false; el.links.classList.remove('away'); }
   if (lk) {
     el.links.textContent = '';
-    links.forEach(a => { const b = document.createElement('a'); b.href = a.href; b.target = '_blank'; b.rel = 'noopener'; b.innerHTML = '<span>' + a.textContent + '</span>' + OUT; el.links.appendChild(b); });
+    if (vid) { const b = document.createElement('button'); b.type = 'button'; b.className = 'pl'; b.dataset.act = 'play'; b.innerHTML = PLAY + '<span>' + parts(f.pill) + '</span>'; b.setAttribute('aria-label', f.pill); el.links.appendChild(b); }
+    links.forEach(a => {
+      let b;
+      if (a.dataset.yt) { b = document.createElement('button'); b.type = 'button'; b.className = 'pl'; b.dataset.yt = a.dataset.yt; b.innerHTML = PLAY + '<span>' + parts(a.textContent.trim()) + '</span>'; }
+      else if (a.hasAttribute('data-mail')) { b = document.createElement('a'); b.href = '#contact'; b.setAttribute('data-mail', ''); b.textContent = a.textContent; }      // the page's own script shows the address on the first tap
+      else { b = document.createElement('a'); b.href = a.href; b.target = '_blank'; b.rel = 'noopener'; b.innerHTML = '<span>' + a.textContent + '</span>' + OUT; }
+      el.links.appendChild(b);
+    });
+    const n = el.links.children.length; pillTall = n > 2 && !(vw >= 700 && vh <= 480);      // (a phone on its side: they stand in one row, game.css)
+    el.links.classList.toggle('tall', n > 2); el.links.classList.toggle('odd', n % 2 === 1);
   } else {
-    const parts = f.pill.split(' · ').map(s => /^\d+:\d\d$/.test(s) ? '<b class="num">' + s + '</b>' : s);
-    el.pt.innerHTML = parts.join('<span class="sep">·</span>');
-    el.pp.innerHTML = vid ? PLAY : GO;
+    pillTall = false;
+    el.pt.innerHTML = parts(f.pill);
+    el.pp.innerHTML = PLAY;
     el.pill.setAttribute('aria-label', f.pill);
+    // Too long for one line at this width: first a size smaller; if that is still too long, onto two lines, broken
+    // before its last part (so no dot is left hanging at the end of a line), never mid-phrase.
+    el.pill.classList.remove('wrap');
+    if (el.pt.scrollWidth > el.pt.clientWidth + 1) {
+      el.pill.classList.add('wrap');
+      const i = el.pt.innerHTML.lastIndexOf('<span class="sep">');
+      if (el.pt.scrollWidth > el.pt.clientWidth + 1 && i > 0) el.pt.innerHTML = el.pt.innerHTML.slice(0, i) + '<br>' + el.pt.innerHTML.slice(el.pt.innerHTML.indexOf('</span>', i) + 7);
+    }
   }
-  on.style.setProperty('--t', TRACK[f.track].tape);
-  on.hidden = false;
-  requestAnimationFrame(() => { if (pillFind === f) on.classList.add('up'); });
+  up.style.setProperty('--t', TRACK[f.track].tape);
+  up.hidden = false;
+  requestAnimationFrame(() => { if (pillFind === f) up.classList.add('up'); });
+  return true;
+}
+// a tap on one of the buttons pill's play buttons (a link is its own tap)
+function linkTap(e) {
+  const b = e.target.closest ? e.target.closest('button') : null, f = pillFind; if (!b || !f || !el.links.classList.contains('up')) return;
+  if (b.dataset.yt) openPlayer({ ...f, video: null, yt: b.dataset.yt, sub: f });      // a YouTube video offered by this find: its tape goes under the player
+  else openPlayer(f);
 }
 function pillAct() {
   const f = pillFind; if (!f) return;
-  if (f.video || f.yt) { openPlayer(f); return; }
-  if (!f.go) { const a = el.links.querySelector('a'); if (a) a.focus(); return; }     // links never open by themselves: Enter moves to the first one
-  hidePill(); window.ygView(false);                       // the plain resume, at this thing's section
-  const t = $(f.go); if (t) t.scrollIntoView();
+  if (el.pill.classList.contains('up')) { openPlayer(f); return; }
+  const a = el.links.querySelector('a,button'); if (a) a.focus();     // links never open by themselves: Enter moves to the first button
 }
 export function pillUp() { return !!pillFind; }
-// the find labels step back (the three-track strips are up, or the camera is showing the whole desk)
+// the find labels step back (the strips of the moment are up, or the camera is showing the whole desk)
 export function labelsDim(on) { el.labels.classList.toggle('dim', !!on); }
 // a pill (or the app's two links) is on screen right now, not tucked away
 export function pillShown() { const e = el.pill.classList.contains('up') ? el.pill : el.links.classList.contains('up') ? el.links : null; return !!e && !e.classList.contains('tuck') && !(e === el.links && away); }
 // a label has only just been slapped on (its first second and a half)
 export function labelFresh() { for (const L of labels) if (!L.out && S.rt - L.t < 1.5) return true; return false; }
-// the app's two links step down while less than half of the phone is on screen
+// the find whose full tape is up right now (null: none)
+export function labelUp() { const L = labels.find(l => !l.out); return L ? L.f : null; }
+// the youngest label's age in seconds (a big number when none is up): the app's moment waits for a tape to be read
+export function labelAge() { let a = 1e9; for (const L of labels) if (!L.out && S.rt - L.t < a) a = S.rt - L.t; return a; }
+// how long the pill has been up without being used, in seconds
+export function pillAge() { return pillFind ? S.rt - pillAt : 0; }
+// the find whose buttons are in the buttons bar right now (null: a Play pill, or nothing)
+export function linksOwner() { return linksFor; }
+// the app's buttons step down while less than half of the phone is on screen (asked only while the bar is the app's: desk.js)
 export function linksAway(on) { if (on !== away) { away = on; el.links.classList.toggle('away', on); } }
 // a dark plate behind the counter, while something of its own gold lies under it
 export function counterPlate(on) { if (on !== plate) { plate = on; el.tm.classList.toggle('plate', on); } }
@@ -228,7 +304,26 @@ export function tickPill(van) {
   if (!pillFind) return;
   if (S.rt - pillAt > 4 && Math.hypot(van.x - pillFind.x, van.y - pillFind.y) > 240) hidePill();
 }
-export function hidePill() { pillFind = null; el.pill.classList.remove('up'); el.links.classList.remove('up'); setTimeout(() => { if (!pillFind) { el.pill.hidden = true; el.links.hidden = true; } }, 320); }
+export function pillH() { return pillFind ? (pillTall ? 152 : 96) : 28; }      // how much of the foot of the screen a pill takes
+export function hidePill() { pillFind = null; linksFor = null; el.pill.classList.remove('up'); el.links.classList.remove('up'); setTimeout(() => { if (!pillFind) { el.pill.hidden = true; el.links.hidden = true; } }, 320); }
+
+// ---------- sound: the speaker tab in the top bar, and the pill that starts the engine ----------
+// The tab draws the truth: waves when sound is really running, crossed when it is not; gold while sound is wanted but
+// still locked (no tap has unlocked it yet), and then a tap on it is the unlock. Its words are the document's own.
+let tipT = 0, startWant = false;
+export function soundTab(live, wanted, show) {
+  const b = el.snd; if (show) b.hidden = false;
+  b.classList.toggle('on', live); b.classList.toggle('lock', wanted && !live);
+  b.setAttribute('aria-label', live ? b.dataset.on : b.dataset.off);
+  if (live || !wanted) soundTip(false);
+}
+// the small tape beside the tab, for four seconds
+export function soundTip(on) { clearTimeout(tipT); el.snd.classList.toggle('tip', !!on); if (on) tipT = setTimeout(() => el.snd.classList.remove('tip'), 4000); }
+export function startPill(on) {
+  const b = el.startb; startWant = !!on;
+  if (on) { b.hidden = false; requestAnimationFrame(() => { if (startWant) b.classList.add('up'); }); }
+  else { b.classList.remove('up'); setTimeout(() => { if (!startWant) b.hidden = true; }, 320); }
+}
 
 // ---------- the player: one shared <video>, full screen, sound on because a tap opened it ----------
 // A YouTube video (spec 6.3): the embed is created here, inside the tap, and not a moment before. Until then nothing
@@ -241,13 +336,15 @@ export function openPlayer(f) {
   el.player.hidden = false;
   if (f.yt) {
     v.hidden = true; el.yt.hidden = false;
-    el.ytf.style.backgroundImage = 'url(' + MEDIA + 'yt-' + f.yt + '.jpg)';
+    // behind the embed while it loads: the thumbnail saved with the site; none for a video whose picture is a drawn card (the weekly recap)
+    const own = f.sub || f, drawn = !!(own.el && own.el.querySelector(':scope > [data-sheet]'));
+    el.ytf.style.backgroundImage = drawn ? '' : 'url(' + MEDIA + 'yt-' + f.yt + '.jpg)';
     const fr = document.createElement('iframe');
     fr.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-    fr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); fr.title = f.head ? f.head.textContent.trim() : 'Video';
+    fr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); fr.title = f.title || (f.head ? f.head.textContent.trim() : 'Video');
     fr.src = 'https://www.youtube-nocookie.com/embed/' + f.yt + '?autoplay=1&playsinline=1&rel=0';
     el.ytf.appendChild(fr);
-    el.ytcap.innerHTML = '<div class="tape still" style="--t:' + TRACK[f.track].tape + '">' + tapeHTML(f) + '</div>';
+    el.ytcap.innerHTML = '<div class="tape still' + stateOf(f.sub || f) + '" style="--t:' + TRACK[f.track].tape + '">' + (f.title ? '<div class="tw"><div class="tb zig"><div class="ti zig"><span class="h">' + f.title + '</span></div></div></div>' : tapeHTML(f)) + '</div>';
     el.ytopen.href = 'https://www.youtube.com/watch?v=' + f.yt;
   } else {
     v.hidden = false; el.yt.hidden = true;
@@ -286,25 +383,28 @@ export function openPoster(f) {
 }
 function endPoster() { poster = null; el.stage.classList.remove('poster'); el.video.controls = true; }
 
-// ---------- the reel (spec 6.3): all ten videos, always one tap away. Nothing is ever locked ----------
-// Built once, from the plain resume's own Watch list: the first ad first and double size, the rest in two columns.
+// ---------- the reel (spec 6.3): every video, always one tap away. Nothing is ever locked ----------
+// Built once, from the document's own Watch list: the first ad first and double size, the rest in rows.
 // A found one is in colour and wears its tab; an unfound one is dusted and offers "play anyway" and "show me where".
+// A tile with no find of its own is a plain YouTube tile: it plays, and that is all. A tile with a drawn card in
+// place of a picture (the weekly recap) shows that card.
 function makeReel() {
   reelMade = true;
   // Four blocks, each a full-width grid with no ragged end: the first ad, double size · ads 2 and 3, side by side ·
-  // the three skits in a row · the four films from YouTube, two by two.
+  // the three skits in a row · the films from YouTube, two by two.
   const rows = ['r2', 'r3', 'r2 ry'].map(c => { const d = document.createElement('div'); d.className = 'rg ' + c; return d; });
-  document.querySelectorAll('#watch .reel li[data-for]').forEach((li, i) => {
-    const f = S.byId[li.dataset.for]; if (!f) return;
-    const img = li.querySelector('img'), b = li.querySelector('b'), len = li.querySelector('.len'), yt = !!f.yt, t = document.createElement('div');
-    const title = b ? b.textContent.trim() : '', sub = i === 0 && f.after ? f.after.textContent.trim().replace(/\.$/, '') : yt ? 'YouTube' : '';
-    t.className = 'rt' + (i === 0 ? ' big' : '') + (yt ? ' yt' : ''); t.dataset.id = f.id; t.style.setProperty('--t', TRACK[f.track].tape);
-    t.innerHTML = '<button class="ri" type="button" data-act="play" aria-label="Play ' + title.replace(/"/g, '') + '"><img alt="" decoding="async" src="' + (img.getAttribute('data-src') || img.getAttribute('src')) + '"><i class="pb" aria-hidden="true">' + PLAY + '</i>' +
-      (len ? '<em class="len" aria-hidden="true">' + len.textContent + '</em>' : '') + '<span class="tab zz" aria-hidden="true"><b class="zz">' + f.tab + '</b></span></button>' +
-      '<p><b>' + title + '</b>' + (sub ? ' <span>' + sub + '</span>' : '') + '</p>' +
-      '<div class="ra"><button class="zz" type="button" data-act="play"><span class="zz">' + PLAY + '<i>play anyway</i></span></button><button class="zz" type="button" data-act="where"><span class="zz">' + GO + '<i>show me where</i></span></button></div>';
+  document.querySelectorAll('#watch .reel li').forEach((li, i) => {
+    const f = li.dataset.for ? S.byId[li.dataset.for] : null, id = li.dataset.yt || ''; if (!f && !id) return;
+    if (f && !f.live) return;
+    const img = li.querySelector('img'), card = li.querySelector('.wk'), b = li.querySelector('b'), cap = li.querySelector('.cap'), len = li.querySelector('.len'), yt = f ? !!f.yt : true, t = document.createElement('div');
+    const title = b ? b.textContent.trim() : '', sub = cap ? cap.textContent.trim() : '';
+    t.className = 'rt' + (i === 0 ? ' big' : '') + (yt ? ' yt' : ''); t.dataset.id = f ? f.id : ''; t.dataset.yt = id; t.dataset.title = title; t.style.setProperty('--t', TRACK[f ? f.track : 'v'].tape);
+    t.innerHTML = '<button class="ri" type="button" data-act="play" aria-label="Play ' + (title || sub).replace(/"/g, '') + '">' + (card ? card.outerHTML : '<img alt="" decoding="async" src="' + (img.getAttribute('data-src') || img.getAttribute('src')) + '">') + '<i class="pb" aria-hidden="true">' + PLAY + '</i>' +
+      (len ? '<em class="len" aria-hidden="true">' + len.textContent + '</em>' : '') + (f ? '<span class="tab zz" aria-hidden="true"><b class="zz">' + f.tab + '</b></span>' : '') + '</button>' +
+      '<p>' + (title ? '<b>' + title + '</b> ' : '') + (sub ? '<span>' + sub + '</span>' : '') + (yt ? ' <i>YouTube</i>' : '') + '</p>' +
+      (f ? '<div class="ra"><button class="zz" type="button" data-act="play"><span class="zz">' + PLAY + '<i>play anyway</i></span></button><button class="zz" type="button" data-act="where"><span class="zz">' + GO + '<i>show me where</i></span></button></div>' : '');
     if (i === 0) { el.reell.appendChild(t); return; }
-    rows[yt ? 2 : /^skit/.test(f.id) ? 1 : 0].appendChild(t);
+    rows[yt ? 2 : f && /^skit/.test(f.id) ? 1 : 0].appendChild(t);
   });
   // the dust that lies on an unfound one: specks thrown at random, drawn once (never a regular pattern)
   const c = document.createElement('canvas'), g = c.getContext('2d'); c.width = c.height = 220;
@@ -316,12 +416,13 @@ function makeReel() {
 }
 function refreshReel() {
   let n = 0, all = 0;
-  el.reell.querySelectorAll('.rt').forEach(t => { const f = S.byId[t.dataset.id], on = !!f.found; all++; if (on) n++; t.classList.toggle('un', !on); t.querySelector('.ra').hidden = on || !f.live; });
+  el.reell.querySelectorAll('.rt').forEach(t => { const f = S.byId[t.dataset.id]; if (!f) return; const on = !!f.found; all++; if (on) n++; t.classList.toggle('un', !on); t.querySelector('.ra').hidden = on || !f.live; });
   el.reeln.textContent = n; el.reel.querySelector('.rn').lastChild.textContent = ' of ' + all + ' found';
 }
 function reelTap(e) {
   const b = e.target.closest ? e.target.closest('[data-act]') : null; if (!b) return;
-  const f = S.byId[b.closest('.rt').dataset.id]; if (!f) return;
+  const t = b.closest('.rt'), f = S.byId[t.dataset.id];
+  if (!f) { if (t.dataset.yt) openPlayer({ yt: t.dataset.yt, track: 'v', title: t.dataset.title }); return; }
   if (b.dataset.act === 'play') openPlayer(f);              // with sound: this tap is the gesture. The counter is not touched
   else { closeReel(false); hooks.where(f.id); hooks.resume(); }
 }
@@ -342,15 +443,25 @@ export function closeReel(resume = true) {
 }
 export function toggleReel() { if (reelOn) closeReel(); else openReel(); }
 
-// ---------- the three-track strips ----------
-export function threeShow(more) {
-  el.labels.classList.add('dim');                       // the find labels step back while the three strips are up
+// ---------- the strips of the moment ----------
+// One dated strip for each main section that is built, in the document's order, then one strip across the middle
+// whose number word is the number of those sections, then how many are still to find.
+function threeInit() {
+  strips = [...el.three.querySelectorAll('.st')].filter(p => { const live = on(p); p.hidden = !live; return live; });
+  el.three.querySelectorAll('[data-n]').forEach(n => { n.hidden = +n.dataset.n !== strips.length; });
+}
+export const threeTracks = () => strips.map(p => p.dataset.track);
+// more: how many are still to find · visited: { track: count }; a section with nothing found yet gets a pencilled strip
+export function threeShow(more, visited) {
+  el.labels.classList.add('dim');                       // the find labels step back while the strips are up
   el.three.hidden = false; el.three.classList.remove('bye');
   el.three.querySelectorAll('p').forEach(p => p.classList.remove('in'));
+  strips.forEach(p => p.classList.toggle('pen', !visited[p.dataset.track]));
   el.more.textContent = more; el.three.querySelector('.s4').style.display = more > 0 ? '' : 'none';
 }
+// step i: a section's strip, then the strip across the middle, then the small one
 export function threeStep(i) {
-  const q = s => el.three.querySelector(s).classList.add('in');
-  if (i === 0) { q('.s0'); q('.s1'); } else if (i === 1) q('.s2'); else if (i === 2) q('.s3'); else q('.s4');
+  const n = strips.length;
+  if (i < n) strips[i].classList.add('in'); else el.three.querySelector(i === n ? '.sm' : '.s4').classList.add('in');
 }
 export function threeBye() { el.three.classList.add('bye'); el.labels.classList.remove('dim'); setTimeout(() => { el.three.hidden = true; }, 400); }

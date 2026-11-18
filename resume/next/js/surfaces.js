@@ -1,6 +1,6 @@
 // surfaces.js — the three ways a table clears: paper bodies (desk), the flour canvas (block),
 // the trail canvas and the headlight wedge (mat). Plus the particle pool.
-import { G, PAL, DRIFTS, HUB_R, S, mulberry32, SEED, surfaceAt, gridAdd, gridCells } from './world.js';
+import { G, PAL, DRIFTS, WOODS, HUB_R, S, mulberry32, SEED, surfaceAt, gridAdd, gridCells } from './world.js';
 import { mk, rgba } from './art.js';
 
 export const TR = 0.5;                       // trail canvas: pixels per world unit (half resolution)
@@ -119,17 +119,19 @@ export function initSurfaces() {
   fg.fillStyle = rgba(PAL.flour, 0.9);
   const near = DRIFTS.concat([{ x: -420, y: 60, r: 50 }]);
   for (let i = 0; i < 5000; i++) {
-    const d = near[(r() * near.length) | 0], a = r() * 6.2832, rad = d.r * 0.7 + Math.pow(r(), 1.7) * (90 + d.r * 0.3);
+    const d = near[(r() * near.length) | 0], a = r() * 6.2832, rad = (d.thin ? 0 : d.r * 0.7) + Math.pow(r(), 1.7) * (90 + d.r * 0.3);      // (a thin one has no heap in its middle: its grains lie thickest there)
     fg.fillRect(Math.round(d.x + Math.cos(a) * rad), Math.round(d.y + Math.sin(a) * rad * 0.8), 1, 1);
   }
-  for (const d of DRIFTS) drift(fg, d, r);
+  // (a thin one is drawn on a scrap and thrown away: it takes the same random numbers, so every other heap keeps its shape)
+  const scrap = mk(4, 4).getContext('2d');
+  for (const d of DRIFTS) drift(d.thin ? scrap : fg, d, r);
   // nothing floury on the hub
   fg.globalCompositeOperation = 'destination-out'; fg.beginPath(); fg.arc(0, 0, HUB_R + 3, 0, 6.2832); fg.fill(); fg.globalCompositeOperation = 'source-over';
 }
 
 // inside a heap's footprint (whether or not it has been ploughed since)
 function inDrift(x, y) {
-  for (const d of DRIFTS) { const dx = x - d.x, dy = (y - d.y) / 0.8; if (dx * dx + dy * dy < d.r * d.r * 0.8) return true; }
+  for (const d of DRIFTS) { if (d.thin) continue; const dx = x - d.x, dy = (y - d.y) / 0.8; if (dx * dx + dy * dy < d.r * d.r * 0.8) return true; }
   return false;
 }
 // 0 none or wiped · 1 haze · 2 deep drift
@@ -206,10 +208,12 @@ export function stamp(x, y, hx, hy) {
 function mark(a, c, s0, s1) {
   if (!s1 || s1 === 'hub' || s0 !== s1 || !onto(s1)) return;
   const seg = () => { tg.beginPath(); tg.moveTo(a[0], a[1]); tg.lineTo(c[0], c[1]); tg.stroke(); };
-  if (s1 === 'mat') {                        // the line of light
+  if (s1 === 'mat') {                        // the line of light (in the woods a faint one, about a third: the lit clearing stays clean however much it is driven over)
+    const wd = c[0] > WOODS[0] && c[1] > WOODS[1]; if (wd) tg.globalAlpha = 0.35;
     tg.lineCap = 'butt'; tg.strokeStyle = rgba(PAL.pink, 0.2); tg.lineWidth = 15; seg();
     tg.strokeStyle = rgba(PAL.pink, 0.5); tg.lineWidth = 7; seg();
     tg.lineCap = 'round'; tg.strokeStyle = '#FFE3EB'; tg.lineWidth = 2.8; seg();
+    tg.globalAlpha = 1;
   } else {
     // On the desk a mark is the solid colour one pass used to make, with square ends: joints do not double and any
     // number of passes equals one, so a corridor crossed six times is still two light lines and never a dark band.

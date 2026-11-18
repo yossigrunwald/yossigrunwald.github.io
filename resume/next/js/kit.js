@@ -9,7 +9,7 @@ export const lit = [];                       // lit circles on the mat: [x, y, r
 export const pgrid = new Map(), fgrid = new Map();   // standing props and flat things, by the cell of their anchor
 export const MARGIN = 260;                   // no sprite reaches further than this from its anchor: a frame asks for its view grown by this much
 
-// A prop is bucketed once, by its anchor. One that moves (the cake slides about 100 units) stays findable as long as
+// A prop is bucketed once, by its anchor. One that moves stays findable as long as
 // it keeps within 150 units of where it was added; its collider is told apart with roam: true.
 export function prop(o) {
   const p = Object.assign({ x: 0, y: 0, sp: null, sortY: 0, alpha: 1, tall: null, onMat: false, dark: null, find: null, squash: 0, draw: null, coll: null, flat: false, roam: false }, o);

@@ -2,7 +2,13 @@
 // Everything here is data: no drawing. Units are world units (spec 4.1): +x east, +y south, origin = hub centre.
 
 export const MEDIA = '../media/';          // launch: move the tree up one level and set './media/'
-export const STAGE = 3;                    // finds with data-stage <= STAGE are live (1 = the hub slice, 2 = the whole desk, 3 = the whole mat)
+// Finds (and the parts of a find) with data-stage <= STAGE are live.
+// 1 the hub slice · 2 the whole desk · 3 the whole mat and the woods · 4 the new words: the desk's three new finds
+// (quality, scale, live), the weekly recap in the woods, and the garage as a counted find · 5 (not built) the belt, with
+// what waits for it: the stamp's tape arrow, the bench's second look, the green strip of the moment · 6 (not built) the
+// rest of the kitchen and the back plank.
+export const STAGE = 4;
+export const on = el => (+el.dataset.stage || 0) <= STAGE;      // is this element (a find, or a part of one) switched on yet
 
 export const PAL = {
   floor: '#23282B', floorSeam: '#1B1F22',
@@ -15,15 +21,19 @@ export const PAL = {
   woods: '#0B231B', woodsGrid: '#133629', woodsLit: '#1F6B4A', woodsLitGrid: '#3C9A70', pine: '#154D36', pineLit: '#2E8A60',
   pink: '#FF4D7D', pinkTape: '#FF6F91',
   masking: '#E6D7AE', ink: '#14110F',
+  green: '#12A37C', greenTape: '#43C7A2',          // the belt's electrical tape (stage 5; the art lead may still move it)
   van: '#F4F1E8', glass: '#1D2A30', rack: '#C9CED2',
   lamp: '#FFC46B', crust: '#C4782A', steel: '#9AA3A6', card: '#B99A6B'
 };
-// per track: tape body, strong colour (lamps, arrows, outlines), index of its lamp
+// per track: tape body, strong colour (lamps, arrows, outlines), its lamp. MAIN: the main sections, in the order the
+// moment names them (a section counts once it has a live find).
+export const MAIN = ['w', 'g', 'v', 'k'];
 export const TRACK = {
   w: { tape: PAL.gold, strong: PAL.gold, lamp: 'lw' },
   k: { tape: PAL.blueTape, strong: PAL.blue, lamp: 'lk' },
   v: { tape: PAL.pinkTape, strong: PAL.pink, lamp: 'lv' },
-  a: { tape: PAL.masking, strong: PAL.masking },
+  g: { tape: PAL.greenTape, strong: PAL.green, lamp: 'lg' },
+  e: { tape: PAL.masking, strong: PAL.masking },
   c: { tape: PAL.masking, strong: PAL.masking }
 };
 
@@ -85,8 +95,8 @@ export function collDist(c, x, y) {
 // joins two nodes whenever the van can drive the straight line between them (van.js), so only the nodes are kept here.
 export const WAYPOINTS = [
   [0, 20], [0, -150], [0, -230], [-140, -420], [140, -420], [0, -700], [-250, -900], [250, -700], [0, -1050], [0, -1240], [-300, -1180], [300, -1150],
-  [-130, 100], [-300, 160], [0, 190], [0, 250], [140, -60], [300, 160],
-  [-292, -1335], [-270, -1444]                           // round the west end of the tall boxes, and in behind them
+  [-130, 100], [-300, 160], [0, 190], [0, 250], [140, -60], [262, 196],
+  [-292, -1335], [-275, -1378]                           // west of the tall boxes, and in front of the power strip's free end
 ];
 export const FIXED_NODES = WAYPOINTS.length;         // the hand-placed ones (van.js joins these over longer runs)
 export function addNode(x, y) { WAYPOINTS.push([x, y]); }
@@ -105,7 +115,7 @@ export function gridCells(g, x0, y0, x1, y1, out) {
   for (let cy = Math.floor(y0 / CELL); cy <= cy1; cy++) for (let cx = Math.floor(x0 / CELL); cx <= cx1; cx++) { const a = g.get(cellKey(cx, cy)); if (a && a.length) out.push(a); }
   return out;
 }
-// Colliders: each sits in every cell its box touches; one that moves (the cake) is kept in a short list of its own.
+// Colliders: each sits in every cell its box touches; one that moves is kept in a short list of its own.
 const cgrid = new Map(), roamers = [], cellBuf = [];
 let cstamp = 0;
 export function addCollider(c, roams) {
@@ -132,24 +142,38 @@ export function mulberry32(a) {
 }
 export const SEED = (() => { const s = +new URLSearchParams(location.search).get('seed'); return s > 0 ? s : 20261116; })();
 
-// ---- the finds, read from the plain resume (spec 9.3) ----
+// ---- the finds, read from the document (spec 9.3): every word the game shows is an element in index.html ----
+// A find's words: head, line, date (the sticker), and the lines its tape gains later (gains: [{ when, el }], when =
+// 'played' once the first ad has been played, 'full' once the tray is full, 'again' when the van comes back to it).
+const words = (el, d) => {
+  const q = s => el.querySelector(':scope > ' + s);
+  return {
+    track: d.track, x: +d.x, y: +d.y, head: q('[data-head]'), line: q('[data-line]'), date: q('[data-date]'),
+    gains: [...el.querySelectorAll(':scope > [data-gain]')].filter(on).map(g => ({ when: g.dataset.gain, el: g })),
+    el, q, found: false, foundAt: 0
+  };
+};
 export function readFinds(doc = document) {
   const out = [];
   doc.querySelectorAll('[data-find]').forEach(el => {
-    const d = el.dataset, q = s => el.querySelector(':scope > ' + s);
+    const d = el.dataset;
     out.push({
-      id: d.find, track: d.track, x: +d.x, y: +d.y, tab: d.tab || '', stage: +d.stage || 9,
-      live: (+d.stage || 9) <= STAGE,
-      head: q('[data-head]'), line: q('[data-line]'), date: q('[data-date]'), after: q('[data-after]'),
-      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || '', go: d.go || null,
-      el, found: false, foundAt: 0
+      ...words(el, d), id: d.find, tab: d.tab || '', stage: +d.stage || 9, live: (+d.stage || 9) <= STAGE,
+      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || ''
     });
   });
   return out;
 }
+// the small things that say their words when bumped and are never counted, by id
+export function readSays(doc = document) {
+  const out = {};
+  doc.querySelectorAll('[data-say]').forEach(el => { const d = el.dataset; if (on(el)) out[d.say] = { ...words(el, d), id: d.say, say: true, tab: '', live: false }; });
+  return out;
+}
+// the nine feature cards: a stencilled word and its short gloss
 export function readCards(doc = document) {
   return [...doc.querySelectorAll('[data-card]')].map(el => ({
-    word: el.textContent.trim().toUpperCase(), x: +el.dataset.x, y: +el.dataset.y, live: (+el.dataset.stage || 9) <= STAGE
+    word: el.querySelector('b').textContent.trim().toUpperCase(), gloss: el.querySelector('span').textContent.trim(), x: +el.dataset.x, y: +el.dataset.y, live: on(el)
   }));
 }
 
@@ -157,23 +181,27 @@ export function readCards(doc = document) {
 // 12 piles: the first one between the hub and the first-ad phone, one on each of the nine cards, one on the taped
 // sheet, and a decoy that hides only a paperclip chain. Plus about 30 single sheets.
 export const FIRST_PILE = { x: 0, y: -216, r: 50, n: 16 };
-export const LINE_PILE = { x: -340, y: -1250, r: 94, n: 22 };      // it covers the taped sheet, 168 x 210
+export const LINE_PILE = { x: -340, y: -1256, r: 94, n: 22 };      // it covers the taped sheet, 180 x 244
 export const DECOY_PILE = { x: 170, y: -1180, r: 62, n: 12 };      // on the east side: no screenful anywhere on the desk holds more than five piles
 // where no single sheet may lie: under the standing things [x0, y0, x1, y1]
 const NO_SHEET = [
   [-110, -400, 110, -240],                             // the first-ad phone and its boxes
   [-452, -664, -306, -596], [280, -964, 440, -884],    // the easel, the phone on its cube
   [-124, -1424, 124, -1322], [268, -1310, 412, -1206], // the app phone, the bench and its stool
-  [-262, -1456, -100, -1300], [-316, -1440, -252, -1326],   // the tall boxes, what is behind them and where two of them land; the printer's paper
+  [-262, -1456, -100, -1300], [-316, -1440, -252, -1326],   // the tall boxes and what is behind them; the cables that run out past their west end
   [-436, -1366, -244, -1134],                          // the taped sheet (its own pile covers it)
   [-330, -980, -270, -940], [-460, -1134, -366, -1066], [214, -1198, 286, -1102], [128, -1016, 174, -976]   // the tape dispenser, the organiser, the clipboard, the mug
 ];
 // Sheets the gust cannot take: each is caught under or against something [x, y, turn, kind]. They still fly when the van hits them.
-export const MUG = [150, -995];
+export const MUG = [150, -995], CLIP = [262, -1178];      // the mug; the clipboard (it lies clear of the tag on the row of screens)
 const CAUGHT = [
   [157, -988, 0.5, 0], [-232, -1377, -0.2, 1], [126, -1353, 1.3, 3], [-446, -613, 0.9, 6], [-291, -951, -0.7, 4],
-  [-366, -1088, 0.35, 7], [291, -1240, -1.1, 2], [283, -895, 0.6, 5], [224, -1126, -0.4, 9]
+  [-366, -1088, 0.35, 7], [291, -1240, -1.1, 2], [283, -895, 0.6, 5], [236, -1154, -0.4, 9]
 ];
+// What was put on the desk later (the stamp and its pad, the paper spike, the three small screens): a single sheet that
+// would lie under one of them is taken away after the scatter, so the scatter itself draws the same numbers as before.
+// (and under the power strip's free end, and where the clipboard now lies)
+const LATER = [[324, -692, 460, -614], [-142, -880, -22, -824], [60, -1082, 270, -1050], [-362, -1480, -190, -1400], [226, -1222, 298, -1136]];
 export function makeSheets(cards) {
   const rnd = mulberry32(SEED), sheets = [], piles = [];
   const add = (pile, x, y) => {
@@ -211,13 +239,13 @@ export function makeSheets(cards) {
     if (p.kind === 'decoy') for (const s of p.sheets) if (hash(s.i) < 50) s.v = 4 + hash(s.i * 7 + 3) % 6;
   }
   for (let i = far; i < sheets.length; i++) { const s = sheets[i]; if (!s.pile && !s.stay && hash(i) < 45) s.v = 4 + hash(i * 7 + 3) % 6; }
-  return { sheets, piles };
+  return { sheets: sheets.filter(s => s.pile || s.stay || !LATER.some(r => s.x > r[0] && s.x < r[2] && s.y > r[1] && s.y < r[3])), piles };
 }
 
 // ---- flour drifts on the near block (centre, radius). Seeded shapes are drawn in surfaces.js ----
-// The last two are small: the spill at the sack's foot, and the untouched heap behind the sack that gives the cake away.
+// The last two are small: the spill at the sack's foot, and the untouched heap behind the sack.
 export const DRIFTS = [
-  { x: -385, y: 255, r: 58 }, { x: -585, y: 95, r: 50 }, { x: -205, y: 410, r: 52 }, { x: -600, y: 415, r: 58 },
+  { x: -385, y: 255, r: 58 }, { x: -585, y: 95, r: 50 }, { x: -205, y: 410, r: 52, thin: 1 }, { x: -600, y: 415, r: 58 },      // thin: a scatter of loose flour, no heap (nothing lies under it)
   { x: -474, y: 104, r: 26 }, { x: -432, y: -74, r: 34 }
 ];
 
@@ -233,7 +261,8 @@ export const S = {
   rt: 0,                // real time, seconds since boot
   finds: [], byId: {}, live: [], cards: [],
   found: [],            // ids in the order found
-  tracks: { w: 0, k: 0, v: 0, a: 0, c: 0 },
+  tracks: { w: 0, g: 0, k: 0, v: 0, e: 0, c: 0 },
+  says: {},             // the small things that speak when bumped (not counted), by id
   props: [], colliders: [],
   sheets: [], piles: [],
   adPlayed: false, threeDone: false, firstInput: false,
