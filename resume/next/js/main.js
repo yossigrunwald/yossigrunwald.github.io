@@ -292,17 +292,25 @@ function updateCamera(dt) {
     const lx = x0 - vw * 0.14 + vw / 2, hx = x1 + vw * 0.14 - vw / 2, ly = y0 - vh * nf + vh * ta, hy = y1 + vh * 0.13 - vh * (1 - ta);
     if (lx < hx) tx = tx < lx ? lx : tx > hx ? hx : tx;
     if (ly < hy) ty = ty < ly ? ly : ty > hy ? hy : ty;
-    // A screen that has just been found (or bumped again) is framed: for 2.5 s, and for as long as the van stays within
-    // 140 units of it, the whole screen and 16 px round it are kept inside the safe area (8 px in from the sides, under
-    // the top bar, over the Play pill). In over 0.4 s, out over 0.8 s. A screen wider than that area is centred.
-    const ff = F.framing.f, fr = ff && ff.scr;
-    const want = !!fr && (S.rt - F.framing.at < 2.5 || Math.hypot(van.x - ff.x, van.y - ff.y) < 140);
+    // (the one tape that hangs on the boxes at the desk's north-west corner: while it is up the view stops a little
+    // short of the west edge, so the boxes it hangs on are on screen and it does not have to lie on its own thing)
+    const lu = ui.labelUp(); if (lu && lu.lab.camX !== undefined && tx < lu.lab.camX) tx = lu.lab.camX;
+    // A screen that has just been found (or bumped again) is framed: for as long as the van stays within 140 units of
+    // it (200 in its first 2.5 s), the whole screen and 16 px round it are kept inside the safe area (8 px in from the
+    // sides, under the top bar, over the Play pill). In over 0.4 s, out over 0.8 s. A screen wider than that area is
+    // centred. The hold lets go as soon as the van has driven off, and it never takes the van out of view (below).
+    const ff = F.framing.f, fr = ff && ff.scr, fd = ff ? Math.hypot(van.x - ff.x, van.y - ff.y) : 0;
+    const want = !!fr && (fd < 140 || (S.rt - F.framing.at < 2.5 && fd < 200));
     frameK = want ? Math.min(1, frameK + dt / 0.4) : Math.max(0, frameK - dt / 0.8);
     if (frameK > 0 && fr) {
       const kz = view.k * cam.zoom, hw = (view.w / 2 - 24) / kz, up = (view.h * ta - 124) / kz, dn = (view.h * (1 - ta) - 148) / kz, e = frameK * frameK * (3 - 2 * frameK);
       const cx = fr[2] - hw > fr[0] + hw ? (fr[0] + fr[2]) / 2 : Math.max(fr[2] - hw, Math.min(fr[0] + hw, tx));
       const cy = fr[3] - dn > fr[1] + up ? (fr[1] + fr[3]) / 2 : Math.max(fr[3] - dn, Math.min(fr[1] + up, ty));
       tx += (cx - tx) * e; ty += (cy - ty) * e;
+      // the van itself stays inside that area, 44 px in from the sides, under the top bar and clear above the pill: a
+      // van that drives on is followed, and on a phone on its side it is not pushed down under the Play pill
+      const mx = Math.max(0, view.w / 2 - 44) / kz, mu = Math.max(0, view.h * ta - 124) / kz, md = Math.max(0, view.h * (1 - ta) - 118) / kz;
+      tx = Math.max(van.x - mx, Math.min(van.x + mx, tx)); ty = Math.max(van.y - md, Math.min(van.y + mu, ty));
     }
   }
   if (S.look) { tx = S.look[0]; ty = S.look[1]; tz = S.look[2]; ta = 0.5; wz = 9; }      // ?debug=1: __g.look(x, y, zoom) holds the camera on a place

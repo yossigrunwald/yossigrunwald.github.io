@@ -78,11 +78,14 @@ function hush(){var v=d.querySelectorAll('#plain video'),i;for(i=0;i<v.length;i+
 /* The document's pictures are fetched when the document is shown, not while the game is (they are a third of the first load). */
 function pics(){var m=d.querySelectorAll('#plain img[data-src]'),i;for(i=0;i<m.length;i++){m[i].src=m[i].getAttribute('data-src');m[i].removeAttribute('data-src')}}
 d.addEventListener('DOMContentLoaded',function(){if(!h.classList.contains('g'))pics()});
+/* Email: the address is put together here, never in the source as one string. A printed or saved page shows it too. */
+function mail(a){var m=['grunwaldyossi2','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.classList.add('addr');a.href='mailto:'+m}
+w.addEventListener('beforeprint',function(){var a=d.querySelector('#plain [data-mail]');if(a)mail(a)});
 /* The document's own buttons work whether or not the game can run. */
 d.addEventListener('click',function(e){var t=e.target,a=t&&t.closest?t.closest('[data-view],[data-mail],[data-play]'):null;if(!a)return;e.preventDefault();
 if(a.hasAttribute('data-view')){if(w.ygView)w.ygView(a.getAttribute('data-view')==='play');return}
-/* Email: the first tap shows the address (never in the source as one string); the next tap is an ordinary mail link. */
-if(a.hasAttribute('data-mail')){var m=['grunwaldyossi2','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.classList.add('addr');a.href='mailto:'+m;return}
+/* Email: the first tap shows the address; the next tap is an ordinary mail link. */
+if(a.hasAttribute('data-mail')){mail(a);return}
 /* A video tile: inside this tap the poster becomes the player, so it plays with sound. */
 var v=d.createElement('video'),im=a.querySelector('img'),li=a.closest('[data-for]');v.controls=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='none';if(im)v.poster=im.currentSrc||im.src;v.src=a.href;
 /* The first ad watched here counts as watched in the game too (its chip goes, its tape gains a line). */

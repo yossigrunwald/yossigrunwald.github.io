@@ -142,7 +142,8 @@ export function bakeFirst() {
   const bk = S.says.back; if (bk) { bk.prop = hm.prop; bk.lab = { up: [0, 226], down: [0, 464], flip: true }; }
   // Its tape never lies across the garage: met from the mouth it goes over the roof; met from the strip (the van at the
   // roof's back edge) it goes over the van, on the bare strip, as the back's own line does.
-  hm.lab = { up: [0, 288], down: [0, 464], pick(v) { const north = v.y < 292; this.flip = north; this.up = north ? [0, 222] : [0, 288]; } }; hm.tabAt = [-34, 387, -0.05];
+  // Met from a side wall (the van beside the box, short of its mouth) it also goes up, clear above the van.
+  hm.lab = { up: [0, 288], down: [0, 464], pick(v) { const north = v.y < 292, side = !north && Math.abs(v.x) > 62 && v.y < 452; this.flip = north || side; this.up = north ? [0, 222] : side ? [0, Math.min(288, v.y - 52)] : [0, 288]; } }; hm.tabAt = [-34, 387, -0.05];
 }
 
 // light lying on the ground, drawn under every prop: the lamp pool over the flour, the skit phone's pink on the mat
@@ -274,7 +275,7 @@ export function bump(c, impact) {
   squash(p);
   const nx = van.x + Math.cos(van.a) * 20, ny = van.y + Math.sin(van.a) * 20, f = p.find;
   // (inside: a thing that is found only from one side, the weekly recap from inside its room; met from anywhere else it is a wall)
-  if (f && f.live) { if (!f.found) { if (f.inside && !f.inside(van)) { /* not from here */ } else if (f.noBump) desk.nudge(f); else wake(f); } else if (f.id === 'home' && van.y < 292 && S.says.back) hello(S.says.back); else again(f); }
+  if (f && f.live) { if (!f.found) { if (f.inside && !f.inside(van)) { /* not from here */ } else if (f.noBump) desk.nudge(f); else wake(f); } else if (f.id === 'home' && S.says.back && (van.y < 292 || S.rt - (S.says.back.readFrom || -9) < 3)) { const b = S.says.back; if (S.rt - (b.saidAt || -9) > 1.5) b.readFrom = S.rt; hello(b); } else again(f); }
   else if (p.say) hello(p.say);
   else if (impact > 120 && p.x < -110 && p.y > -110) burst(0, nx, ny, 4, 150, 0.45, 3.4);   // on the block a bump shakes flour loose
 }
@@ -418,12 +419,12 @@ function tickThree(rdt) {
 //   0.45 to 1.8 s  the gust, in that view: the piles go one after another from the hub end northward, their cards
 //                  flip up and streak north to the phone at the top of the frame, where each waits just short of the tray
 //   1.8 s on       the camera pushes in on the tray; the waiting cards dock 0.12 s apart as it arrives, the screen
-//                  turns gold; the app's own tape is slapped on at 2.15 s and is given 4 s to be read there, then
-//                  back to the van (at about 6.2 s; 7 s at the latest)
+//                  turns gold; the app's own tape is slapped on at 2.15 s and is given 4.5 s to be read there, then
+//                  back to the van (at about 6.7 s; 7.5 s at the latest)
 // A new touch after the first 0.6 s ends it. A thumb that was already down and steering does not, until the screen has
 // turned gold and the tape has had 2.4 s: the card takes a second and a half to fly, so that thumb is the usual case
 // and not a wish to skip.
-const LAB_AT = 2.15, LAB_READ = 4, LAB_HELD = 2.4;
+const LAB_AT = 2.15, LAB_READ = 4.5, LAB_HELD = 2.4;
 export const cine = { on: false, t: 0, x: 0, y: 0, z: 1.5, gold: 0, wide: false, lab: true, endAt: -9 };
 export const framing = { f: null, at: -9 };      // the screen found (or bumped again) last: the camera keeps the whole of it in view while the van is at it
 let wasHub = true;
@@ -439,7 +440,7 @@ function tickCine(rdt) {
   if (cine.t >= 1.8) cine.wide = false;
   if (cine.t >= LAB_AT && !cine.lab) { ui.labelsDim(false); appLabel(); }
   if (desk.tray.gold >= 1 && !cine.gold) cine.gold = cine.t;
-  if (cine.t >= 7 || (cine.gold && cine.t > Math.max(cine.gold + 0.8, LAB_AT + LAB_READ))) endCine();
+  if (cine.t >= 7.5 || (cine.gold && cine.t > Math.max(cine.gold + 0.8, LAB_AT + LAB_READ))) endCine();
 }
 // the van takes no steering: the camera is away from it
 export function holdOn() { return (three.on && three.lift) || cine.on; }

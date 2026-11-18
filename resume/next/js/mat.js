@@ -229,7 +229,9 @@ function buildGate() {
 
 // ---------- a bedsheet screen showing a saved thumbnail. Nothing is asked of YouTube until Play (ui.js) ----------
 // (f.card: a sheet whose picture is a drawn card, baked from the document's words. No picture of that video is ever fetched.)
-function loadImg(f) { if (!f.img && !f.card) { f.img = new Image(); f.img.decoding = 'async'; f.img.src = MEDIA + 'yt-' + f.yt + '.jpg'; } }
+// The test is the document's own (a data-sheet in the find's markup), so it holds before the card has been baked too.
+const drawn = f => f.drawn === undefined ? (f.drawn = !!(f.el && f.el.querySelector(':scope > [data-sheet]'))) : f.drawn;
+function loadImg(f) { if (!f.img && !f.card && !drawn(f)) { f.img = new Image(); f.img.decoding = 'async'; f.img.src = MEDIA + 'yt-' + f.yt + '.jpg'; } }
 const ready = f => !!f.card || (f.img && f.img.complete && f.img.naturalWidth > 0);
 function picture(ctx, f, s, px, py) {
   const a = ctx.globalAlpha, w = f.sw, h = f.sh;

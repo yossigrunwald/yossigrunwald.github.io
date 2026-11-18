@@ -91,7 +91,7 @@ export function addLabel(f, van) {
     if (!f.lab.mid) { old.up = f.lab.flip ? true : f.lab.below ? false : van.y >= f.y - 4; old.at = old.up ? f.lab.up : f.lab.down; old.mid = false; old.placed = false; }
     return;
   }
-  labels.forEach(dropLabel);
+  labels.forEach(L => dropLabel(L, 'replaced by ' + f.id));
   const d = document.createElement('div');
   const st = stateOf(f); d.className = 'tape' + st;
   d.style.setProperty('--t', TRACK[f.track].tape);
@@ -142,8 +142,11 @@ function tapeHTML(f) {
 }
 // a label that is up shows a line its find has just gained (the tray filled, the ad was played)
 export function relabel(f) { const L = labels.find(l => l.f === f && !l.out); if (L && stateOf(f) !== L.st) { L.st = stateOf(f); L.d.className = 'tape' + L.st + (f.lab.maxw ? ' nar' : ''); fit(L.d); L.w = L.d.offsetWidth; L.h = L.d.offsetHeight; L.read = readOf(f, L.st); } }
-function dropLabel(L) {
+// ?debug=1: every tape that goes before it has had its read time, and why (__g.ui.tapeLog)
+export const tapeLog = [];
+function dropLabel(L, why) {
   if (L.out) return; L.out = true; L.d.classList.add('out');
+  if (window.__g && S.rt - L.t < L.read) { tapeLog.push({ id: L.f.id, age: +(S.rt - L.t).toFixed(2), read: +L.read.toFixed(2), why: why || '?', at: +S.rt.toFixed(2) }); if (tapeLog.length > 60) tapeLog.shift(); }
   setTimeout(() => { L.d.remove(); labels = labels.filter(x => x !== L); if (!labels.some(x => x.f === L.f)) L.f.tabOn = true; }, 230);
 }
 // Where a label's box lands on screen for a spot (world) and a way of hanging there: over it (up), under it, or centred on it (mid)
@@ -170,7 +173,7 @@ function thingRect(f) {
 // thing, then under it, then beside it on the side with more room. Only if nowhere is free does it stay where it was
 // first put, and yield there by fading. (A label that belongs on its thing's own top edge, the first ad's, is left alone.)
 function place(L, toScreen, v, top, bottom, vanY) {
-  if (L.mid) return;
+  if (L.mid || L.f.lab.fix) return;                               // (fix: a label with one place of its own)
   const f = L.f, rects = [[v[0] - 35, v[1] - 35, v[0] + 35, v[1] + 35]];
   const add = (x0, y0, x1, y1) => { const a = toScreen(x0, y0), b = toScreen(x1, y1); if (b[0] > 0 && a[0] < vw && b[1] > 0 && a[1] < vh) rects.push([a[0], a[1], b[0], b[1]]); };
   for (const q of S.live) if (q.scr && (q.video || q.yt) && (q.found || (q.video && !(q.near < 0.3)))) add(q.scr[0], q.scr[1], q.scr[2], q.scr[3]);
@@ -178,9 +181,12 @@ function place(L, toScreen, v, top, bottom, vanY) {
   const ln = S.byId.line; if (ln && ln.found && ln !== f && !f.lab.onLine) add(ln.x - 80, ln.y - 112, ln.x + 80, ln.y + 112);      // the taped sheet, once it can be read (its written part: the margin may be touched)
   const sl = S.says.slate; if (sl && sl !== f && sl.box) add(sl.box[0], sl.box[1], sl.box[2], sl.box[3]);      // the slate's board: the one place the kinds of video are read
   const free = (at, up, mid) => { const [x, y] = boxAt(L, at, up, mid, toScreen, top, bottom); for (const r of rects) if (x < r[2] && x + L.w > r[0] && y < r[3] && y + L.h > r[1]) return false; return true; };
-  const s = toScreen(f.x, f.y), side = s[0] > vw / 2 ? -1 : 1, k = Math.abs(toScreen(1, 0)[0] - toScreen(0, 0)[0]) || 1, dx = (L.w / 2 + 70) / k;
+  // (beside: 70 px out from a small thing's middle; the app phone, whose whole box no label may cover (lab.clear), is
+  // cleared by its whole width, so on a phone on its side its tape stands next to the phone and not across the tray)
+  const s = toScreen(f.x, f.y), side = s[0] > vw / 2 ? -1 : 1, k = Math.abs(toScreen(1, 0)[0] - toScreen(0, 0)[0]) || 1, fb = f.lab.clear ? f.box : null;
+  const dx = fb ? (fb[2] - fb[0]) / 2 + (L.w / 2 + 16) / k : (L.w / 2 + 70) / k, sy0 = fb ? (fb[1] + fb[3]) / 2 : f.y - 46;
   // (after the two sides: under it, just past the van that is parked at its foot · then further below, clear of whatever lies under it)
-  const dn = f.lab.down, vy = vanY + 40 / k, tries = [[L.at, L.up, false], [L.up ? dn : f.lab.up, !L.up, false], [[f.x + side * dx, f.y - 46], false, true], [[f.x - side * dx, f.y - 46], false, true],
+  const dn = f.lab.down, vy = vanY + 40 / k, tries = [[L.at, L.up, false], [L.up ? dn : f.lab.up, !L.up, false], [[f.x + side * dx, sy0], false, true], [[f.x - side * dx, sy0], false, true],
     [[dn[0], Math.max(dn[1], vy)], false, false], [[dn[0], dn[1] + 120], false, false], [[dn[0], dn[1] + 235], false, false]];
   for (const [at, up, mid] of tries) if (free(at, up, mid)) { L.at = at; L.up = up; L.mid = mid; return; }
 }
@@ -190,20 +196,24 @@ export function updateLabels(toScreen, van, pillUp) {
   for (const L of labels) {
     if (!L.placed) { L.placed = true; place(L, toScreen, v, top, bottom, van.y); }
     // A label is held in view only while at least half of its thing is on screen. Less than that and it leaves with the
-    // thing (and so never comes to rest on something else).
-    const r = thingRect(L.f), loose = shown(r[0], r[1], r[2], r[3]) < 0.5;
+    // thing (and so never comes to rest on something else). The one exception is a label that is still being read with
+    // the van at its thing (hold): the camera may be looking elsewhere at that moment (a screen found a second ago is
+    // still framed), and a find's words must never go unseen. It stays on screen for its read time.
+    const age = S.rt - L.t, c = L.f.prop && L.f.prop.coll, far = c ? collDist(c, van.x, van.y) > 90 : Math.hypot(van.x - L.f.x, van.y - L.f.y) > 130;
+    const hold = !far && age < Math.max(L.read, L.f.lab.min || 1.6);
+    const r = thingRect(L.f), loose = !hold && shown(r[0], r[1], r[2], r[3]) < 0.5;
     const [sx, sy] = toScreen(L.at[0], L.at[1]), [x, y] = boxAt(L, L.at, L.up, L.mid, toScreen, top, bottom, loose);
     L.d.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
     // the van is never hidden for long: once a label has had a second and a half to be read, it goes nearly clear while the van is under it
     // (its thing, not the spot the label hangs from: a label put beside a wide thing hangs from a spot that may itself be past the screen's edge)
-    const age = S.rt - L.t, ts = L.mid ? toScreen(L.f.x, L.f.y) : [sx, sy], off = ts[0] < -30 || ts[0] > vw + 30 || ts[1] < top - 70 || ts[1] > vh + 40;       // its thing has left the screen
+    const ts = L.mid ? toScreen(L.f.x, L.f.y) : [sx, sy], off = ts[0] < -30 || ts[0] > vw + 30 || ts[1] < top - 70 || ts[1] > vh + 40;       // its thing has left the screen
     const thru = age > L.read && v[0] > x - 26 && v[0] < x + L.w + 26 && v[1] > y - 26 && v[1] < y + L.h + 26;
     if (thru !== L.thru) { L.thru = thru; L.d.classList.toggle('thru', thru); }
-    const c = L.f.prop && L.f.prop.coll, far = c ? collDist(c, van.x, van.y) > 90 : Math.hypot(van.x - L.f.x, van.y - L.f.y) > 130;
     // every label gets time to be read first; but one that is leaving with its thing goes as soon as half of it is past the edge (never a cut-off strip of tape at the side of the screen)
     const gone = loose && Math.max(0, Math.min(x + L.w, vw) - Math.max(x, 0)) * Math.max(0, Math.min(y + L.h, vh) - Math.max(y, top)) < L.w * L.h * 0.5;
     // (max: a label that would otherwise stay for as long as the van is parked at its thing, in front of what the thing shows, goes after that long; its tab stays, and a bump brings it back)
-    if (!L.out && (gone || (age > (L.f.lab.min || 1.6) && (far || off)) || (L.f.lab.max && age > Math.max(L.f.lab.max, L.read + 0.5)))) dropLabel(L);
+    const late = age > (L.f.lab.min || 1.6), max = L.f.lab.max && age > Math.max(L.f.lab.max, L.read + 0.5);
+    if (!L.out && (gone || (late && (far || (off && !hold))) || max)) dropLabel(L, gone ? 'gone' : max ? 'max' : far ? 'far' : 'off');
   }
   // the top-bar first-ad chip steps aside when it would say the same thing twice: while the first-ad pill is up,
   // and while the MY FIRST AD tape on the phone itself has slid up next to it

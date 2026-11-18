@@ -36,7 +36,7 @@ export function init(wakeFn, busyFn) {
   // every label it leaves the screen with its thing), and once more when the van arrives. It never sits on the phone
   // itself (box: the gold screen, which no label may cover): with the van parked at the foot it goes below the van.
   app.noBump = true; app.tabAt = [app.x + 92, app.y - 18, 0.08]; app.box = [app.x - 85, app.y - 305, app.x + 85, app.y];
-  app.lab = { up: [app.x, app.y - 316], down: [app.x, app.y + 12], mid: false, below: true, min: 3.4 };
+  app.lab = { up: [app.x, app.y - 316], down: [app.x, app.y + 12], mid: false, below: true, min: 4.5, clear: true };
   // line: the van is on the sheet when it is found and usually keeps going, so the label goes on the side the van came
   // from, where it will not be driven under; and this one long read stays solid 4 s even if it is (read)
   // (the tape carries only the find's head: the sheet itself, 180 x 244, does the reading)
@@ -53,9 +53,14 @@ export function init(wakeFn, busyFn) {
   if (lv) { lv.lit = 0; lv.lab = { up: [lv.x - 12, lv.y - 80], down: [lv.x - 12, lv.y + 14] }; lv.tabAt = [lv.x - 50, lv.y + 8, -0.05]; }
   // The power strip (a small thing: it says its line, it is not counted). It lies in the open beside the tall boxes'
   // west end and is bumped from the open desk, the van to its south. Under the van there is the taped sheet, which no
-  // tape may cover once it can be read; so its tape always goes above the strip (flip), over the desk's far edge, and
-  // the strip, the van and the sheet all stay in view under it.
-  const st = S.says.strip; if (st) { st.blink = 0; st.lab = { up: [st.x + 20, st.y - 38], down: [st.x + 20, st.y + 16], flip: true }; }
+  // tape may cover once it can be read, and a tape over the strip would hide the thing it is about. So its tape hangs
+  // on the cardboard boxes beside it: a narrow column down the stack's plain face from just under its top edge, its
+  // left edge at the strip's east end; the strip, the van and the sheet all stay in view. It is put there and nowhere
+  // else (fix): every other free spot round the strip is the strip itself or the sheet.
+  // (camX: bumped at the strip's west end the view stops at the desk's west edge, where only 112 px of the boxes are
+  // on screen, too few for the column. While this tape is up the view does not go west of camX, 24 units short of
+  // that stop: main.js.)
+  const st = S.says.strip; if (st) { st.blink = 0; const at = [bx + 9, by - 116]; st.lab = { up: at, down: at, below: true, fix: true, maxw: 150, camX: -296 }; }
 }
 
 // ---------- the nine cards: under a pile, flipped up, held a beat, then streaking north into the tray ----------
