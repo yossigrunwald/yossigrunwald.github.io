@@ -4,10 +4,12 @@
 export const MEDIA = '../media/';          // launch: move the tree up one level and set './media/'
 // Finds (and the parts of a find) with data-stage <= STAGE are live.
 // 1 the hub slice · 2 the whole desk · 3 the whole mat and the woods · 4 the new words: the desk's three new finds
-// (quality, scale, live), the weekly recap in the woods, and the garage as a counted find · 5 (not built) the belt, with
-// what waits for it: the stamp's tape arrow, the bench's second look, the green strip of the moment · 6 (not built) the
-// rest of the kitchen and the back plank.
-export const STAGE = 4;
+// (quality, scale, live), the weekly recap in the woods, and the garage as a counted find · 5 the belt (the steel bench
+// in the north-east: belt.js), with what waited for it: the stamp's tape arrow, the bench's second look, the green strip
+// of the moment, the hub's fifth arrow · 6 (not built) the rest of the kitchen and the back plank.
+// 5 is live. ?stage=4 gives back the build that was approved before the bench (the tests diff against it).
+export const STAGE = (() => { const s = +new URLSearchParams(location.search).get('stage'); return s >= 1 && s <= 5 ? s : 5; })();
+export const S5 = STAGE >= 5;                                   // everything the bench adds is behind this, or behind a data-stage="5"
 export const on = el => (+el.dataset.stage || 0) <= STAGE;      // is this element (a find, or a part of one) switched on yet
 
 export const PAL = {
@@ -22,6 +24,7 @@ export const PAL = {
   pink: '#FF4D7D', pinkTape: '#FF6F91',
   masking: '#E6D7AE', ink: '#14110F',
   green: '#12A37C', greenTape: '#43C7A2',          // the belt's electrical tape (stage 5; the art lead may still move it)
+  bench: '#A3ACB0', benchShade: '#7F898E', rubber: '#22282B', paint: '#EEF1F3',      // the steel bench, its belt, its painted lines (used nowhere else)
   van: '#F4F1E8', glass: '#1D2A30', rack: '#C9CED2',
   lamp: '#FFC46B', crust: '#C4782A', steel: '#9AA3A6', card: '#B99A6B'
 };
@@ -47,6 +50,9 @@ export const G = {
   desk: [-460, -1480, 460, -110], block: [-700, -110, -110, 520], mat: [110, -110, 1040, 1100],
   strip: [-110, 110, 110, 520]
 };
+// The steel bench of the AI table (stage 5), in the corner the desk and the mat left free: its west edge is the desk's
+// east edge, its south edge the mat's north edge, so nothing built moves and the world box does not grow.
+if (S5) FULL.belt = G.belt = [460, -900, 1040, -110];
 export const WOODS = [560, 620, 1040, 1100];         // the green mat that lies on the dark one (spec 4.2)
 export const HUB_R = 160;
 export const BOX = [-700, -1480, 1040, 1100];        // world box of everything drivable in this stage
@@ -67,6 +73,7 @@ export function surfaceAt(x, y) {
   if (inR(G.block, x, y)) return 'block';
   if (inR(G.mat, x, y)) return 'mat';
   if (inR(G.strip, x, y)) return 'strip';
+  if (G.belt && inR(G.belt, x, y)) return 'belt';      // last: every point that had a surface keeps it (the shared edges stay desk and mat)
   return null;
 }
 // the van may stand here: its centre and four probes half a van-length out must all be on a table
@@ -159,7 +166,15 @@ export function readFinds(doc = document) {
     const d = el.dataset;
     out.push({
       ...words(el, d), id: d.find, tab: d.tab || '', stage: +d.stage || 9, live: (+d.stage || 9) <= STAGE,
-      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || ''
+      video: d.video || null, len: d.len || '', yt: d.yt || null, pill: d.pill || '', lure: d.lure || '',
+      // how: a find that opens an explainer (the five on the bench). Its card paragraph, its footer if it has one, its
+      // captions in order, and the words lettered inside its pictures and on its machine, all from its own children.
+      how: (() => {
+        const ol = el.querySelector(':scope > [data-steps]'); return ol ? {
+          card: el.querySelector(':scope > [data-how]'), foot: el.querySelector(':scope > [data-foot]'),
+          steps: [...ol.children], words: Object.fromEntries([...el.querySelectorAll(':scope > [data-w]')].map(e => [e.dataset.w, e.textContent.trim()]))
+        } : null;
+      })()
     });
   });
   return out;
@@ -202,6 +217,7 @@ const CAUGHT = [
 // would lie under one of them is taken away after the scatter, so the scatter itself draws the same numbers as before.
 // (and under the power strip's free end, and where the clipboard now lies)
 const LATER = [[324, -692, 460, -614], [-142, -880, -22, -824], [60, -1082, 270, -1050], [-362, -1480, -190, -1400], [226, -1222, 298, -1136]];
+if (S5) LATER.push([200, -628, 452, -580]);          // and under the stamp's tape arrow, which is laid down with the bench: no loose sheet lies on its words
 export function makeSheets(cards) {
   const rnd = mulberry32(SEED), sheets = [], piles = [];
   const add = (pile, x, y) => {

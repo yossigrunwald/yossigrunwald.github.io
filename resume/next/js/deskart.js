@@ -504,16 +504,21 @@ export function stampMark(g, x, y, k = 1) {
   g.restore();
 }
 // The tape arrow that points from the stamp at the next table over (it is laid down only once that table is built).
-// A strip of gold tape with the hub's own two-strip arrow head; its words in his hand. Origin = its middle.
+// A strip of gold tape with the hub's own two-strip arrow head; its words in his hand, one sentence to a line, so the
+// strip is short: its head is at the desk's east edge and its west end stays out of the opening frame on a phone
+// (which shows the desk as far east as x 295). Origin = its middle.
 export function tapeArrow(text) {
   const m = mk(4, 4).getContext('2d'); m.font = `700 11.5px ${HAND}`;
-  const tw = m.measureText(text).width, L = tw + 30, W = L + 34, H = 44;
+  const q = text.match(/^(.*?[.?!])\s+(.+)$/), rows = q ? [q[1], q[2]] : [text];
+  let tw = 0; for (const r of rows) tw = Math.max(tw, m.measureText(r).width);
+  const n = rows.length, k = n > 1 ? 1.35 : 1, L = tw + (n > 1 ? 20 : 30), TH = n > 1 ? 33 : 19, W = L + 44, H = TH + 28;
   return flat(W, H, W / 2, H / 2, g => {
     g.translate(W / 2, H / 2);
-    const done = drawTape(g, -8, 0, L, 19, -1.2, PAL.gold, 1.2);
-    g.font = `700 11.5px ${HAND}`; g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 0, 0.8);
+    const done = drawTape(g, -8, 0, L, TH, -1.2, PAL.gold, 1.2);
+    g.font = `700 11.5px ${HAND}`; g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) g.fillText(rows[i], 0, 0.8 + (i - (n - 1) / 2) * 13.4);
     done();
-    for (const sg of [-1, 1]) drawTape(g, L / 2 - 4, sg * 6.6, 24, 8, -sg * 38, PAL.gold, 1.2)();      // its head: two strips meeting at the point, east
+    for (const sg of [-1, 1]) drawTape(g, L / 2 - 4 + (k - 1) * 3, sg * 6.6 * k, 24 * k, 8 * k, -sg * 38, PAL.gold, 1.2)();      // its head: two strips meeting at the point, east
   }, 0.5);
 }
 

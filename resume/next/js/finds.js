@@ -1,13 +1,14 @@
 // finds.js — the hub's props and colliders, find rules, wake animations, the second look, the moment and the idle tour.
 // The far desk (stage 2) lives in desk.js, the rest of the mat and the woods (stage 3) in mat.js; the prop registry,
 // the sprite shelf and the looping screens are in kit.js.
-import { S, PAL, TRACK, HUB_R, readFinds, readSays, readCards, makeSheets, collDist } from './world.js';
+import { S, PAL, TRACK, HUB_R, S5, readFinds, readSays, readCards, makeSheets, collDist } from './world.js';
 import * as art from './art.js';
 import { van, auto, input, goTo, stopAuto, R } from './van.js';
 import { emit, burst } from './surfaces.js';
 import { spr, flats, lit, loops, prop, cbox, ccirc, squash, tickSquash, makeLoop, startLoop, addScreen, grab, drawScreen, tickScreens, pauseLoops, resumeLoops, skitRim, playSmall, glass, steps } from './kit.js';
 import * as desk from './desk.js';
 import * as mat from './mat.js';
+import * as belt from './belt.js';
 import * as ui from './ui.js';
 import * as audio from './audio.js';
 
@@ -36,7 +37,7 @@ export function vanFrame(i) {
 }
 
 export function vanCanvases() { const out = []; if (frames) for (const f of frames) if (f) out.push(f.c, f.s); return out; }      // for the debug memory count
-export function extraCanvases() { return [desk.canvases(), mat.canvases(), art.keptCanvases()]; }      // canvases held outside the prop lists
+export function extraCanvases() { return [desk.canvases(), mat.canvases(), belt.canvases(), art.keptCanvases()]; }      // canvases held outside the prop lists
 
 // ---------- building the stage ----------
 export function readWorld() {
@@ -45,6 +46,7 @@ export function readWorld() {
   S.cards = readCards().filter(c => c.live);
   const ps = makeSheets(S.cards); S.sheets = ps.sheets; S.piles = ps.piles;
   desk.init(wake, () => three.on || three.hold > 0); mat.init();
+  belt.init(hello, () => three.on || three.hold > 0 || cine.on);      // the bench (stage 5): hello says a small thing's tape, the second is "a moment is on"
   const ad = S.byId.ad1; ad.scr = [-67.5, -545, 67.5, -305];
   const L = addScreen('ad1', makeLoop(ad.video), ad, ad.scr); L.on = true; startLoop(L);      // moving at first paint
 }
@@ -52,9 +54,9 @@ export function readWorld() {
 // everything with lettering on it, baked again (used when a font face arrives after boot)
 export function rebakeLettering() {
   const name = document.querySelector('[data-name]').textContent.trim(), roles = document.querySelector('[data-roles]').textContent.trim(), ad = S.byId.ad1;
-  art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, roles), 0, 0);
+  art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, roles, S5), 0, 0);
   art.retire(spr.adTape); spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);
-  desk.rebakeLettering(); mat.rebakeLettering();
+  desk.rebakeLettering(); mat.rebakeLettering(); belt.rebakeLettering();
   S.live.forEach(fd => { if (fd.tabSp) fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
 }
 
@@ -62,7 +64,7 @@ export function rebakeLettering() {
 export function bakeFirst() {
   const name = document.querySelector('[data-name]').textContent.trim(), roles = document.querySelector('[data-roles]').textContent.trim();
   // (the big ones are kept only while the van is near them: art.keep)
-  spr.hub = art.keep(() => art.hubSprite(name, roles), 0, 0);
+  spr.hub = art.keep(() => art.hubSprite(name, roles, S5), 0, 0);      // (S5: with the fifth arrow, to the bench)
   spr.sheets = art.sheetSprites();
   spr.phone = art.keep(() => art.giantPhone(), 0, -300);
   const ad = S.byId.ad1;
@@ -148,6 +150,7 @@ export function bakeFirst() {
 
 // light lying on the ground, drawn under every prop: the lamp pool over the flour, the skit phone's pink on the mat
 export function drawGround(ctx) {
+  belt.drawGround(ctx);                                     // the bench's belt and its floor tape: the hub and every prop draw over them
   if (inView(-330, -30, -90, 140)) steps(ctx, -228, 35, PAL.lamp, [20, 20, 115, 75, 0.22], [12, 16, 55, 35, 0.18]);      // the loaf's lamp: two hard-edged steps
   const s = S.byId.skit1;
   if (inView(s.x - 82, s.y - 54, s.x + 82, s.y + 54)) {
@@ -159,7 +162,8 @@ export function drawGround(ctx) {
 
 // Tape dashes on the hub (spec 7.2): after a major find, eight light up one after another toward the nearest major of
 // a track that has nothing found yet. They keep clear of the routed name, the roles and the four arrows.
-const MAJOR = { w: 'ad1', k: 'bread', v: 'skit1' };
+const MAJOR = S5 ? { w: 'ad1', k: 'bread', v: 'skit1', g: 'team' } : { w: 'ad1', k: 'bread', v: 'skit1' };
+const MAJORS = S5 ? ['w', 'k', 'v', 'g'] : ['w', 'k', 'v'];      // the tracks that have a major (the bench's is its first machine)
 const dash = { tr: null, t: 0, ux: 0, uy: 0, o: null };
 // The nearest thing still to find, and whether any of them is in sight. A thing: every live find not found yet but the
 // app (that one is found by its cards), and every card pile not ploughed yet. vis(x, y): is that spot on the screen?
@@ -175,7 +179,7 @@ export function seek(vis) {
 // any: no track is empty any more, so the dashes point at the nearest thing still to find, in its own track's colour
 function pointOn(any) {
   let m = null, tr = null, o = null, bd = 1e9;
-  for (const t of ['w', 'k', 'v']) { if (S.tracks[t]) continue; const q = S.byId[MAJOR[t]], d = Math.hypot(q.x - van.x, q.y - van.y); if (d < bd) { bd = d; m = q; tr = t; } }
+  for (const t of MAJORS) { if (S.tracks[t]) continue; const q = S.byId[MAJOR[t]], d = Math.hypot(q.x - van.x, q.y - van.y); if (d < bd) { bd = d; m = q; tr = t; } }
   if (!m && any) { const b = seek(() => false).best; if (b) { m = b; tr = b.tr; o = b.o; } }
   if (!m) { dash.tr = null; return; }
   const l = Math.hypot(m.x, m.y - 20) || 1;
@@ -191,6 +195,7 @@ export function drawDashes(ctx) {
     if (on <= 0 || x * x + y * y > 150 * 150) continue;
     if ((Math.abs(x) < 134 && y > -86 && y < -14) || (Math.abs(x) < 128 && y > 64 && y < 94)) continue;      // the name, the roles
     if (Math.abs(Math.abs(x) - 126) < 20 && Math.abs(y) < 22 || Math.abs(Math.abs(y) - 126) < 22 && Math.abs(x) < 20) continue;   // an arrow
+    if (S5 && Math.abs(x - 79) < 20 && Math.abs(y + 101) < 20) continue;      // the fifth arrow, to the bench
     const k = on < 0.14 ? 1 + (0.14 - on) * 4 : 1;
     ctx.save(); ctx.translate(x, y - 4.8); ctx.rotate(a); ctx.scale(k, k); ctx.globalAlpha = fade;
     ctx.fillStyle = 'rgba(20,17,15,.3)'; ctx.fillRect(-4.2, -1.2, 10, 4.6);
@@ -229,7 +234,9 @@ export function bakeJobs() {
     rollPink = m(318, -52, S.tracks.v ? spr.rollP : art.tapeRoll(PAL.pinkTape, true), { coll: ccirc(318, -52, 12) });
   });
   jobs.push(...mat.jobsNear());                             // the two skit phones and the chair: a van heading east is at them in two seconds
+  jobs.push(...belt.jobsNear());                            // the bench's colliders: a van that follows the floor tape is on it within two seconds ([] before stage 5)
   jobs.push(...desk.jobs());                                // the far desk
+  jobs.push(...belt.jobs());                                // the bench's machines ([] before stage 5)
   jobs.push(...mat.jobs());                                 // the rest of the mat, and the woods
   jobs.push(() => {                                         // one-word tabs that stay on found things
     S.live.forEach(fd => { fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
@@ -260,10 +267,11 @@ export function nearFind(wx, wy, r) {
   }
   return best;
 }
-// a found video whose screen is under the tap: tapping the screen itself plays it (spec 6.3)
+// a found video whose screen is under the tap: tapping the screen itself plays it (spec 6.3); and a found machine of
+// the bench under the tap (f.tapBox): tapping it opens its explainer
 export function screenAt(wx, wy) {
   for (const f of S.live) {
-    const r = f.scr; if (!f.found || !(f.video || f.yt) || !r) continue;
+    const r = f.scr || f.tapBox; if (!f.found || !(f.video || f.yt || f.how) || !r) continue;
     if (wx >= r[0] && wx <= r[2] && wy >= r[1] && wy <= r[3]) return f;
   }
   return null;
@@ -341,7 +349,7 @@ export function wake(f) {
     f.saidAt = S.rt; burst(3, p.x, p.y + 40, 10, 120, 0.7, 4);
   } else if (f.id === 'skit1') {
     vanState.cam = true; loops.skit1.on = true; startLoop(loops.skit1); lit.push([p.x, p.y, 110]);
-  } else if (!desk.onWake(f, show)) mat.onWake(f);
+  } else if (!desk.onWake(f, show) && !mat.onWake(f)) belt.onWake(f);
   if (show) startCine(f);
   if (MAJOR[f.track] === f.id) pointOn();
   if (f.track === 'v' && rollPink) rollPink.sp = spr.rollP;
@@ -361,7 +369,7 @@ export function update(dt, rdt) {
     if (b.bake >= 1 && spr.loafGold && b.prop) { b.prop.sp = spr.loafGold; art.retire(spr.loafPale, true); }      // baked: the pale loaf is not needed again
     if (Math.random() < dt * 22) emit(1, b.x + (Math.random() - 0.5) * 70, b.y - 30, (Math.random() - 0.5) * 16, -40 - Math.random() * 30, 1.3, 9 + Math.random() * 5);
   } else if (b.bake >= 1 && S.t - b.foundAt < 9 && Math.random() < dt * 5) emit(1, b.x + (Math.random() - 0.5) * 60, b.y - 34, (Math.random() - 0.5) * 10, -30, 1.5, 8);
-  desk.update(dt, rdt); mat.update(dt, rdt); tickSecond();
+  desk.update(dt, rdt); mat.update(dt, rdt); belt.update(dt, rdt); tickSecond();
   // The moment starts 0.9 s after the find that completes it, so that find is seen first. If the van is
   // being driven on meanwhile it starts within 0.35 s instead: the van is then held close to the thing it has just found.
   if (dash.tr) dash.t += rdt;
@@ -385,7 +393,7 @@ export function update(dt, rdt) {
 // only with the last of them (main.js). Then one strip across the middle, which is up for 3.7 s; then how many are
 // still to find. They start to go 0.2 s before the camera starts back down. The Play pill tucks away meanwhile.
 // A tap after the first 0.8 s skips it (threeTouch).
-const NOTE = { w: 0, k: 1, v: 2, g: 1 }, GAP = 0.9;
+const NOTE = S5 ? { w: 0, g: 1, v: 2, k: 3 } : { w: 0, k: 1, v: 2 }, GAP = 0.9;      // four sections: D, F sharp, A, D, in the order the strips land
 function startThree() {
   const tr = ui.threeTracks(), last = 0.15 + (tr.length - 1) * GAP;
   S.threeDone = true; Object.assign(three, { on: true, t: 0, lift: !S.reduced, n: 0, ended: false, bye: false, tr, marks: tr.map((t, i) => 0.15 + i * GAP).concat([last + GAP, last + GAP + 0.5]), up: last + GAP + 3.9 });
@@ -405,7 +413,7 @@ function tickThree(rdt) {
   three.t += rdt;
   const m = three.marks, k = three.tr.length;
   while (three.n < m.length && three.t >= m[three.n]) {
-    if (three.n < k) { audio.trackNote(NOTE[three.tr[three.n]] || 0); audio.slap(); } else if (three.n === k) audio.chord();
+    if (three.n < k) { const tr = three.tr[three.n]; audio.trackNote(NOTE[tr] || 0, tr); audio.slap(); } else if (three.n === k) audio.chord(S5);
     ui.threeStep(three.n); three.n++;
   }
   if (!three.bye && three.t >= (three.ended ? three.endAt + 0.9 : S.reduced ? three.up + 2 : three.up - 0.2)) { three.bye = true; ui.threeBye(); }

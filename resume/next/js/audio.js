@@ -192,13 +192,13 @@ function engine(c) {
 
 // ---------- 4. the surfaces ----------
 // ONE ROW PER SURFACE, keyed by the name world.surfaceAt gives it ('woods' is the green mat on the dark one; 'floor' is
-// bare floor, and what an unknown name falls back to). A new table needs a row here and nothing else. For the AI table:
-//   belt: { lp: 2100, eng: 1, roll: [['bandpass', 1900, 5, 0.5], ['bandpass', 3300, 7, 0.25]] },      // a steel bench: two thin ringing bands
+// bare floor, and what an unknown name falls back to). A new table needs a row here and nothing else.
 //   lp, eng   the motor on this surface: its low-pass (Hz) and its level
 //   roll      what the wheels do: bands of noise, each [filter, Hz, Q, level]. It follows the speed and is silent standing
 //   am        [strokes a second at full speed, depth 0..1]: the roll comes in strokes (grass)
 //   hum       [Hz slow, Hz more at full speed, Q, level]: one thin band that climbs with the speed (a tyre on rubber)
 //   flour     the roll swells with what the nose is pushing: [wiped, haze, heap]
+//   seam      [units between plate joints, knock pitch, level]: a small knock at every joint driven over (the steel bench)
 const SURF = {
   floor: { lp: 2000, eng: 1, roll: [['bandpass', 800, 0.5, 0.11]] },                                                // a plain neutral roll
   hub: { lp: 1700, eng: 1, roll: [['bandpass', 420, 2.6, 0.6], ['bandpass', 880, 3.2, 0.08]] },                  // plywood: hollow, wooden
@@ -208,7 +208,10 @@ const SURF = {
   // it; the mat is all down low, a dull roll and one thin band that climbs with the speed, nothing above a kilohertz)
   block: { lp: 760, eng: 0.7, roll: [['bandpass', 3900, 0.55, 0.15], ['highpass', 6200, 0.5, 0.045]], flour: [0.4, 1, 1.45] },      // flour: a soft bright hush, a sled on snow
   mat: { lp: 400, eng: 1.2, roll: [['lowpass', 360, 0.7, 0.22]], hum: [250, 160, 12, 1.15] },                        // rubber: close, dark, a low tyre hum
-  woods: { lp: 1500, eng: 0.95, roll: [['bandpass', 2600, 0.8, 0.26]], am: [9, 0.7] }                               // grass: a swish in strokes
+  woods: { lp: 1500, eng: 0.95, roll: [['bandpass', 2600, 0.8, 0.26]], am: [9, 0.7] },                              // grass: a swish in strokes
+  // The steel bench of the AI table: two NARROW bands that ring (every other surface is broad or low) and a little air,
+  // and a small "tink" at each plate joint, about five a second at full speed: told apart by tone and by rhythm.
+  belt: { lp: 1900, eng: 0.78, roll: [['bandpass', 2050, 9, 0.8], ['bandpass', 3250, 11, 0.45], ['highpass', 5200, 0.7, 0.03]], seam: [64, 2.6, 0.05] }
 };
 function surfaces(c) {
   SV = {};
@@ -257,7 +260,7 @@ function crackle(t) {
 // The loop calls this about thirty times a second (never more) with what the van is doing:
 //   d: { dt, speed (units a second), thr (0..1: how hard it is being asked to go), surface, flour (0, 1, 2 under the nose),
 //        paper (0..1: sheets being ploughed), groove (over a routed line of the hub), fire (0..1: how near the campfire) }
-const D = { r: 0, still: 9, kick: 0, wasThr: 0, lug: 0, cur: '', paper: 0, kOdo: 0, kGap: 16, st: null, sp: 0, key: 'floor', jit: 1 };
+const D = { r: 0, still: 9, kick: 0, wasThr: 0, lug: 0, cur: '', paper: 0, kOdo: 0, kGap: 16, sOdo: 0, st: null, sp: 0, key: 'floor', jit: 1 };
 const ROLL = 1, RUSTLE = 0.12, FLICK = 0.2, FIRE = 0.7;
 export function drive(d) {
   if (!ok() || !E.g) return;
@@ -308,6 +311,9 @@ export function drive(d) {
     // a soft knock over each routed groove (about one every 20 to 38 units of travel), and one for the lip of the hub
     if (key !== D.cur) { if (D.cur && (key === 'hub' || D.cur === 'hub') && sp > 0.08) knock(t, 0.72, 0.13 * M.extra); D.cur = key; D.kOdo = 0; }
     if (d.groove && sp > 0.06) { D.kOdo += D.sp * dt; if (D.kOdo > D.kGap) { D.kOdo = 0; D.kGap = 20 + Math.random() * 18; knock(t, 1, (0.06 + 0.04 * sp) * M.extra); } }
+    // a plate joint of the steel bench, every row.seam[0] units of travel: the same two knock oscillators, pitched up
+    // (the van is never on the hub's grooves and on the bench at once, so no node is added)
+    if (row.seam && sp > 0.06) { D.sOdo += D.sp * dt; if (D.sOdo > row.seam[0]) { D.sOdo = 0; knock(t, row.seam[1], row.seam[2] * (0.6 + 0.4 * Math.min(1, sp)) * M.extra); } }
     // the campfire, by how near it is: about eleven snaps a second
     const fire = d.fire || 0;
     if (fire > 0.004 || X.fire) {
@@ -339,7 +345,8 @@ function osc(type, f, t, dur, peak, dest, a = 0.004) {
   const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
   env(g, t, a, peak, dur); o.connect(g); g.connect(dest); o.start(t); o.stop(t + a + dur + 0.05); return o;
 }
-// timbre by track: w bell (sine plus a 2.76 partial) · k soft mallet · v plucked saw through a closing filter · else plain sine
+// timbre by track: w bell (sine plus a 2.76 partial) · k soft mallet · v plucked saw through a closing filter ·
+// g struck metal (a short triangle, a 3.01 partial, a click: the bench) · else plain sine
 function voice(track, f, t, vol = 1) {
   if (track === 'w') { osc('sine', f, t, 1.5, 0.4 * vol, out); osc('sine', f * 2.76, t, 0.6, 0.11 * vol, out); osc('sine', f * 5.4, t, 0.18, 0.04 * vol, out); }
   else if (track === 'k') { osc('sine', f, t, 0.75, 0.5 * vol, out, 0.012); osc('triangle', f * 2, t, 0.16, 0.09 * vol, out, 0.006); }
@@ -347,14 +354,15 @@ function voice(track, f, t, vol = 1) {
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 5;
     lp.frequency.setValueAtTime(4200, t); lp.frequency.exponentialRampToValueAtTime(380, t + 0.5); lp.connect(out);
     osc('sawtooth', f, t, 0.6, 0.22 * vol, lp); osc('sawtooth', f * 1.005, t, 0.6, 0.14 * vol, lp);
-  } else osc('sine', f, t, 0.9, 0.4 * vol, out, 0.01);
+  } else if (track === 'g') { osc('triangle', f, t, 0.5, 0.42 * vol, out, 0.003); osc('sine', f * 3.01, t, 0.25, 0.11 * vol, out, 0.002); osc('square', f * 2, t, 0.012, 0.05 * vol, out, 0.001); }
+  else osc('sine', f, t, 0.9, 0.4 * vol, out, 0.01);
 }
 // Every one of these returns at once when sound is not really running: a note is never queued on a sleeping context
 // (they would all fire together when it woke).
 const safe = fn => (...a) => { if (!ok()) return; try { fn(...a); } catch (e) { /* a missing sound */ } };
 export const findNote = safe((i, track) => voice(track, hz(TUNE[i % TUNE.length]), ctx.currentTime + 0.01));
-export const trackNote = safe(n => voice('wkv'[n], hz([0, 4, 7][n]), ctx.currentTime + 0.01, 0.8));      // D, F sharp, A
-export const chord = safe(() => { const t = ctx.currentTime + 0.01; voice('w', hz(0), t, 0.6); voice('k', hz(4), t, 0.6); voice('v', hz(7), t, 0.6); voice('a', hz(12), t, 0.35); });
+export const trackNote = safe((n, track) => voice(track || 'wkv'[n], hz([0, 4, 7, 12][n]), ctx.currentTime + 0.01, 0.8));      // D, F sharp, A (and the D above, once there are four sections); each in its own track's voice
+export const chord = safe(four => { const t = ctx.currentTime + 0.01; voice('w', hz(0), t, 0.6); voice('k', hz(4), t, 0.6); voice('v', hz(7), t, 0.6); voice('a', hz(12), t, 0.35); if (four) voice('g', hz(9), t, 0.5); });      // four: with the bench's voice in it (stage 5)
 // a card's ding. n = 0 as it flips up; 1..9 as it docks in the tray, climbing the scale one step a card
 const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
 export const ding = safe((n = 0) => { const t = ctx.currentTime + 0.01, f = hz(24 + SCALE[Math.min(9, n)] - (n ? 12 : 0)); osc('sine', f, t, 0.5, 0.16, out); osc('sine', f * 2.76, t, 0.2, 0.05, out); });
@@ -426,10 +434,10 @@ export function debug() {
       for (let i = 1; i < fb.length; i++) { const f = i * hzPer, p = Math.pow(10, fb[i] / 10); o[f < 250 ? 0 : f < 1200 ? 1 : f < 4000 ? 2 : 3] += p; all += p; }
       return all > 1e-11 ? o.map(v => +(v / all).toFixed(3)) : [0, 0, 0, 0];
     },
-    // the power in each 100 Hz band up to 3 kHz, keyed by the band's lower edge
-    spec100() {
+    // the power in each 100 Hz band up to 3 kHz (or up to top), keyed by the band's lower edge
+    spec100(top = 3000) {
       const o = {}; if (!ana || !ctx || ctx.state !== 'running') return o;
-      const hzPer = spectrum(); for (let i = 1; i * hzPer < 3000; i++) { const k = Math.floor(i * hzPer / 100) * 100; o[k] = (o[k] || 0) + Math.pow(10, fb[i] / 10); }
+      const hzPer = spectrum(); for (let i = 1; i * hzPer < top; i++) { const k = Math.floor(i * hzPer / 100) * 100; o[k] = (o[k] || 0) + Math.pow(10, fb[i] / 10); }
       return o;
     },
     // the one line drawn at the bottom left of the screen

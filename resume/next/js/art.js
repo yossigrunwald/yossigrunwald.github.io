@@ -1,6 +1,6 @@
 // art.js — the slab routine that bakes every sprite (spec 8.1), ground tiles, prop recipes, van headings.
 // Everything is drawn once into offscreen sprites. Nothing in this file runs per frame except drawSpr/drawShadow.
-import { PAL, mulberry32, SEED } from './world.js';
+import { PAL, mulberry32, SEED, S5 } from './world.js';
 
 export const SS = 2;            // sprite pixels per world unit
 export const HK = 0.6;          // screen px per unit of height
@@ -149,29 +149,64 @@ export const wakes = { draw: 0, idle: 0, drops: 0 };      // for ?debug=1: how o
 export function clock(t) { NOW = t; }
 const isNear = sp => { const a = sp.at, n = NEAR2; return (a[2] > NEAR[0] && a[0] < NEAR[2] && a[3] > NEAR[1] && a[1] < NEAR[3]) || (!!n && a[2] > n[0] && a[0] < n[2] && a[3] > n[1] && a[1] < n[3]); };
 const at2 = sp => { const a = sp.at, n = NEAR2; return !!n && a[2] > n[0] && a[0] < n[2] && a[3] > n[1] && a[1] < n[3]; };
-function wake(sp) { const n = sp.make(); sp.c = n.c; sp.s = n.s; sp.t = NOW; }
-function drop(sp) { if (!sp.c) return; wakes.drops++; sp.c.width = sp.c.height = 0; sp.c = null; if (sp.s) { sp.s.width = sp.s.height = 0; sp.s = null; } }
+function wake(sp) { const n = sp.make(); sp.c = n.c; sp.s = n.s; sp.t = NOW; mem.held += sp.by; }
+function drop(sp) { if (!sp.c) return; wakes.drops++; mem.held -= sp.by; sp.c.width = sp.c.height = 0; sp.c = null; if (sp.s) { sp.s.width = sp.s.height = 0; sp.s = null; } }
 export function keep(make, x, y, x1 = x, y1 = y, first = null) {      // first: the sprite, if it has just been baked already
   const sp = first || make(), b = sp.bb; sp.make = make; sp.t = NOW; kept.push(sp);
   sp.at = x1 === x && y1 === y && b ? [x + b[0], y + b[1], x + b[2], y + b[3]] : [x, y, x1, y1];      // a point: the ground it covers from there
+  sp.by = (sp.c.width * sp.c.height + (sp.s ? sp.s.width * sp.s.height : 0)) * 4; mem.held += sp.by;      // what it holds while it is baked, in bytes
   sp.cw = sp.c.width; sp.ch = sp.c.height; sp.lo = mk(sp.cw / 4, sp.ch / 4); sp.lo.getContext('2d').drawImage(sp.c, 0, 0, sp.cw / 4, sp.ch / 4);
   return sp;
 }
 // called when a sprite has just been made and nothing more will read its canvas this turn: far ones are let go at once
 export function settle() { for (const sp of kept) if (!sp.seen) { sp.seen = true; if (!isNear(sp)) drop(sp); } }
 // no longer one of the kept (it has been replaced). free: nothing will ever draw it again, so its canvases go now
-export function retire(sp, free) { if (!sp || !sp.make) return; const i = kept.indexOf(sp); if (i >= 0) kept.splice(i, 1); if (free) drop(sp); else if (!sp.c) wake(sp); sp.make = null; }
+export function retire(sp, free) { if (!sp || !sp.make) return; const i = kept.indexOf(sp); if (i >= 0) kept.splice(i, 1); if (free) drop(sp); else { if (!sp.c) wake(sp); mem.held -= sp.by; } sp.make = null; }
 // its canvas, baked again if it was let go (for the few places that read a canvas directly)
 export function cv(sp) { if (sp.make) { if (!sp.c) wake(sp); sp.t = NOW; } return sp.c; }
-// r: the view grown by a margin · r2: a second place to keep ready (where the camera is about to go), or null
-export function sweep(r, jobs, r2 = null) {
+// The budget (set on a phone at stage 5; 0 = none, and then nothing here differs from the build before it). When what
+// the margin round the view would hold comes to more than the budget, the margin is drawn in, a step at a time, to the
+// first that fits (never under 84 units: a prop within 80 of the view is drawn, for its shadow), and what lies outside
+// it is let go after 0.3 s, not 3, and in the same sweep while the kept sprites hold more than the budget (what is
+// still held from where the van was a moment ago). It grows again only when the wider margin would hold a tenth less than the budget,
+// so a view on the line between two margins does not bake and drop the same sprites over and over.
+let BUDGET = 0; const MGS = [0, 180, 120, 84, 84], LEAD = [0, 100, 100, 100, 60];      // the margins, step by step, and how much wider each stays on the leading sides
+export const mem = { mg: 0, lv: 0, need: 0, held: 0 };             // the margin in use, what it would hold, and what the kept sprites hold right now (bytes)
+export function needAt(v, mg) { return need([v[0] - mg, v[1] - mg, v[2] + mg, v[3] + mg]); }      // for ?debug=1
+// for ?debug=1: of what the kept sprites hold right now, the bytes that are near, the bytes that are not, and of those the bytes the last frame drew
+export function heldBy() { let n = 0, f = 0, d = 0; for (const sp of kept) if (sp.c) { if (isNear(sp)) n += sp.by; else { f += sp.by; if (sp.t === NOW) d += sp.by; } } return [n, f, d]; }
+export function budget(mb) { BUDGET = mb * 1048576; mem.mg = 0; mem.lv = 0; }
+function need(r) { let b = 0; for (const sp of kept) { const a = sp.at; if (a[2] > r[0] && a[0] < r[2] && a[3] > r[1] && a[1] < r[3]) b += sp.by; } return b; }
+// A margin that is drawn in stays 100 units wider on the sides the van is driving toward (lx, ly: -1, 0 or 1), so what
+// is about to come into view is still baked ahead of the frame that draws it; where even that is over the budget
+// (the last step) the lead is 60 units.
+// r: the view grown by a margin (mg units; r is changed here when the margin is drawn in) · r2: a second place to keep
+// ready (where the camera is about to go), or null · v: the view itself
+export function sweep(r, jobs, r2 = null, mg = 0, v = null, lx = 0, ly = 0) {
+  let age = 3;
+  if (BUDGET && mg && v) {
+    let lv = 0, b = need(r);
+    while (lv < MGS.length - 1 && (b > BUDGET || (lv < mem.lv && b > BUDGET * 0.9))) {
+      lv++; const m = MGS[lv], a = Math.min(mg, m + LEAD[lv]);
+      r[0] = v[0] - (lx < 0 ? a : m); r[2] = v[2] + (lx > 0 ? a : m); r[1] = v[1] - (ly < 0 ? a : m); r[3] = v[3] + (ly > 0 ? a : m); b = need(r);
+    }
+    // (the last step shortens the lead; where even that does not fit, on the far desk, the full lead is kept: nothing is gained there by less of it but sprites baked inside a frame)
+    if (lv === MGS.length - 1 && b > BUDGET) { lv--; const m = MGS[lv], a = Math.min(mg, m + LEAD[lv]); r[0] = v[0] - (lx < 0 ? a : m); r[2] = v[2] + (lx > 0 ? a : m); r[1] = v[1] - (ly < 0 ? a : m); r[3] = v[3] + (ly > 0 ? a : m); b = need(r); }
+    // the margin is drawn in: what is not near goes after 0.3 s. Over the budget right now: it goes in this very sweep
+    // (never a sprite the frame just drawn has used: its time is this frame's, and the test below is a strict one)
+    if (lv > 0 || mem.held > BUDGET) age = mem.held > BUDGET ? 0 : 0.3;
+    mem.lv = lv; mem.mg = lv ? MGS[lv] : mg; mem.need = b;
+  }
   NEAR[0] = r[0]; NEAR[1] = r[1]; NEAR[2] = r[2]; NEAR[3] = r[3]; NEAR2 = r2;
   for (const sp of kept) {
     const near = isNear(sp);
-    if (sp.c) { if (!near && NOW - sp.t > 3) drop(sp); }
-    else if (near && !sp.due && (!LOW || at2(sp))) { sp.due = true; jobs.push(() => { sp.due = false; if (!sp.c && sp.make && (!LOW || at2(sp))) { wake(sp); wakes.idle++; } }); }      // (while the whole table is on screen, only what stands where the camera goes next)
+    if (sp.c) { if (!near && NOW - sp.t > age) drop(sp); }
+    else if (near && !sp.due && (!LOW || at2(sp))) { sp.due = true; jobs.push(() => { sp.due = false; if (!sp.c && sp.make && (!LOW || at2(sp)) && (!BUDGET || isNear(sp))) { wake(sp); wakes.idle++; } }); }      // (while the whole table is on screen, only what stands where the camera goes next; with a budget, only what is still near when its turn comes)
   }
 }
+// The loop is about to stop (a sheet opens over the game, the tab is hidden): nothing sweeps meanwhile, so what is kept
+// and not near goes now, not in up to three seconds' time. Only where there is a budget.
+export function trim() { if (!BUDGET) return; for (const sp of kept) if (sp.c && !isNear(sp)) drop(sp); }
 export function keptCanvases() { const out = []; for (const sp of kept) out.push(sp.c, sp.s, sp.lo); return out; }
 // a flat sprite from a draw function; origin at (cx, cy) in units. res: pixels a unit (light pools need only one)
 export function flat(w, h, cx, cy, draw, grainK = 1, res = SS) {
@@ -306,13 +341,28 @@ export function tiles() {
     g.fillStyle = PAL.ink; g.fillRect(0, 0, 36, 1.2); g.fillRect(0, 22.8, 36, 1.2);
     addGrain(c, 0.8); out.tape = c;
   }
+  if (S5) { // the steel bench (stage 5): brushed plates 128 units square. 256 px holds one plate. Its own seed: no other tile's numbers move
+    const c = mk(256, 256), g = c.getContext('2d'), q = mulberry32(SEED ^ 0xbe17);
+    g.fillStyle = PAL.bench; g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 42; k++) { const y = q() * 256, h = 0.8 + q() * 2.6, a = (q() - 0.5) * 0.09; g.fillStyle = a > 0 ? `rgba(255,255,255,${a})` : `rgba(20,17,15,${-a})`; g.fillRect(0, y, 256, h); }      // brushed: thin streaks along the plate
+    for (let k = 0; k < 9; k++) { const x = q() * 256, y = q() * 256, l = 14 + q() * 46; g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(x, y, l, 0.9); g.fillRect(x - 256, y, l, 0.9); }      // a few short bright scratches
+    g.fillStyle = 'rgba(20,17,15,.18)'; g.fillRect(0, 0, 256, 2); g.fillRect(0, 0, 2, 256);      // the joints, along the tile's own two edges
+    g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, 2, 256, 1); g.fillRect(2, 0, 1, 256);      // and the light line beside each
+    for (const [x, y] of [[11, 11], [245, 11], [11, 245], [245, 245]]) {                             // four rivets round each crossing
+      g.fillStyle = 'rgba(20,17,15,.3)'; g.beginPath(); g.arc(x + 0.7, y + 0.9, 3, 0, 6.2832); g.fill();
+      g.fillStyle = '#8B959A'; g.beginPath(); g.arc(x, y, 2.7, 0, 6.2832); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(x - 0.8, y - 0.8, 1, 0, 6.2832); g.fill();
+    }
+    addGrain(c, 0.8); out.belt = c;
+  }
   return out;
 }
 
 // ---------- the hub: a round of plywood with the name routed in and four tape arrows ----------
 // where the two routed lines sit on the hub, in world units (centre y on screen, width, height): the first-paint HTML name lands on them
 export const hubText = { name: null, roles: null };
-export function hubSprite(name, roles) {
+// five: with a fifth arrow, green, to the steel bench in the north-east (stage 5)
+export function hubSprite(name, roles, five) {
   const R = 160, r = mulberry32(SEED ^ 0x77);
   const det = g => {
     for (let k = 0; k < 8; k++) { g.fillStyle = `rgba(255,222,172,${0.05 + r() * 0.06})`; g.fillRect(-R + r() * 2 * R, -R, 22 + r() * 46, 2 * R); }
@@ -340,8 +390,8 @@ export function hubSprite(name, roles) {
     hubText.name = routed(name.toUpperCase(), -50, 254, 1);
     hubText.roles = routed(roles.toUpperCase(), 85.6, 244, 1, '#34180A');      // the headline: set tight, so it is as large as its chord of the disc allows, and cut a step darker than the name
     // four tape arrows at the rim: gold north, pink east, masking south, blue west
-    const arrow = (ang, col) => {
-      g.save(); g.rotate(ang); g.translate(0, -126);
+    const arrow = (ang, col, rad = 126) => {
+      g.save(); g.rotate(ang); g.translate(0, -rad);
       const strip = (x, y, w, h, a) => {
         g.save(); g.translate(x, y); g.rotate(a);
         g.fillStyle = 'rgba(20,17,15,.26)'; g.fillRect(-w / 2 + 1, -h / 2 + 1.2, w, h);
@@ -353,6 +403,9 @@ export function hubSprite(name, roles) {
       g.restore();
     };
     arrow(0, PAL.gold); arrow(Math.PI / 2, PAL.pink); arrow(Math.PI, PAL.masking); arrow(-Math.PI / 2, PAL.blue);
+    // the fifth: 38 degrees east of north, at where the green floor tape leaves the rim. Two units further out than the
+    // others, so its inner end clears the routed name (finds.drawDashes keeps its dashes off it)
+    if (five) arrow(0.663, PAL.green, 128);
   };
   // plywood edge: the plies show as stripes
   // (its shadow is one disc, drawn by main.js each frame: no canvas is held for it)

@@ -1,11 +1,11 @@
-/* game.css — tape labels, the pills, the strips of the moment, player, YouTube player, the reel, the plain resume, print. (First-paint HUD is inline in index.html.) */
+/* game.css — tape labels, the pills, the strips of the moment, player, YouTube player, the reel, the explainer of the bench (stage 5), the plain resume, print. (First-paint HUD is inline in index.html.) */
 
 /* ---------- tape (shared shape) ---------- */
 .zig{clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 12.5%,calc(100% - 5px) 25%,100% 37.5%,calc(100% - 5px) 50%,100% 62.5%,calc(100% - 5px) 75%,100% 87.5%,calc(100% - 5px) 100%,5px 100%,0 87.5%,5px 75%,0 62.5%,5px 50%,0 37.5%,5px 25%,0 12.5%)}
 
 /* ---------- tape labels: DOM on top of the canvas, at most six ---------- */
 #labels{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;transition:opacity .2s linear}
-#labels.dim{opacity:0}
+#labels.dim,#labels.hw{opacity:0}
 .tape{position:absolute;left:0;top:0;width:max-content;max-width:min(320px,calc(100vw - 20px));will-change:transform;transition:opacity .15s linear}
 .tape.thru{opacity:.25}
 .tape .tw{position:relative;transform:rotate(var(--r,0deg));transform-origin:50% 60%;filter:drop-shadow(2px 3px 0 rgba(20,17,15,.38));animation:slap .2s cubic-bezier(.3,.9,.4,1) both}
@@ -16,6 +16,7 @@
 .tape.nar .ti{padding-left:12px;padding-right:12px}
 /* the lines a tape gains later: once the first ad has been played, once the tray is full, when the van comes back */
 .tape .l.gn{display:none}
+.tape .nb{font-style:inherit;white-space:nowrap}
 .tape.played .gn[data-g=played],.tape.full .gn[data-g=full],.tape.again .gn[data-g=again]{display:block}
 .tape q{quotes:"\201C" "\201D"}
 .tape .d{position:absolute;right:-7px;bottom:-12px;background:#FBFCFD;color:var(--ink);font:700 11px/1 var(--road);letter-spacing:.02em;padding:5px 8px 3px;border-radius:9px;box-shadow:0 0 0 1.2px var(--ink);transform:rotate(-2.5deg);white-space:nowrap}
@@ -31,6 +32,10 @@
 #tm .lamps .lw.on{background:var(--gold)}
 #tm .lamps .lk.on{background:var(--blue)}
 #tm .lamps .lv.on::after{background:var(--pink)}
+/* the fourth lamp (stage 5, the bench): a diamond, in two layers like the triangle (clip-path, never transform: the lamp animation uses that) */
+#tm .lamps .lg{box-shadow:none;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);width:12px;height:12px;margin:-.5px 0;background:var(--ink);position:relative}
+#tm .lamps .lg::after{content:"";position:absolute;inset:2.3px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#454C50}
+#tm .lamps .lg.on::after{background:var(--green)}
 #tm .lamps i.on{animation:lamp .5s ease-out}
 @keyframes lamp{0%{transform:scale(2.1)}100%{transform:none}}
 #chip.gone{display:none}
@@ -223,6 +228,94 @@
 #reel.on #rx{transform:none}
 #rx svg{width:22px;height:22px;stroke:var(--ink);stroke-width:2.8;stroke-linecap:round;fill:none}
 @media (prefers-reduced-motion:reduce){#reel,#reel .rsh,#reel .rft,#rx{transition:none}}
+
+/* ---------- the explainer (stage 5): a machine's card with its animated picture. A sheet of the reel's family ---------- */
+#how{position:fixed;inset:0;z-index:16;background:rgba(20,17,15,0);transition:background .25s linear;touch-action:none;font-family:var(--road);color:var(--ink);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#how[hidden]{display:none}
+#how:not(.on){pointer-events:none}      /* while it fades out (0.28 s) a drag goes through to the game */
+#how.on{background:rgba(20,17,15,.6)}
+#how .hsh{position:absolute;left:0;right:0;top:calc(58px + env(safe-area-inset-top));bottom:0;margin:0 auto;max-width:560px;background:var(--desk);box-shadow:0 0 0 2px var(--ink);border-radius:16px 16px 0 0;padding:16px 14px calc(76px + env(safe-area-inset-bottom));display:flex;flex-direction:column;outline:0;transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#how.foot .hsh{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+#how.on .hsh{transform:none}
+#how .htop{flex:none;min-width:0}
+/* the heading: the find's HEAD on this table's tape, its sticker pinned at the tape's lower right */
+#how .hhd{position:relative;display:inline-block;max-width:calc(100% - 8px);margin:0 0 0 2px;transform:rotate(-1.4deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.3))}
+#howh{margin:0}
+#howh>span{display:block;background:var(--ink);padding:1.5px}
+#howh b{display:block;background:var(--greentape);padding:8px 17px 6px;font:900 clamp(19px,5.9vw,28px)/1 var(--stencil);letter-spacing:.04em;text-transform:uppercase;text-wrap:balance}
+#howd{position:absolute;right:-7px;bottom:-16px;background:#FBFCFD;color:var(--ink);font:700 11px/1 var(--road);letter-spacing:.02em;padding:5px 8px 3px;border-radius:9px;box-shadow:0 0 0 1.2px var(--ink);transform:rotate(-1.6deg);white-space:nowrap}
+#howd:empty{display:none}
+/* the picture: a button (a tap on its right goes on a step, on its left goes back one) */
+#howp{display:block;width:100%;aspect-ratio:8/5;margin:20px 0 0;padding:0;border:0;border-radius:9px;background:#1E2427;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.26);overflow:hidden;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#howc{display:block;width:100%;height:100%;border-radius:9px}
+#how.wait #howp{animation:hwait .7s ease-in-out infinite alternate}      /* the picture code is still on its way */
+@keyframes hwait{0%{background:#1E2427}100%{background:#323B40}}
+#how .hdots{display:flex;justify-content:center;gap:7px;height:8px;margin:11px 0 9px}
+#how .hdots i{position:relative;display:block;flex:none;width:8px;height:8px;box-shadow:inset 0 0 0 1.5px var(--ink);background:transparent;overflow:hidden}
+#how .hdots i.done{background:var(--ink)}
+#how .hdots i.cur{width:22px}
+#how .hdots i.cur::after{content:"";position:absolute;inset:0;background:var(--ink);transform-origin:0 50%;animation:hfill 2.4s linear var(--hd,0s) both}
+#how.still .hdots i.cur::after{animation:none}
+@keyframes hfill{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+/* the caption: its own strip of the tape, slapped on afresh at each step. The slot is two lines high, so nothing under it moves */
+#howcap{margin:0;height:54px;display:flex;align-items:center;justify-content:center}
+#howcap>span{display:block;max-width:100%;background:var(--ink);padding:1.5px;transform:rotate(1deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.3))}
+#howcap.sl>span{animation:hslap .2s cubic-bezier(.3,.9,.4,1) both}
+#howcap b{display:block;max-width:100%;background:var(--greentape);padding:5px 16px 4px;font:700 17px/1.2 var(--hand);text-align:center;text-wrap:balance}
+@keyframes hslap{0%{transform:rotate(-9deg) scale(1.4);opacity:0}55%{transform:rotate(3deg) scale(.97);opacity:1}100%{transform:rotate(1deg) scale(1);opacity:1}}
+/* the card's paragraph, in its own scrolling box: the picture stays in view while it is read */
+#how .hbody{flex:1 1 auto;min-height:0;margin:14px -4px 0;padding:0 4px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+#howcard{margin:0;padding:2px 0 8px;font:400 15px/1.45 var(--road)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+/* the picture code did not arrive (offline, a stale cache): the captions are shown as a numbered list in its place */
+#how.nopic #howp,#how.nopic .hdots,#how.nopic #howcap{display:none}
+#how.nopic #howl{position:static;width:auto;height:auto;margin:18px 0 12px;padding:0 0 0 24px;overflow:visible;clip:auto;clip-path:none;white-space:normal;font:700 16px/1.3 var(--hand)}
+#how.nopic #howl li{margin:0 0 5px;padding-left:2px}
+#how .hft{position:absolute;z-index:2;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;height:calc(76px + env(safe-area-inset-bottom));background:var(--desk);box-shadow:0 -2px 0 var(--ink),0 -6px 0 rgba(20,17,15,.1);transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#how.foot .hft{height:calc(104px + env(safe-area-inset-bottom))}
+#how.on .hft{transform:none}
+#howfoot{position:absolute;z-index:3;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom));margin:0 auto;max-width:560px;padding:0 8px;text-align:center;font:700 clamp(11px,3.45vw,12.5px)/1.1 var(--road);color:#4B555C;white-space:nowrap;transform:translateY(160px);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#howfoot[hidden]{display:none}
+#how.on #howfoot{transform:none}
+#hx{position:absolute;z-index:3;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));width:56px;height:56px;margin:0 0 0 -28px;padding:0;border:0;border-radius:50%;background:var(--bone);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 2px var(--ink),3px 4px 0 2px rgba(20,17,15,.4);-webkit-tap-highlight-color:transparent;touch-action:manipulation;transform:translateY(120px);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#how.on #hx{transform:none}
+#hx svg{width:22px;height:22px;stroke:var(--ink);stroke-width:2.8;stroke-linecap:round;fill:none}
+#hx:active{transform:translateY(1.5px)}
+@media (max-width:339px){#howcap b{font-size:15.5px}#howcard{font-size:14.5px}}
+/* a short portrait screen: the paragraph's own box would be under four lines, so the whole sheet scrolls */
+@media (max-height:619px) and (orientation:portrait){#how .hsh{display:block;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}#how .hbody{overflow:visible}}
+/* A wide screen that is not tall (a laptop, a tablet on its side: 501 to 859 px high). One column would leave the
+   paragraph a few lines or none, so: two columns, the picture with its marks and caption on the left, the heading and
+   the paragraph on the right, and the sheet only as tall as they are (the left column always fits; a paragraph too
+   long for what is left scrolls in its own box). */
+@media (orientation:landscape) and (min-height:501px) and (max-height:859px){
+  #how .hsh{top:auto;max-width:960px;max-height:calc(100% - 58px - env(safe-area-inset-top));display:grid;grid-template-columns:min(54%,calc((100vh - 272px)*1.6)) minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr);column-gap:22px;align-content:start}
+  #how .htop{display:contents}
+  #how .hhd{grid-column:2;grid-row:1;justify-self:start;margin-top:2px}
+  #howp{grid-column:1;grid-row:1/span 2;margin:0;align-self:start}
+  #how .hdots{grid-column:1;grid-row:3}
+  #howcap{grid-column:1;grid-row:4;margin-bottom:8px}
+  #how .hbody{grid-column:2;grid-row:2/span 4;margin-top:26px}
+  #how .hft,#howfoot{max-width:960px}
+}
+/* a tall wide screen: the paragraph a size larger */
+@media (min-width:700px) and (min-height:860px){#howcard{font-size:16px;max-width:34em}}
+/* a phone on its side: two columns. Left the picture (as tall as there is room), its marks and its caption; right the heading and the paragraph */
+@media (orientation:landscape) and (max-height:500px){
+  #how .hsh{top:calc(8px + env(safe-area-inset-top));max-width:860px;padding-top:12px;padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right));display:grid;grid-template-columns:calc((100vh - 184px)*1.6) minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr);column-gap:18px;align-content:start}
+  #how.foot .hsh{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  #how .htop{display:contents}
+  #how .hhd{grid-column:2;grid-row:1;justify-self:start;margin-top:2px}
+  #howh b{font-size:22px}
+  #howp{grid-column:1;grid-row:1/span 2;margin:0;align-self:start}
+  #how .hdots{grid-column:1;grid-row:3}
+  #howcap{grid-column:1;grid-row:4;height:auto;min-height:44px;align-items:flex-start}
+  #howcap b{font-size:15.5px}
+  #how .hbody{grid-column:2;grid-row:2/span 3;margin-top:18px}
+  #how .hft,#how.foot .hft{max-width:860px;height:calc(76px + env(safe-area-inset-bottom))}
+  #howfoot{left:0;right:calc(50% + 40px);bottom:calc(30px + env(safe-area-inset-bottom));max-width:none;margin:0;padding:0 6px 0 calc(14px + env(safe-area-inset-left));text-align:right;white-space:normal;line-height:1.2}
+}
+@media (prefers-reduced-motion:reduce){#how,#how .hsh,#how .hft,#hx,#howfoot{transition:none}#howcap.sl>span,#how .hdots i.cur::after,#how.wait #howp{animation:none}}
 
 /* ---------- the plain resume: one column, road-sign body, stencil headings ---------- */
 #plain{max-width:680px;margin:0 auto;padding:20px 20px 72px}

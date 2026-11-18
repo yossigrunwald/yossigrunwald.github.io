@@ -24,7 +24,7 @@ export const tray = { launched: 0, docked: 0, gold: 0, nudge: 0, slots: [], gust
 // t: seconds into the moment · next: when the last waiting card was told to dock
 export const show = { on: false, t: 0, next: 0 };
 const flying = [];
-let wake = null, busy = () => false, pencil = null, cube = null, boxes = null;
+let wake = null, busy = () => false, pencil = null, cube = null, boxes = null, arrowP = null, arrowTxt = '';
 
 // ---------- up front: where each find's label and tab go ----------
 // busyFn(): the other moment (the strips) is on or about to begin
@@ -350,7 +350,32 @@ function buildQuality() {
   });
   // the tape arrow, pointing at the next table over: laid down only once that table is built (its stage)
   const ar = f.q('[data-arrow]');
-  if (ar && on(ar)) { const txt = ar.textContent.trim(); spr.arrow = art.keep(() => da.tapeArrow(txt), x - 96, y + 36); prop({ x: x - 96, y: y + 36, flat: true, sp: spr.arrow }); }
+  if (ar && on(ar)) {
+    // (its head where it was, at the desk's east edge; the strip is on two lines and ends east of x 300)
+    // It is no part of the opening frame (on a short phone screen, and on a tablet, that frame's east edge cuts it, or
+    // the top bar's tab lies on it): while that frame is up it is not drawn. The first touch takes the camera to the
+    // van; if the arrow is out of view by then it is simply there when the van next comes by, and if it has been in view
+    // ever since it is laid down 1.2 s after that touch, over 0.3 s. Reduced motion has no opening frame: it is there.
+    arrowTxt = ar.textContent.trim(); spr.arrow = art.keep(() => da.tapeArrow(arrowTxt), x - 49, y + 36);
+    const lay = { on: false, held: -9, from: -9, at: -9 };
+    arrowP = prop({
+      x: x - 49, y: y + 36, flat: true, sp: spr.arrow,
+      draw(ctx, p) {
+        const t = S.rt;
+        if (!lay.on) {
+          if (!S.reduced) {
+            if (!S.firstInput) { lay.held = lay.from = t; return; }
+            if (t - lay.held < 0.25) { if (t - lay.from < 1.2) { lay.held = t; return; } lay.at = t; }
+          }
+          lay.on = true;
+        }
+        const u = (t - lay.at) / 0.3, a = ctx.globalAlpha;
+        if (u < 1) ctx.globalAlpha = a * u;
+        art.drawShadow(ctx, p.sp, p.x, p.y); art.drawSpr(ctx, p.sp, p.x, p.y);
+        if (u < 1) ctx.globalAlpha = a;
+      }
+    });
+  }
   f.prop = prop({
     // (closed to the desk's east edge: no gap beside it to be caught in)
     x, y, sp: spr.pad, sortY: y + 1, find: f, coll: cbox(x - 30, y - 40, G.desk[2] + 1, y + 2), bb: [-96, -80, 36, 14],
@@ -452,6 +477,7 @@ export function rebakeLettering() {
   if (spr.lineBack) { art.retire(spr.lineBack); art.retire(spr.lineFront); const up = f.found; spr.lineBack = art.keep(() => da.lineSheet(lineText(f), up), f.x, f.y); if (up) spr.lineFront = spr.lineBack; if (f.prop) f.prop.sp = spr.lineBack; }
   if (spr.planNums) bakeFirst();
   if (spr.tally) spr.tally = da.tallyDigits();
+  if (spr.arrow && arrowP) { art.retire(spr.arrow, true); spr.arrow = art.keep(() => da.tapeArrow(arrowTxt), arrowP.x, arrowP.y); arrowP.sp = spr.arrow; }
   const lv = S.byId.live; if (spr.live && lv && lv.prop) { const tag = lv.q('[data-tag]').textContent.trim(); spr.live.forEach(q => art.retire(q, true)); spr.live = [0, 1, 2].map(n => art.keep(() => da.liveScreens(n, tag), lv.x, lv.y)); lv.prop.sp = spr.live[0]; }
 }
 

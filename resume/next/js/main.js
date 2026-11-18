@@ -1,11 +1,12 @@
 // main.js — boot, the loop, the camera, the frame (layers of spec 9.5), quality tiers, debug flags.
-import { S, G, BOX, HUB_R, PAL, TRACK, GHOST, CUTS, WOODS, surfaceAt, gridCells, shown } from './world.js';
+import { S, G, BOX, HUB_R, PAL, TRACK, GHOST, CUTS, WOODS, S5, surfaceAt, gridCells, shown } from './world.js';
 import * as art from './art.js';
 import { van, input, auto, step, bindInput, goTo, onBump, onEdge, readStick } from './van.js';
 import * as sf from './surfaces.js';
 import * as F from './finds.js';
 import * as desk from './desk.js';
 import * as mat from './mat.js';
+import * as belt from './belt.js';
 import { pgrid, fgrid, MARGIN } from './kit.js';
 import * as ui from './ui.js';
 import * as audio from './audio.js';
@@ -18,11 +19,13 @@ const TIERS = [2, 1.5, 1.25, 1];
 let tier = qs.has('tier') ? Math.max(0, Math.min(3, +qs.get('tier') | 0)) : 0;
 const tierPinned = qs.has('tier');
 
-let ctx = null, pat = {}, tileC = {}, booted = false, running = false, raf = 0, lastT = 0, acc = 0;
+let ctx = null, pat = {}, tileC = {}, booted = false, running = false, raf = 0, lastT = 0, acc = 0, drawn = false;      // drawn: a first frame has been drawn (everything a frame needs is there)
+const KEPT_MB = 6;                           // a phone's budget for the sprites kept ready round the view, in MB (art.sweep)
 const view = { w: 390, h: 844, dpr: 2, k: 1, s: 1, tx: 0, ty: 0 };
 const cam = { x: 0, y: OPEN_Y, vx: 0, vy: 0, zoom: OPEN_ZOOM, zv: 0, anchor: 0.5 };
 const jobs = [];
 let frameK = 0, vanA = 1;
+let endedAt = 0;                             // when a touch last ended the moment (that touch is not a tap, nor a press of the pill)
 let tapScreen = null, sweepT = 0, cineWas = false, slowWin = 0, bootMs = null, fpsAvg = 60, ftAvg = 16, ftN = 0, ftSum = 0, govT = 0, tapRing = null, firstAt = 0, lastTapAt = 0, stampAt = 0, hazeTick = 0;
 
 // The opening frame (spec 2). Portrait, 844 px tall: zoom 0.66 centred on y -140, which shows y -779..499: table from
@@ -45,6 +48,8 @@ for (const [k, t] of [['desk', 'desk'], ['block', 'block'], ['strip', 'ply'], ['
   if (r[2] > g[2]) GPARTS.push([t, g[2], g[1], r[2], g[3]]);
 }
 const cellBuf = [], visF = [];      // reused every frame: the grid cells in view, and the flat things in view
+const TABLES = S5 ? ['desk', 'block', 'strip', 'mat', 'belt'] : ['desk', 'block', 'strip', 'mat'];      // the tables that throw a shadow on the floor
+const sm = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
 const litNow = [], wb = [0, 0, 0, 0], wg = [0, 0, 0, 0, 0, 0];      // the lit circles in view, the wedge's bounding box and its three corners
 
 // ---------- boot ----------
@@ -78,7 +83,7 @@ async function boot() {
   jobs.push(...F.bakeJobs());
   // "show me where" may be tapped before the idle bake has reached the thing (always so on #reel, where the loop has
   // not run yet): every job still waiting is run first, so the thing stands, with its collider, before the route is made
-  ui.initUI({ pause: stop, resume: start, live: () => running, sound: () => audio.tabTap(), engine: engineTap, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
+  ui.initUI({ pause: stop, resume: start, live: () => running, held: () => F.holdOn(), ended: () => performance.now() - endedAt < 500, sound: () => audio.tabTap(), engine: engineTap, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
   ui.setViewport(view.w, view.h);
   onBump(F.bump); onEdge(() => audio.thud());
   const hnd = { first, tap, toWorld, w: () => view.w, live: () => running };
@@ -91,7 +96,7 @@ async function boot() {
     if (performance.now() - lastTapAt > 500 || !tapScreen) return;
     const f = tapScreen; tapScreen = null;
     if (!f.found) return;
-    ui.openPlayer(f);
+    if (f.how) ui.openHow(f); else ui.openPlayer(f);      // (a machine on the bench: its explainer)
     if (e.type === 'touchend' && e.cancelable) e.preventDefault();    // no second, synthetic click landing on the player
   };
   cv.addEventListener('touchend', playTapped, { passive: false });
@@ -144,26 +149,32 @@ function resize() {
   cv.width = Math.round(w * view.dpr); cv.height = Math.round(h * view.dpr);
   if (!ctx) ctx = cv.getContext('2d', { alpha: false });
   ui.setViewport(w, h);
+  // a phone, with the bench built: the sprites kept ready round the view have a budget (art.sweep), so the page's canvases stay under 24 MB while it is driven
+  // (a phone: its short side is under 520 px. A laptop's window 650 px tall is not one, and keeps the full margin)
+  art.budget(S5 && Math.min(w, h) < 520 ? KEPT_MB : 0);
+  // The loop is stopped while a sheet is open over the game, and setting the canvas's size has just cleared it: one
+  // frame is drawn, so the game behind the sheet is not left black after a turn of the phone or a resize.
+  if (drawn && !running && html.classList.contains('g')) { try { render(1); } catch (e) { /* the next frame of the loop draws it */ } }
 }
 
 function start() {
   if (running || !booted || document.hidden || ui.busy() || !html.classList.contains('g')) return;
   running = true; lastT = performance.now(); F.resumeLoops(); raf = requestAnimationFrame(frame);
 }
-function stop() { if (!running) return; running = false; cancelAnimationFrame(raf); F.pauseLoops(); input.keys.clear(); input.mag = 0; audio.rest(); }
+function stop() { if (!running) return; running = false; cancelAnimationFrame(raf); F.pauseLoops(); input.keys.clear(); input.mag = 0; audio.rest(); art.trim(); }
 
 // ---------- input glue ----------
 // 0 an ordinary touch · 1 swallowed (the moment has only just begun) · 2 it ended the moment
 // fresh: a new touch-down or key press (not the repeat of a key that is held)
 function first(fresh) {
-  const r = F.threeTouch(fresh !== false);
+  const r = F.threeTouch(fresh !== false); if (r === 2) endedAt = performance.now();
   if (!S.firstInput) { S.firstInput = true; firstAt = S.rt; van.lights = true; F.tourStop(); }
   return r;
 }
 function toWorld(cx, cy) { const k = view.s / view.dpr; return [(cx - view.tx / view.dpr) / k, (cy - view.ty / view.dpr) / k]; }
 function toScreen(wx, wy) { return [(wx * view.s + view.tx) / view.dpr, (wy * view.s + view.ty) / view.dpr]; }
 function tap(wx, wy) {
-  if (F.holdOn()) return;
+  if (F.holdOn() || ui.justShut()) return;      // (justShut: the second tap of a double tap that closed a sheet)
   lastTapAt = performance.now();
   // A tap on a found screen plays it only while its Play pill is up, which is while the van is at it. From further off
   // the same tap drives the van there and raises the pill: nothing with sound starts from across the table.
@@ -212,7 +223,7 @@ function frame(now) {
   try { soundTick(rdt); } catch (e) { /* sound never stops the loop */ }
   updateCamera(rdt);
   art.lowRes((F.three.on && F.three.lift) || cam.zoom < 0.8);      // the camera is up (or still coming down): no sprite is baked again for the overview
-  render(acc / STEP);
+  render(acc / STEP); drawn = true;
   ui.updateLabels(toScreen, van, ui.pillUp());
 
   // idle baking: 4 ms slices
@@ -225,7 +236,8 @@ function frame(now) {
   if ((sweepT -= rdt) <= 0) {
     sweepT = 0.3; const v = S.vr, mg = 260, c = F.cine;
     // (the second place is what the close view of the tray will show, and no more: while the whole desk is on screen it is the only thing made ready)
-    art.sweep([v[0] - mg, v[1] - mg, v[2] + mg, v[3] + mg], jobs, c.on ? [c.x - 270, c.y - 430, c.x + 270, c.y + 430] : null);
+    art.sweep([v[0] - mg, v[1] - mg, v[2] + mg, v[3] + mg], jobs, c.on ? [c.x - 270, c.y - 430, c.x + 270, c.y + 430] : null, mg, v, Math.abs(van.vx) > 50 ? Math.sign(van.vx) : 0, Math.abs(van.vy) > 50 ? Math.sign(van.vy) : 0);
+    if (art.mem.mg && art.mem.mg < mg) sweepT = 0.15;      // (a margin drawn in to keep the budget: it is looked at twice as often, so what comes into view is still baked ahead)
   }
   govern(raw, rdt);
 }
@@ -285,12 +297,26 @@ function updateCamera(dt) {
     const vw = view.w / (view.k * cam.zoom), vh = view.h / (view.k * cam.zoom), D = G.desk;
     const onDesk = van.y < D[3], inCol = van.x > D[0] && van.x < D[2], south = van.y > G.strip[3], east = van.x > G.mat[0];
     // (the mat is an L: south of the strip its west edge is the edge that counts, and only the mat reaches the far south)
-    const x0 = onDesk ? D[0] : south ? G.mat[0] : BOX[0], x1 = onDesk ? D[2] : BOX[2], y0 = inCol ? BOX[1] : D[3], y1 = east ? BOX[3] : G.strip[3];
+    // The bench (stage 5). East of the desk the tables reach north only as far as the bench does (eased in over 120 units
+    // east of the seam, so the clamp is the desk column's own at the seam itself), and coming up the mat toward the
+    // bench the mat's north edge stops counting (eased in from y 40, so the skit phones are framed as they always were).
+    // Without the bench (Bt undefined) every line here gives what it always gave.
+    const Bt = G.belt, t0 = tx;
+    const kE = Bt ? sm((van.x - D[2]) / 120) : 0, kM = Bt ? sm((D[3] + 150 - van.y) / 150) : 0;
+    const x0 = onDesk ? D[0] : south ? G.mat[0] : BOX[0], x1 = onDesk ? D[2] : BOX[2];
+    const y0 = inCol ? BOX[1] : Bt && van.x >= D[2] ? D[3] + (BOX[1] + (Bt[1] - BOX[1]) * kE - D[3]) * kM : D[3], y1 = east ? BOX[3] : G.strip[3];
     // (In front of the app phone the view is let 30% past the desk's north edge, not 16%: the phone stands 170 units
     // above that edge and must clear the top bar. The extra eases off to nothing 330 units either side of it.)
     const nf = inCol ? 0.16 + 0.14 * Math.max(0, Math.min(1, (330 - Math.abs(van.x)) / 150)) : 0.16;
     const lx = x0 - vw * 0.14 + vw / 2, hx = x1 + vw * 0.14 - vw / 2, ly = y0 - vh * nf + vh * ta, hy = y1 + vh * 0.13 - vh * (1 - ta);
     if (lx < hx) tx = tx < lx ? lx : tx > hx ? hx : tx;
+    // On the bench, and on the desk beside it, the row of tables is the desk and the bench together. The target is a
+    // blend of the desk's own clamped target and that row's: kb is 0 on the desk until 150 units from its east edge
+    // (and anywhere north of the bench), 1 on the bench from 80 units in. (A blend of two clamped targets: no jump.)
+    if (Bt && onDesk) {
+      const kb = Math.max(sm((van.x - (D[2] - 150)) / 150) * sm((van.y - (Bt[1] + 20)) / 120), sm((van.x - D[2]) / 80));
+      if (kb > 0) { const hb = BOX[2] + vw * 0.14 - vw / 2, tb = lx < hb ? (t0 < lx ? lx : t0 > hb ? hb : t0) : t0; tx += (tb - tx) * kb; }
+    }
     if (ly < hy) ty = ty < ly ? ly : ty > hy ? hy : ty;
     // (the one tape that hangs on the boxes at the desk's north-west corner: while it is up the view stops a little
     // short of the west edge, so the boxes it hangs on are on screen and it does not have to lie on its own thing)
@@ -324,7 +350,7 @@ function render(al) {
   const tx = view.tx = W / 2 - cam.x * s, ty = view.ty = H * cam.anchor - cam.y * s;
   const x0 = -tx / s, y0 = -ty / s, x1 = x0 + W / s, y1 = y0 + H / s;
   S.vr[0] = x0; S.vr[1] = y0; S.vr[2] = x1; S.vr[3] = y1;
-  const D = G.desk, B = G.block, M = G.mat, T = G.strip, Wd = WOODS, spr = F.spr;
+  const D = G.desk, B = G.block, M = G.mat, T = G.strip, Bt = G.belt, Wd = WOODS, spr = F.spr;      // (Bt: the steel bench, stage 5; undefined before it)
   // before the first touch the van creeps forward and back once, in step with the ghost thumb under it
   const gu = !S.firstInput && !S.reduced && S.rt - hintAt > 0.75 && S.rt - hintAt < 1.5 ? (S.rt - hintAt - 0.75) / 0.75 : -1, creep = gu >= 0 ? Math.sin(gu * Math.PI) * 18 : 0;
   const vx = van.px + (van.x - van.px) * al + Math.cos(van.a) * creep, vy = van.py + (van.y - van.py) * al + Math.sin(van.a) * creep;
@@ -359,7 +385,7 @@ function render(al) {
   ctx.setTransform(s, 0, 0, s, tx, ty); ctx.globalAlpha = 1;
   ctx.fillStyle = pat.floor; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   ctx.fillStyle = 'rgba(20,17,15,.45)';
-  for (const k of ['desk', 'block', 'strip', 'mat']) { const r = G[k]; ctx.fillRect(r[0] + 26, r[1] + 18, r[2] - r[0], r[3] - r[1]); }
+  for (const k of TABLES) { const r = G[k]; ctx.fillRect(r[0] + 26, r[1] + 18, r[2] - r[0], r[3] - r[1]); }
 
   // 2. tables. Past a cut edge of the slice the same table carries on with the lights off: its own tile, opaque, the
   // and over that one veil of the floor colour. Drawn only where the view reaches it. (The desk is whole: it has no such part.)
@@ -371,11 +397,12 @@ function render(al) {
   }
   if (gn) { ctx.fillStyle = 'rgba(35,40,43,.78)'; for (const q of GPARTS) if (q.on) ctx.fillRect(q[1], q[2], q[3] - q[1], q[4] - q[2]); }
   ctx.fillStyle = pat.desk; fill(D); desk.drawPlan(ctx); ctx.fillStyle = pat.block; fill(B); ctx.fillStyle = pat.ply; fill(T);
+  if (Bt && Bt[0] < x1 && Bt[1] < y1 && Bt[3] > y0) { ctx.fillStyle = pat.belt; fill(Bt); belt.drawBench(ctx); }      // the steel bench: its tile, its two free edges, its painted lines
   if (x0 < D[0] + 8 || x1 > D[2] - 8 || y0 < D[1] + 8) {              // the desk's own edges, west, north and east: a banded edge, lit on its inner lip
-    const dw = D[2] - D[0], dh = D[3] - D[1];
-    ctx.fillStyle = '#B3C0CC'; ctx.fillRect(D[0], D[1], dw, 3.4); ctx.fillRect(D[0], D[1], 3.4, dh); ctx.fillRect(D[2] - 3.4, D[1], 3.4, dh);
-    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(D[0] + 3.4, D[1] + 3.4, dw - 6.8, 1.2); ctx.fillRect(D[0] + 3.4, D[1] + 3.4, 1.2, dh - 3.4); ctx.fillRect(D[2] - 4.6, D[1] + 3.4, 1.2, dh - 3.4);
-    ctx.fillStyle = 'rgba(20,17,15,.3)'; ctx.fillRect(D[0], D[1], dw, 0.9); ctx.fillRect(D[0], D[1], 0.9, dh); ctx.fillRect(D[2] - 0.9, D[1], 0.9, dh);
+    const dw = D[2] - D[0], dh = D[3] - D[1], eh = Bt ? Bt[1] - D[1] : dh;      // (eh: beside the bench the desk's east edge is a seam, as where it meets the mat)
+    ctx.fillStyle = '#B3C0CC'; ctx.fillRect(D[0], D[1], dw, 3.4); ctx.fillRect(D[0], D[1], 3.4, dh); ctx.fillRect(D[2] - 3.4, D[1], 3.4, eh);
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(D[0] + 3.4, D[1] + 3.4, dw - 6.8, 1.2); ctx.fillRect(D[0] + 3.4, D[1] + 3.4, 1.2, dh - 3.4); ctx.fillRect(D[2] - 4.6, D[1] + 3.4, 1.2, eh - 3.4);
+    ctx.fillStyle = 'rgba(20,17,15,.3)'; ctx.fillRect(D[0], D[1], dw, 0.9); ctx.fillRect(D[0], D[1], 0.9, dh); ctx.fillRect(D[2] - 0.9, D[1], 0.9, eh);
   }
   if (matOn) {
     const woodsOn = Wd[0] < x1 && Wd[1] < y1;
@@ -405,6 +432,7 @@ function render(al) {
   }
   ctx.fillStyle = 'rgba(20,17,15,.5)';                               // seams where the tables meet
   ctx.fillRect(B[0], D[3] - 1, M[2] - B[0], 2); ctx.fillRect(T[0] - 1, T[1], 2, T[3] - T[1]); ctx.fillRect(T[2] - 1, T[1], 2, T[3] - T[1]);
+  if (Bt) ctx.fillRect(D[2] - 1, Bt[1], 2, D[3] - Bt[1]);          // the desk and the bench
 
   // 3. trail canvas · 5. flour canvas · light lying on the ground · the tape on the cut edges · then the hub, which is never floury
   sf.drawTrails(ctx, x0, y0, x1, y1);
@@ -441,7 +469,7 @@ function render(al) {
   sf.drawPaper(ctx, spr.sheets, view, x0, y0, x1, y1);
 
   // 6b. hard shadows and the warm wedge, only on the lit tables (none on the mat, none on the floor)
-  ctx.save(); ctx.beginPath(); rect(D); rect(B); rect(T); ctx.moveTo(HUB_R, 0); ctx.arc(0, 0, HUB_R, 0, 6.2832); ctx.clip();
+  ctx.save(); ctx.beginPath(); rect(D); rect(B); rect(T); if (Bt) rect(Bt); ctx.moveTo(HUB_R, 0); ctx.arc(0, 0, HUB_R, 0, 6.2832); ctx.clip();      // (the bench is a lit table too)
   const list = [];
   for (const a of gridCells(pgrid, x0 - MARGIN, y0 - MARGIN, x1 + MARGIN, y1 + MARGIN, cellBuf)) for (const p of a) {
     const b = p.bb || p.sp.bb; if (p.x + b[2] + 80 < x0 || p.x + b[0] > x1 || p.y + b[3] + 60 < y0 || p.y + b[1] > y1) continue;
@@ -601,7 +629,7 @@ function tickTab(dt) {
     tab.look = 0.2;
     const vis = (x, y) => { const p = toScreen(x, y); return p[0] > 10 && p[0] < view.w - 10 && p[1] > 100 && p[1] < view.h - 20; };
     const q = F.seek(vis); tab.seen = q.seen; tab.tgt = null;
-    if (S.rt - firstAt > 40) { const tr = !S.tracks.w ? 'w' : !S.tracks.k ? 'k' : !S.tracks.v ? 'v' : null; if (tr) { const m = S.byId[tr === 'w' ? 'ad1' : tr === 'k' ? 'bread' : 'skit1']; if (!vis(m.x, m.y - 30)) tab.tgt = { x: m.x, y: m.y - 30, tr }; else tab.seen = true; } }
+    if (S.rt - firstAt > 40) { const tr = !S.tracks.w ? 'w' : !S.tracks.k ? 'k' : !S.tracks.v ? 'v' : S5 && !S.tracks.g ? 'g' : null; if (tr) { const m = S.byId[tr === 'w' ? 'ad1' : tr === 'k' ? 'bread' : tr === 'v' ? 'skit1' : 'team']; if (!vis(m.x, m.y - 30)) tab.tgt = { x: m.x, y: m.y - 30, tr }; else tab.seen = true; } }
     if (!tab.tgt && q.best && tab.idle >= 6) tab.tgt = q.best;
   }
   tab.idle = tab.seen || !S.firstInput ? 0 : tab.idle + dt;
@@ -676,7 +704,8 @@ function govern(raw, rdt) {
 // ---------- ?debug=1 ----------
 function debugHooks(fontsOk) {
   window.__g = {
-    van, found: S.found, S, cam, auto, input, view, three: F.three, cine: F.cine, wakes: art.wakes, loops: F.loops, spr: F.spr, flats: F.flats, fontsOk, audio: audio.debug(), tray: desk.tray, show: desk.show, tab, framing: F.framing, chase: mat.chase, paper: sf.paper,
+    van, found: S.found, S, cam, auto, input, view, three: F.three, cine: F.cine, wakes: art.wakes, loops: F.loops, spr: F.spr, flats: F.flats, fontsOk, audio: audio.debug(), tray: desk.tray, show: desk.show, tab, framing: F.framing, chase: mat.chase, paper: sf.paper, belt: belt.state, mem: art.mem, budget: art.budget, needAt: mg => art.needAt(S.vr, mg), heldBy: art.heldBy,
+    how: { open: id => ui.openHow(S.byId[id]), close: () => ui.closeHow(), freeze: (i, u) => ui.howFreeze(i, u), state: () => ui.howState() },      // the explainer: open one, hold a step at a moment of its 2.4 s, what its engine is doing
     get fps() { return Math.round(fpsAvg); },
     // canvas memory held, in MB: every sprite and its shadow, the ground tiles, the trail, the flour, the loops' copies, the van's frames
     get canvasMB() { return this.canvasMem.total; },
@@ -697,14 +726,14 @@ function debugHooks(fontsOk) {
       part('cards', () => { for (const c of S.cards) walk(c, 0); });
       part('piles', () => { for (const p of S.piles) walk(p, 0); });
       part('loops', () => { for (const k in F.loops) walk(F.loops[k], 0); });
-      part('extra', () => walk(F.extraCanvases(), 0));
+      part('extra', () => walk(F.extraCanvases(), 0)); part('how', () => walk(ui.howCanvases(), 0));
       part('trail', () => walk(sf.trailCanvases(), 0)); part('flour', () => walk(sf.flour, 0));
       cur = 0; for (const k in tileC) walk(tileC[k], 0); out.tiles = +(cur * 4 / 1048576).toFixed(2);
       out.total = +Object.values(out).reduce((a, b) => a + b, 0).toFixed(1);
       return out;
     }, get bootMs() { return bootMs; }, get tier() { return tier; }, get running() { return running; },
     tp(x, y) { van.x = van.px = x; van.y = van.py = y; van.vx = van.vy = 0; cam.x = x; cam.y = y; cam.vx = cam.vy = 0; if (!S.firstInput) first(); },
-    find(id) { F.wake(S.byId[id]); return S.found.slice(); },
+    find(id) { F.wake(S.byId[id]); return S.found.slice(); }, where(id) { F.showWhere(id); },      // (where: the autopilot drives to a find and bumps it, as the reel's "show me where" does)
     look(x, y, z) { S.look = x === undefined ? null : [x, y, z || 1]; }, lightAll(on) { if (on === false) F.lit.pop(); else F.lit.push([460, 500, 1500]); }, ui,
     toScreen, toWorld
   };

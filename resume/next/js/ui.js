@@ -1,5 +1,6 @@
 // ui.js — the DOM on top of the canvas: counter, lamps, tape labels, the Play pill and the buttons pill, the video
-// player, the YouTube player, the reel, the strips of the moment, the first-ad chip. All words come from index.html.
+// player, the YouTube player, the reel, the explainer of a machine on the bench, the strips of the moment, the first-ad
+// chip. All words come from index.html.
 import { S, TRACK, MEDIA, collDist, shown, on } from './world.js';
 import * as audio from './audio.js';
 
@@ -16,13 +17,16 @@ export function initUI(h) {
     pill: $('pill'), pp: $('pill').querySelector('.pp'), pt: $('pill').querySelector('.pt'), player: $('player'), video: $('player').querySelector('video'),
     px: $('px'), chip: $('chip'), three: $('three'), more: $('more'), links: $('links'), stage: $('stage'), toplain: $('toplain'),
     snd: $('snd'), startb: $('startb'),
-    yt: $('yt'), ytf: $('ytf'), ytcap: $('ytcap'), ytopen: $('ytopen'), reel: $('reel'), reell: $('reell'), reeln: $('reeln'), reelb: $('reelb'), rx: $('rx')
+    yt: $('yt'), ytf: $('ytf'), ytcap: $('ytcap'), ytopen: $('ytopen'), reel: $('reel'), reell: $('reell'), reeln: $('reeln'), reelb: $('reelb'), rx: $('rx'),
+    how: $('how'), howh: $('howh').querySelector('b'), howd: $('howd'), howp: $('howp'), howc: $('howc'), hdots: $('how').querySelector('.hdots'), howcap: $('howcap'), howl: $('howl'), howcard: $('howcard'), howfoot: $('howfoot'), hx: $('hx')
   };
   el.tot.textContent = '/' + S.live.length;
+  el.tm.querySelectorAll('.lamps i').forEach(i => { i.hidden = !on(i); });      // a lamp whose table is not built yet is not shown
   setCount(0, true);
   threeInit();
   // The tap on the pill is the sound gesture: src and play() happen inside this handler (spec 6.3).
-  el.pill.addEventListener('click', () => { if (pillFind && el.pill.classList.contains('up')) pillAct(); });
+  // (the touch that ended the moment is not also a press of the pill, which slides back up under that very thumb)
+  el.pill.addEventListener('click', () => { if (pillFind && el.pill.classList.contains('up') && !(hooks.ended && hooks.ended())) pillAct(); });
   // The gold chip is a real link to the file; once the game is loaded it opens the game's own player instead.
   el.chip.addEventListener('click', e => { e.preventDefault(); openPlayer(S.byId.ad1); });
   el.links.addEventListener('click', linkTap);
@@ -32,6 +36,7 @@ export function initUI(h) {
   el.rx.addEventListener('click', () => closeReel());
   el.reel.addEventListener('click', e => { if (e.target === el.reel) closeReel(); });      // a tap on the dark above the sheet closes it
   el.reell.addEventListener('click', reelTap);
+  howInit();
   el.video.addEventListener('playing', () => { if (playing && playing.id === 'ad1') S.adPlayed = true; });
   // sound: the speaker tab and the Start pill are plain buttons with plain click listeners (nothing on their path cancels an event)
   el.snd.addEventListener('click', () => hooks.sound());
@@ -49,6 +54,7 @@ export function initUI(h) {
   el.player.addEventListener('pointerup', e => { if (sy !== null && e.clientY - sy > 80) closePlayer(); sy = null; });
   el.player.addEventListener('pointercancel', () => { sy = null; });
   addEventListener('keydown', e => {
+    if (how) { howKey(e); return; }                         // the explainer's own keys; nothing else is reached while it is open
     if (e.key === 'Escape' && (playing || poster)) closePlayer();
     else if (e.key === 'Escape' && reelOn) closeReel();
     else if (e.key === 'Enter' && !playing && !reelOn && pillFind && (el.pill.classList.contains('up') || el.links.classList.contains('up')) && (hooks.live() || poster)) {
@@ -77,7 +83,7 @@ export function setCount(n, quiet) {
   el.tm.setAttribute('aria-label', n + ' of ' + S.live.length + ' found');
   if (!quiet) { el.tm.classList.remove('tick'); void el.tm.offsetWidth; el.tm.classList.add('tick'); }
 }
-export function lampOn(track) { const t = TRACK[track]; if (t && t.lamp) el.tm.querySelector('.' + t.lamp).classList.add('on'); }
+export function lampOn(track) { const t = TRACK[track], e = t && t.lamp && el.tm.querySelector('.' + t.lamp); if (e) e.classList.add('on'); }
 
 // ---------- tape labels ----------
 // A label is slapped on at a find and follows it on screen. There is never more than one full label: it drops to its
@@ -180,6 +186,7 @@ function place(L, toScreen, v, top, bottom, vanY) {
   const ap = S.byId.app; if (ap && ap.found && ap.box) add(ap.box[0], ap.box[1], ap.box[2], ap.box[3]);
   const ln = S.byId.line; if (ln && ln.found && ln !== f && !f.lab.onLine) add(ln.x - 80, ln.y - 112, ln.x + 80, ln.y + 112);      // the taped sheet, once it can be read (its written part: the margin may be touched)
   const sl = S.says.slate; if (sl && sl !== f && sl.box) add(sl.box[0], sl.box[1], sl.box[2], sl.box[3]);      // the slate's board: the one place the kinds of video are read
+  const sg = S.says.post; if (sg && sg.sign && f.track === 'g') add(sg.sign[0], sg.sign[1], sg.sign[2], sg.sign[3]);      // the bench's sign, lettered on the steel: a tape of that table keeps off it when it can
   const free = (at, up, mid) => { const [x, y] = boxAt(L, at, up, mid, toScreen, top, bottom); for (const r of rects) if (x < r[2] && x + L.w > r[0] && y < r[3] && y + L.h > r[1]) return false; return true; };
   // (beside: 70 px out from a small thing's middle; the app phone, whose whole box no label may cover (lab.clear), is
   // cleared by its whole width, so on a phone on its side its tape stands next to the phone and not across the tray)
@@ -234,7 +241,7 @@ const btns = f => f.el ? [...f.el.querySelectorAll(':scope > .links > a')].filte
 const parts = t => t.split(' · ').map(s => '<span class="part">' + (/^\d+:\d\d$/.test(s) ? '<b class="num">' + s + '</b>' : s) + '</span>').join('<span class="sep">·</span>');
 export function pill(f) {
   const vid = f.video || f.yt, links = btns(f), lk = links.length > 0;
-  if (!vid && !lk) return false;
+  if (!vid && !lk && !f.how) return false;      // (f.how: a machine on the bench. Its pill opens its explainer: openHow)
   if (pillFind === f) { pillAt = S.rt; return true; }
   pillFind = f; pillAt = S.rt;
   const up = lk ? el.links : el.pill, off = lk ? el.pill : el.links;
@@ -281,7 +288,7 @@ function linkTap(e) {
 }
 function pillAct() {
   const f = pillFind; if (!f) return;
-  if (el.pill.classList.contains('up')) { openPlayer(f); return; }
+  if (el.pill.classList.contains('up')) { if (f.how) openHow(f); else openPlayer(f); return; }
   const a = el.links.querySelector('a,button'); if (a) a.focus();     // links never open by themselves: Enter moves to the first button
 }
 export function pillUp() { return !!pillFind; }
@@ -293,6 +300,8 @@ export function pillShown() { const e = el.pill.classList.contains('up') ? el.pi
 export function labelFresh() { for (const L of labels) if (!L.out && S.rt - L.t < 1.5) return true; return false; }
 // the find whose full tape is up right now (null: none)
 export function labelUp() { const L = labels.find(l => !l.out); return L ? L.f : null; }
+// is this find's tape up right now? (asked inside a frame: no closure)
+export function labelIs(f) { for (const L of labels) if (!L.out && L.f === f) return true; return false; }
 // the youngest label's age in seconds (a big number when none is up): the app's moment waits for a tape to be read
 export function labelAge() { let a = 1e9; for (const L of labels) if (!L.out && S.rt - L.t < a) a = S.rt - L.t; return a; }
 // how long the pill has been up without being used, in seconds
@@ -312,7 +321,11 @@ export function pillTuck(on) { el.pill.classList.toggle('tuck', !!on); el.links.
 // stays while the van is within 240 units, and at least 4 s
 export function tickPill(van) {
   if (!pillFind) return;
-  if (S.rt - pillAt > 4 && Math.hypot(van.x - pillFind.x, van.y - pillFind.y) > 240) hidePill();
+  if (S.rt - pillAt <= 4) return;
+  // (a machine on the bench: its pill reads the same as its neighbours', so it goes once the van is a van's length
+  // and a half from that machine, and never stays up while the van is at another one)
+  const b = pillFind.how ? pillFind.tapBox : null;                  // (tapBox: the ground the whole machine stands on)
+  if (b ? Math.hypot(Math.max(b[0] - van.x, 0, van.x - b[2]), Math.max(b[1] - van.y, 0, van.y - b[3])) > 96 : Math.hypot(van.x - pillFind.x, van.y - pillFind.y) > 240) hidePill();
 }
 export function pillH() { return pillFind ? (pillTall ? 152 : 96) : 28; }      // how much of the foot of the screen a pill takes
 export function hidePill() { pillFind = null; linksFor = null; el.pill.classList.remove('up'); el.links.classList.remove('up'); setTimeout(() => { if (!pillFind) { el.pill.hidden = true; el.links.hidden = true; } }, 320); }
@@ -380,8 +393,142 @@ export function closePlayer() {
   if (reelOn) refreshReel();
   audio.hold(false); hooks.resume();
 }
-// something is open over the game (a player, the #ad1 poster, the reel): the loop stays stopped
-export function busy() { return !!playing || !!poster || reelOn; }
+// ---------- the explainer (stage 5): a machine's card, with its animated picture looping above the paragraph ----------
+// One sheet (#how) for the five machines of the bench. It is opened by the pill "See how it works" (a tap, or Enter
+// while the pill is up: pillAct) and by a tap on the found machine while its pill is up (main.js, f.tapBox). Every
+// word in it is copied from the find's own markup when it opens (f.head, f.date, f.how.card, f.how.foot, f.how.steps);
+// the picture code (how.js, howart.js) is fetched on demand, so the first load of the page pays nothing for it.
+// While it is open the game's loop is stopped (hooks.pause: held keys are dropped and the motor's sound rests),
+// everything behind it is inert, and it closes by its disc, a tap on the dark above it, Escape, or the back gesture.
+let how = null, howMod = null, howApi = null, howAt = 0, howT = 0, howShut = 0, modal = null, popSkip = 0;
+const INERT = ['c', 'hud', 'toplain', 'labels', 'pill', 'links', 'startb', 'three', 'first'];
+// A modal's plumbing: one history entry so that back closes it, the rest of the page inert, the focus moved in and,
+// on close, given back to what had it (or to the canvas). Written so the reel and the player could use it too.
+function modalOpen(root, close) {
+  modal = { root, close, last: document.activeElement, pushed: false };
+  try { history.pushState({ yg: 1 }, ''); modal.pushed = true; } catch (e) { /* no history: Escape and the disc still close it */ }
+  for (const id of INERT) { const e = $(id); if (e) e.inert = true; }
+  const d = root.querySelector('[role=dialog]'); if (d) d.focus({ preventScroll: true });
+}
+function modalClose(fromPop) {
+  const m = modal; if (!m) return; modal = null;
+  for (const id of INERT) { const e = $(id); if (e) e.inert = false; }
+  if (m.pushed && !fromPop) { popSkip++; try { history.back(); } catch (e) { popSkip--; } }     // (asynchronous: popSkip covers a re-open inside that gap)
+  const l = m.last; (l && l !== document.body && l.isConnected && l.offsetParent !== null ? l : $('c')).focus({ preventScroll: true });
+}
+addEventListener('popstate', () => { if (popSkip > 0) { popSkip--; return; } if (modal) modal.close(true); });
+
+// A double tap does one thing, not two. The disc comes up where the pill's middle was, so the second tap of a double
+// tap on the pill is not a press of the disc, the dark or the picture (early). And the sheet lets a touch through
+// while it fades, so that a drag steers at once: the second tap of a double tap that closed it is not a press of what
+// lies under it (the pill, the top bar: the listener below; the canvas: main.js asks justShut). Only for a finger or a
+// mouse (detail > 0): a key is never held back.
+const TWICE = 450;
+const early = e => e.detail > 0 && performance.now() - howAt < TWICE;
+export const justShut = () => performance.now() - howShut < TWICE;
+function howInit() {
+  const shut = e => { if (early(e)) return; if (e.detail > 0) howShut = performance.now(); closeHow(); };
+  el.hx.addEventListener('click', shut);
+  el.how.addEventListener('click', e => { if (e.target === el.how) shut(e); });      // a tap on the dark above the sheet closes it
+  document.addEventListener('click', e => { if (e.detail > 0 && justShut()) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // The picture is a button: a tap on its right 60 percent goes on a step, on its left 40 percent goes back one;
+  // from the keyboard (Enter or Space on it) it goes on. The loop carries on from there.
+  el.howp.addEventListener('click', e => { if (early(e)) return; const r = el.howp.getBoundingClientRect(); howGo(e.detail > 0 && e.clientX < r.left + r.width * 0.4 ? -1 : 1); });
+  addEventListener('resize', () => { if (!how) return; el.howcap.classList.remove('sl'); capFit(); if (howApi) howApi.size(); });
+}
+function howGo(d) { if (!how || !howApi || el.how.classList.contains('nopic')) return; audio.tick(); howApi.step(d); }
+// Keys while it is open: Escape closes · Right or Space next, Left previous · Tab stays inside the sheet (for engines
+// without inert) · Enter and Space on a focused control are that control's own. Nothing else reaches the game.
+function howKey(e) {
+  const k = e.key, onBtn = e.target && e.target.closest && e.target.closest('button');
+  if (k === 'Escape') { e.preventDefault(); closeHow(); }
+  else if (e.metaKey || e.ctrlKey || e.altKey) return;
+  else if (k === 'ArrowRight' || ((k === ' ' || k === 'Spacebar') && !onBtn)) { e.preventDefault(); howGo(1); }
+  else if (k === 'ArrowLeft') { e.preventDefault(); howGo(-1); }
+  else if (k === 'ArrowUp' || k === 'ArrowDown' || k === 'PageUp' || k === 'PageDown') {
+    // the paragraph is scrolled from here (the focus sits on the dialog or on a button, never inside the scrolling box):
+    // its own box where that is the scroller, the whole sheet on the layouts where the sheet scrolls
+    const b = el.how.querySelector('.hbody'), sc = b.scrollHeight > b.clientHeight + 1 ? b : b.parentNode, d = k.charAt(0) === 'P' ? sc.clientHeight * 0.8 : 44;
+    e.preventDefault(); sc.scrollTop += k === 'ArrowDown' || k === 'PageDown' ? d : -d;
+  }
+  else if (k === 'Tab') {
+    const list = [el.howp, el.hx].filter(b => b.offsetParent !== null), at = list.indexOf(document.activeElement);
+    e.preventDefault(); if (list.length) list[(at < 0 ? (e.shiftKey ? list.length - 1 : 0) : at + (e.shiftKey ? list.length - 1 : 1)) % list.length].focus();
+  }
+}
+// A caption that runs to two lines: its tape is cut to the lines' own width, not left as wide as the sheet. It is
+// measured with the sheet laid out (a hidden box has no lines): at each new caption, and again after a resize.
+function capFit() {
+  const b = el.howcap.querySelector('b'); b.style.width = '';
+  const rs = document.createRange(); rs.selectNodeContents(b); const rc = rs.getClientRects(); let w = 0; for (let k = 0; k < rc.length; k++) if (rc[k].width > w) w = rc[k].width;
+  if (rc.length > 1 && w > 40) b.style.width = Math.ceil(w + 36) + 'px';
+}
+// a step has begun (i), t seconds into it: the caption strip, the step marks, the list a screen reader has
+function howStep(i, t) {
+  if (!how) return;
+  const st = how.how.steps, b = el.howcap.querySelector('b'), m = el.hdots.children, li = el.howl.children, txt = st[i] ? st[i].textContent.trim() : '';
+  if (b.textContent !== txt) {
+    b.textContent = txt; el.howcap.classList.remove('sl'); capFit();
+    if (!S.reduced) { void el.howcap.offsetWidth; el.howcap.classList.add('sl'); }
+  }
+  for (let k = 0; k < m.length; k++) {
+    const c = k < i ? 'done' : k === i ? 'cur' : '';
+    if (k === i && m[k].className === 'cur') { m[k].className = ''; void m[k].offsetWidth; }      // the same mark again (the tab came back): its fill starts over from t
+    m[k].className = c; if (k === i) m[k].style.setProperty('--hd', -(t || 0).toFixed(2) + 's');
+    if (li[k]) { if (k === i) li[k].setAttribute('aria-current', 'step'); else li[k].removeAttribute('aria-current'); }
+  }
+}
+// (both files are asked for at once: how.js imports howart.js, which would otherwise only be found when how.js has arrived)
+function loadHow() {
+  if (!howMod) { import('./howart.js').catch(() => { /* how.js asks for it too, and reports */ }); howMod = import('./how.js').then(m => { howApi = m; return m; }, e => { howMod = null; throw e; }); }
+  return howMod;
+}
+// the picture code may be fetched now (the bench asks as the van comes near it): at once, so a first tap finds it there
+export function preloadHow() { if (!howMod) loadHow().catch(() => { /* asked for again when a sheet opens */ }); }
+export function openHow(f) {
+  if (!f || !f.how || how || playing || poster || reelOn || !booted() || (hooks.held && hooks.held()) || justShut()) return;
+  const h = f.how, e = el;
+  how = f; howAt = performance.now(); clearTimeout(howT);
+  // the words, copied in from the find's own markup (textContent only)
+  e.howh.textContent = f.head ? f.head.textContent.trim() : '';
+  e.howd.textContent = f.date ? f.date.textContent.trim() : '';
+  e.howl.textContent = ''; e.hdots.textContent = '';
+  for (const s of h.steps) { const li = document.createElement('li'); li.textContent = s.textContent.trim(); e.howl.appendChild(li); e.hdots.appendChild(document.createElement('i')); }
+  e.howcard.textContent = h.card ? h.card.textContent.trim() : '';
+  e.howfoot.textContent = h.foot ? h.foot.textContent.trim() : ''; e.howfoot.hidden = !h.foot;
+  e.how.className = (h.foot ? 'foot' : '') + (S.reduced ? ' still' : '') + (howApi ? '' : ' wait');      // (wait: the picture code is not here yet)
+  e.how.style.setProperty('--t', TRACK[f.track].tape);
+  hooks.pause();
+  e.labels.classList.add('hw');                            // the world's tapes step back while a sheet is up (one of them carries the sheet's own heading)
+  // Shown first, then reset and measured: a box that is display:none has no layout, so a scroll reset on it does
+  // nothing (the next sheet would open where the last was left) and a caption's lines cannot be measured.
+  e.how.hidden = false;
+  e.how.querySelector('.hsh').scrollTop = 0; e.how.querySelector('.hbody').scrollTop = 0;
+  e.howcap.querySelector('b').textContent = ''; howStep(0, 0);
+  if (S.reduced) e.how.classList.add('on'); else requestAnimationFrame(() => { if (how === f) e.how.classList.add('on'); });
+  audio.slap();
+  modalOpen(e.how, closeHow);
+  // the sheet is whole and readable before the picture code has arrived; if it never does, the captions show as a list
+  loadHow().then(m => { if (how === f) { e.how.classList.remove('nopic', 'wait'); m.start(f, e.howc, { reduced: S.reduced, onStep: howStep }); } }, () => { if (how === f) { e.how.classList.remove('wait'); e.how.classList.add('nopic'); } });
+}
+export function closeHow(fromPop) {
+  if (!how) return;
+  how = null; el.how.classList.remove('on'); el.labels.classList.remove('hw');
+  clearTimeout(howT); howT = setTimeout(() => { if (!how) el.how.hidden = true; }, S.reduced ? 0 : 280);
+  if (howApi) howApi.stop();                               // its loop ends, its canvas goes to 0 x 0, its word sprites are let go
+  modalClose(fromPop === true);
+  if (pillFind) pillAt = S.rt;                             // the pill stays up
+  hooks.resume();
+}
+const booted = () => !!el && !!el.how;
+export const howOpen = () => !!how;
+export const howCanvases = () => how && howApi ? howApi.canvases() : [];
+// ?debug=1 (__g.how): hold one step at one moment of its 2.4 s; what the engine is doing
+export function howFreeze(i, u) { return howApi ? howApi.freeze(i, u) : null; }
+export function howState() { return { open: how ? how.id : null, nopic: !!el && el.how.classList.contains('nopic'), ...(howApi ? howApi.state() : {}) }; }
+
+// something is open over the game (a player, the #ad1 poster, the reel, an explainer): the loop stays stopped
+export function busy() { return !!playing || !!poster || reelOn || !!how; }
 export function playerOpen() { return busy(); }
 
 // #ad1 (spec 9.8): the first ad's poster, full screen, with its Play pill. The tap on the pill plays it with sound.
@@ -437,7 +584,7 @@ function reelTap(e) {
   else { closeReel(false); hooks.where(f.id); hooks.resume(); }
 }
 export function openReel() {
-  if (reelOn || playing || poster) return;
+  if (reelOn || playing || poster || how) return;
   if (!reelMade) makeReel();
   refreshReel();
   reelOn = true; el.reel.hidden = false; el.reelb.setAttribute('aria-expanded', 'true');
