@@ -247,10 +247,81 @@ export function easelBits() {
   return { clip, tl: tape(-1), tr: tape(1) };
 }
 
-// ---------- ad 3: a phone leaning on a plain grey cube that rounds off into a ball ----------
+// ---------- inside (was ad 3): a phone leaning on a plain grey cube ----------
 export function leanPhone() { return bake([{ ...phoneFace(84, 150, 10, 90), ghost: true }]); }      // only its shadow: the phone is drawn each frame (kit.phoneBody)
-// Five sprites, the cube to the ball. The cube has no grain and no detail on purpose: it is the one unfinished thing
-// on the desk. Origin = the middle of the cube's front edge.
+// ---------- inside: the app's flow on the phone that leans on the grey cube (G4, 2026-11-19) ----------
+// Four screens, shown one at a time: a quote, a job in a day's calendar, an invoice, the same invoice paid. Each is the
+// app as the desk draws it everywhere else (a white screen, a gold header with the tick mark, rows as bars) with one
+// word stencilled under it, from the find's own markup (data-w). No real screenshot, no name, no price and no figure:
+// every row is a bar. INSIDE: the screen (84 x 150) and where the PAID stamp lands on it (it is drawn per frame: stampMark).
+export const INSIDE = { w: 84, h: 150, stamp: [58, 66, 2.6] };
+export function insidePanel(k, word) {
+  const W = INSIDE.w, H = INSIDE.h, SOFT = '#A9B4BF', LINE = '#DCE3E9';
+  return flat(W, H, 0, 0, g => {
+    g.fillStyle = '#FBFCFD'; g.fillRect(0, 0, W, H);
+    // the header: gold, the mark (a tick in a rounded square), a title bar
+    g.fillStyle = PAL.gold; g.fillRect(0, 0, W, 18);
+    g.fillStyle = PAL.ink; g.beginPath(); rr(g, 7, 4, 10, 10, 2.6); g.fill();
+    g.strokeStyle = PAL.gold; g.lineWidth = 1.6; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(9.6, 9.2); g.lineTo(11.5, 11.2); g.lineTo(14.6, 6.8); g.stroke();
+    g.fillStyle = PAL.ink; g.fillRect(22, 7.8, 24, 2.6); g.fillStyle = 'rgba(20,17,15,.35)'; g.fillRect(64, 7.6, 3.4, 3.4); g.fillRect(70, 7.6, 3.4, 3.4);
+    const sheet = (y0, h) => {                                       // a page on the screen: white, a hard shadow, a soft key line
+      g.fillStyle = 'rgba(20,17,15,.12)'; g.fillRect(11.5, y0 + 1.5, 62, h);
+      g.fillStyle = '#FFFFFF'; g.fillRect(10, y0, 62, h); g.strokeStyle = '#C5D0DA'; g.lineWidth = 0.8; g.strokeRect(10.4, y0 + 0.4, 61.2, h - 0.8);
+    };
+    const pill = (y, done) => {                                      // a button: gold to press, a key line once it is done
+      g.beginPath(); rr(g, 16, y, 50, 10, 5);
+      if (done) { g.strokeStyle = PAL.ink; g.lineWidth = 1; g.stroke(); } else { g.fillStyle = PAL.gold; g.fill(); }
+      g.strokeStyle = PAL.ink; g.lineWidth = 1.4; g.beginPath(); g.moveTo(37.6, y + 5.2); g.lineTo(40.2, y + 7.6); g.lineTo(45, y + 2.8); g.stroke();
+    };
+    if (k === 0) {                                                   // QUOTE: a page with a few ruled lines, and the button that approves it
+      sheet(26, 74);
+      g.fillStyle = PAL.ink; g.fillRect(16, 32, 26, 3.6);
+      g.fillStyle = SOFT; [50, 44, 48, 30].forEach((w, i) => g.fillRect(16, 43 + i * 8, w, 2));
+      pill(82, false);
+    } else if (k === 1) {                                            // JOB: a day in slots, one of them taken
+      g.fillStyle = PAL.ink; g.fillRect(12, 26, 30, 3.6); g.fillStyle = SOFT; g.fillRect(12, 33, 20, 2);
+      for (let i = 0; i < 7; i++) { const y = 42 + i * 9.3; g.fillStyle = LINE; g.fillRect(22, y, 52, 1); g.fillStyle = '#8795A3'; g.fillRect(12, y - 0.6, 6, 2.2); }
+      g.fillStyle = 'rgba(20,17,15,.14)'; g.beginPath(); rr(g, 25.4, 53.9, 48, 17.6, 3); g.fill();
+      g.fillStyle = PAL.gold; g.beginPath(); rr(g, 24, 52.5, 48, 17.6, 3); g.fill(); g.strokeStyle = PAL.ink; g.lineWidth = 0.9; g.stroke();
+      g.fillStyle = PAL.ink; g.fillRect(28, 56.4, 28, 3); g.fillStyle = 'rgba(20,17,15,.45)'; g.fillRect(28, 62.4, 18, 2);
+    } else {                                                         // INVOICE (and PAID: the same page, its button done; the stamp is drawn on it per frame)
+      sheet(26, 74);
+      g.fillStyle = PAL.ink; g.fillRect(16, 32, 22, 3.6);
+      for (let i = 0; i < 3; i++) { const y = 43 + i * 7.6; g.fillStyle = SOFT; g.fillRect(16, y, [30, 24, 34][i], 2); g.fillRect(56, y, 12, 2); }
+      g.fillStyle = PAL.ink; g.fillRect(16, 67, 52, 1.2); g.fillRect(16, 71.6, 18, 3.4); g.fillRect(52, 71.6, 16, 3.4);
+      pill(84, k === 3);
+    }
+    // its one word, in the stencil, as large as the screen's width allows
+    let fs = 20; g.font = `900 ${fs}px ${STENCIL}`;
+    try { g.letterSpacing = '1px'; } catch (e) { /* older engines: no tracking */ }
+    const tw = g.measureText(word).width; if (tw > 68) { fs *= 68 / tw; g.font = `900 ${fs}px ${STENCIL}`; }
+    g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(word, W / 2, 128);
+    try { g.letterSpacing = '0px'; } catch (e) { /* same */ }
+    // where it is in the flow: four pips, this one filled
+    for (let i = 0; i < 4; i++) { g.fillStyle = i === k ? PAL.ink : '#D5DDE4'; g.fillRect(W / 2 - 15 + i * 8, 138, 4.6, 4.6); }
+  }, 0);
+}
+
+// The four screens side by side, each in the phone's dark frame, the last one stamped: the find's picture on its details
+// card (ui.js). Its words are the find's own (data-w, in the flow's order, as desk.js reads them). Made when the card opens.
+export function insideStrip(el) {
+  const w = {}; el.querySelectorAll(':scope > [data-w]').forEach(e => { w[e.dataset.w] = e.textContent.trim(); });
+  const words = ['quote', 'job', 'invoice', 'paid'].map(k => w[k] || ''), W = INSIDE.w, H = INSIDE.h, GAP = 14, PAD = 14, B = 5, K = 2;
+  const c = mk((PAD * 2 + 4 * (W + 2 * B) + 3 * GAP) * K, (PAD * 2 + H + 2 * B) * K), g = c.getContext('2d'); g.scale(K, K);
+  for (let k = 0; k < 4; k++) {
+    const x = PAD + k * (W + 2 * B + GAP), y = PAD, p = insidePanel(k, words[k]);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); rr(g, x + 2, y + 3, W + 2 * B, H + 2 * B, 9); g.fill();
+    g.fillStyle = '#17191B'; g.beginPath(); rr(g, x, y, W + 2 * B, H + 2 * B, 9); g.fill();
+    g.drawImage(p.c, x + B, y + B, W, H); p.c.width = p.c.height = 0;
+    if (k === 3) stampMark(g, x + B + INSIDE.stamp[0], y + B + INSIDE.stamp[1], INSIDE.stamp[2]);
+  }
+  c.setAttribute('aria-hidden', 'true');
+  return c;
+}
+
+// Five sprites, the cube to the ball. The cube has no grain and no detail on purpose. Origin = the middle of the cube's
+// front edge. (Since 2026-11-19 only the plain cube is used: the phone on it shows the app, the 3D ad's mascot is not drawn.)
 export function cubeFrames(first) {
   const out = [], G0 = '#B7BABC', G1 = '#8B8F92';
   out.push(bake([box(-25, -38, 50, 38, 0, 60, G0, G1, { hl: 0 })], { grain: 0 }));

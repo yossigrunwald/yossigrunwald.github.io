@@ -513,6 +513,118 @@ html.can #plain .foot{display:block}
 
 @media (prefers-reduced-motion:reduce){.tape .tw,#tm.tick .blade,#tm .lamps i.on{animation:none}#pill,#startb,#links,#snd .tp,#three p.in{transition:none}}
 
+/* ========== game clarity (2026-11-19): the intro card, the achievements, the details pill and card ========== */
+/* ---------- the way into the achievements: a button laid over the counter, and the tab on the left edge under it ---------- */
+#tmb{position:absolute;z-index:1;left:calc(4px + env(safe-area-inset-left));top:calc(2px + env(safe-area-inset-top));width:var(--tw,92px);min-width:44px;height:54px;margin:0;padding:0;border:0;border-radius:10px;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#achb{position:absolute;z-index:6;left:env(safe-area-inset-left);top:calc(56px + env(safe-area-inset-top));height:44px;margin:0;padding:0 6px 0 0;border:0;background:none;display:flex;align-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(2px 2.5px 0 rgba(20,17,15,.4))}
+#achb>span{display:block;margin-left:-5px;background:var(--ink);padding:1.5px;transform:rotate(-1.2deg);transform-origin:0 50%}
+#achb b{display:flex;align-items:center;gap:6px;background:var(--masking);color:var(--ink);font:700 11px/1 var(--road);letter-spacing:.08em;padding:8px 9px 6px 14px}
+#achb svg{width:6px;height:9px;margin-top:-2px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#achb:active>span{transform:rotate(-1.2deg) translateX(1.5px)}
+/* the toast: a tape of the find's own colour slapped over the tab, for two seconds (never over a find's tape: none comes this high) */
+#achtoast{position:absolute;z-index:7;left:env(safe-area-inset-left);top:calc(56px + env(safe-area-inset-top));height:44px;max-width:calc(100% - 112px);margin:0;display:flex;align-items:center;pointer-events:none;visibility:hidden;filter:drop-shadow(2px 3px 0 rgba(20,17,15,.4))}
+#achtoast>span{--r:1.4deg;display:block;flex:none;width:max-content;max-width:calc(100vw - 32px);margin-left:-5px;background:var(--ink);padding:1.5px;transform:rotate(var(--r))}
+#achtoast b{display:block;background:var(--t,var(--gold));color:var(--ink);font:700 13px/1 var(--road);letter-spacing:.02em;padding:8px 12px 5px 16px;white-space:nowrap}
+#achtoast em{font:900 16px/.8 var(--stencil);font-style:normal;letter-spacing:.04em}
+#achtoast.in{visibility:visible}
+#achtoast.in>span{animation:slap .2s cubic-bezier(.3,.9,.4,1) both}
+#achtoast.in.go>span{animation:none;transition:transform .22s ease-in,opacity .22s ease-in;transform:rotate(var(--r)) translateX(-24px) scale(.5);opacity:0}
+
+/* ---------- the intro card: a sheet of paper taped over the opening frame, with the Start pill under it ---------- */
+#intro{position:absolute;z-index:6;left:calc(16px + env(safe-area-inset-left));right:calc(16px + env(safe-area-inset-right));top:calc(114px + env(safe-area-inset-top));max-width:400px;margin:0 auto;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none;-webkit-user-select:none;user-select:none}
+#intro[hidden]{display:block;visibility:hidden}
+#intro .ib{position:relative;transform:rotate(-.8deg);transform-origin:50% 30%;filter:drop-shadow(3px 4px 0 rgba(20,17,15,.38))}
+#intro:not([hidden]) .ib{animation:introin .34s cubic-bezier(.2,.9,.3,1.12) both}      /* (it runs when the card is shown, not while it waits hidden) */
+#intro.out .ib,#intro.out:not([hidden]) .ib{animation:none;transition:transform .2s ease-in,opacity .2s ease-in;transform:rotate(-.8deg) translateY(-14px) scale(.94);opacity:0}
+#intro .ib::before,#intro .ib::after{content:"";position:absolute;z-index:2;top:-9px;width:62px;height:20px;background:rgba(230,215,174,.92);box-shadow:0 0 0 1px rgba(20,17,15,.5)}
+#intro .ib::before{left:-12px;transform:rotate(-24deg)}
+#intro .ib::after{right:-12px;transform:rotate(21deg)}
+#intro .ip{position:relative;background:var(--bone);border-radius:3px;box-shadow:0 0 0 1.5px var(--ink);padding:18px 20px 14px;font:700 16px/1.32 var(--hand);text-wrap:pretty}
+#intro h2{display:flex;justify-content:flex-start;margin:0 0 12px -6px}
+#intro h2>span{display:block;max-width:100%;background:var(--ink);padding:1.5px;transform:rotate(-1.5deg)}
+#intro h2 b{display:block;background:var(--gold);padding:8px 14px 5px;font:900 clamp(21px,6.6vw,27px)/1.02 var(--stencil);letter-spacing:.04em;text-wrap:balance}
+#intro p{margin:0 0 7px}
+#intro p:last-child{margin-bottom:0}
+#intro .it{display:none}
+#intro a{display:inline-block;padding:12px 1px;margin:-12px -1px;color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer}
+@media (pointer:coarse){#intro .it{display:block}#intro .ik{display:none}}
+@media (max-height:820px){#intro{top:calc(110px + env(safe-area-inset-top))}#intro .ip{padding:15px 17px 12px;font-size:15.5px;line-height:1.27}#intro p{margin-bottom:6px}}
+@media (max-height:700px){#intro .ip{padding:13px 15px 10px;font-size:14.5px;line-height:1.24}#intro h2{margin-bottom:8px}#intro h2 b{font-size:21px}#intro p{margin-bottom:4px}}
+@media (max-height:500px){#intro{top:calc(108px + env(safe-area-inset-top));right:auto;width:min(360px,44vw);margin:0}#intro .ip{padding:11px 14px 9px;font-size:14px}#intro h2 b{font-size:19px}}
+@keyframes introin{from{transform:rotate(-.8deg) translateY(-22px) scale(.9);opacity:0}}
+
+/* ---------- the details pill: a smaller pill of the same make, standing over the find's own pill (--pb: JS) ---------- */
+#morep{position:absolute;z-index:6;left:0;right:0;bottom:calc(var(--pb,16px) + env(safe-area-inset-bottom));width:max-content;max-width:calc(100% - 32px);height:48px;margin:0 auto;padding:0 20px 0 6px;border:0;border-radius:24px;background:var(--t,var(--gold));color:var(--ink);font:700 17px/1 var(--road);letter-spacing:.01em;display:flex;align-items:center;gap:10px;box-shadow:0 0 0 2px var(--ink),3px 4px 0 2px rgba(20,17,15,.45);transform:translateY(calc(100% + var(--pb,16px) + 40px + env(safe-area-inset-bottom)));transition:transform .3s cubic-bezier(.2,1.35,.4,1);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
+#morep[hidden]{display:flex;visibility:hidden}
+#morep.up{transform:none;visibility:visible}
+#morep.up.tuck,#morep.up.away{transform:translateY(calc(100% + var(--pb,16px) + 40px + env(safe-area-inset-bottom)))}
+#morep.up:active{transform:translateY(2px)}
+#morep .pp{flex:none;width:36px;height:36px;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+#morep .pp svg{width:14px;height:14px;fill:none;stroke:var(--t,var(--gold));stroke-width:2.6;stroke-linecap:round}
+#morep .pt{padding-top:3px;white-space:nowrap}
+@media (max-width:339px){#morep{font-size:15px;padding-right:14px}}
+
+/* ---------- a find's details card: the explainer's sheet, as tall as what it holds ---------- */
+#det{position:fixed;inset:0;z-index:16;background:rgba(20,17,15,0);transition:background .25s linear;touch-action:none;font-family:var(--road);color:var(--ink);-webkit-tap-highlight-color:transparent}
+#det[hidden]{display:none}
+#det:not(.on){pointer-events:none}
+#det.on{background:rgba(20,17,15,.6)}
+#det .dsh{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 58px - env(safe-area-inset-top));margin:0 auto;max-width:560px;background:var(--desk);box-shadow:0 0 0 2px var(--ink);border-radius:16px 16px 0 0;padding:18px 16px calc(90px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1);outline:0}
+#det.on .dsh{transform:none}
+#deth{display:inline-block;max-width:calc(100% - 8px);margin:0 0 0 2px;transform:rotate(-1.4deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.3))}
+#deth>span{display:block;background:var(--ink);padding:1.5px}
+#deth b{display:block;background:var(--t,var(--gold));padding:8px 17px 6px;font:900 clamp(19px,5.9vw,28px)/1 var(--stencil);letter-spacing:.04em;text-transform:uppercase;text-wrap:balance}
+#detpic{position:relative;margin:18px 0 0;height:min(32vh,240px);border-radius:9px;background:#1E2427;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.26);overflow:hidden}
+#detpic[hidden]{display:none}
+#detpic img,#detpic canvas{display:block;width:100%;height:100%;object-fit:contain}
+#detpic .wk{position:relative;width:100%;height:100%;aspect-ratio:auto;border-radius:9px}
+#detbody{margin:16px 2px 0;font:400 16px/1.5 var(--road)}
+#detbody p{margin:0 0 10px}
+#detbody ul{margin:0 0 10px;padding:0;list-style:none}
+#detbody li{position:relative;margin:0 0 8px;padding-left:22px}
+#detbody li::before{content:"";position:absolute;left:4px;top:.52em;width:7px;height:7px;background:var(--t,var(--gold));box-shadow:0 0 0 1.5px var(--ink);transform:rotate(45deg)}
+#det .dft{position:absolute;z-index:2;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;height:calc(76px + env(safe-area-inset-bottom));background:var(--desk);box-shadow:0 -2px 0 var(--ink),0 -6px 0 rgba(20,17,15,.1);transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#det.on .dft{transform:none}
+#detx,#achx{position:absolute;z-index:3;width:56px;height:56px;margin:0;padding:0;border:0;border-radius:50%;background:var(--bone);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 2px var(--ink),3px 4px 0 2px rgba(20,17,15,.4);-webkit-tap-highlight-color:transparent;transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#detx{left:50%;bottom:calc(10px + env(safe-area-inset-bottom));margin-left:-28px;transform:translateY(120px)}
+#det.on #detx{transform:none}
+#detx svg,#achx svg{width:22px;height:22px;stroke:var(--ink);stroke-width:2.8;stroke-linecap:round;fill:none}
+#det.on #detx:active{transform:translateY(1.5px)}
+@media (min-width:700px) and (min-height:700px){#detbody{font-size:16.5px}#detpic{height:260px}}
+
+/* ---------- the achievements panel: a drawer from the left, over the game ---------- */
+#ach{position:fixed;inset:0;z-index:14;background:rgba(20,17,15,0);transition:background .25s linear;touch-action:none;font-family:var(--road);color:var(--ink);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#ach[hidden]{display:none}
+#ach:not(.on){pointer-events:none}
+#ach.on{background:rgba(20,17,15,.6)}
+#ach .ash{position:absolute;left:0;top:0;bottom:0;width:min(380px,calc(100% - 64px));background:var(--desk);box-shadow:0 0 0 2px var(--ink);border-radius:0 16px 16px 0;padding:calc(20px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;transform:translateX(-104%);transition:transform .28s cubic-bezier(.2,.9,.3,1);outline:0}
+#ach.on .ash{transform:none}
+#achh{display:inline-block;margin:0 0 0 2px;transform:rotate(-1.6deg);filter:drop-shadow(2px 3px 0 rgba(20,17,15,.3))}
+#achh>span{display:block;background:var(--ink);padding:1.5px}
+#achh b{display:block;background:var(--gold);padding:9px 18px 5px;font:900 clamp(24px,7.4vw,30px)/1 var(--stencil);letter-spacing:.05em}
+#ach .asub{margin:14px 2px 0;font:700 16px/1.3 var(--hand)}
+#ach .arn{margin:7px 2px 0;font:700 13px/1 var(--road);letter-spacing:.02em;color:#4B555C}
+#ach .arn b{font:900 22px/.8 var(--stencil);color:var(--ink);letter-spacing:.03em}
+#ach .ag{margin-top:22px}
+#ach .ag[hidden]{display:none}
+#ach h3{display:inline-block;margin:0 0 11px 1px;transform:rotate(-1deg);filter:drop-shadow(1.5px 2px 0 rgba(20,17,15,.3))}
+#ach h3>span{display:block;background:var(--ink);padding:1.5px}
+#ach h3 b{display:block;background:var(--t);padding:6px 12px 3px;font:900 16px/1 var(--stencil);letter-spacing:.06em;white-space:nowrap}
+#ach ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+#ach .ar button{width:100%;min-height:48px;margin:0;padding:8px 10px 6px 12px;border:0;border-radius:10px;background:#FBFCFD;color:var(--ink);box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.2);display:flex;align-items:center;gap:10px;text-align:left;font:700 15px/1.2 var(--hand);text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#ach .ar button:active{transform:translateY(1.5px)}
+#ach .ah{flex:1 1 auto;min-width:0;text-wrap:balance}
+#ach .atg{flex:none;background:var(--ink);padding:1.2px;transform:rotate(3deg)}
+#ach .atg b{display:block;background:var(--t);font:700 11px/1 var(--hand);padding:5px 8px 4px;white-space:nowrap}
+#ach .ar .go{flex:none;width:8px;height:12px;margin-top:-1px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#ach .lk{display:flex;align-items:center;gap:9px;min-height:44px;padding:4px 12px 2px;border:1.5px dashed #9AA5AD;border-radius:10px;color:#5B666D;font:700 13px/1 var(--road);letter-spacing:.02em}
+#ach .lk svg{flex:none;width:12px;height:14px;margin-top:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+#achx{left:calc(min(380px,100% - 64px) + 4px);top:calc(14px + env(safe-area-inset-top));transform:translateX(-90px) scale(.6);opacity:0}
+#ach.on #achx{transform:none;opacity:1}
+#ach.on #achx:active{transform:translateY(1.5px)}
+
+@media (prefers-reduced-motion:reduce){#intro .ib,#achtoast.in>span{animation:none}#intro.out .ib,#achtoast.in.go>span,#morep,#det,#det .dsh,#det .dft,#detx,#ach,#ach .ash,#achx{transition:none}}
+
 /* ---------- print: only the document, two pages at most, no panels, no video ---------- */
 @media print{
   @page{size:auto;margin:12mm 13mm}
@@ -566,3 +678,7 @@ html.can #plain .foot{display:block}
   #plain .skills dt{font-size:7.8pt}
   #plain .skills dd{margin:0;max-width:none}
 }
+/* a card opened over the panel: the panel's own close mark steps away while the card (with its own) is up */
+#ach[inert] #achx{opacity:0;visibility:hidden;pointer-events:none}
+/* the intro card on a wide, short screen: to the left of the hub, so it never sits on the disc's arrow and label */
+@media (min-width:900px) and (min-aspect-ratio:1/1){#intro{left:calc(24px + env(safe-area-inset-left));right:auto;margin:0;width:min(400px,calc(50vw - 150px))}}

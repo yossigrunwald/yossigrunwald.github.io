@@ -84,13 +84,13 @@ async function boot() {
   jobs.push(...F.bakeJobs());
   // "show me where" may be tapped before the idle bake has reached the thing (always so on #reel, where the loop has
   // not run yet): every job still waiting is run first, so the thing stands, with its collider, before the route is made
-  ui.initUI({ pause: stop, resume: start, live: () => running, held: () => F.holdOn(), ended: () => performance.now() - endedAt < 500, sound: () => audio.tabTap(), engine: engineTap, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
+  ui.initUI({ pause: stop, resume: start, live: () => running, held: () => F.holdOn(), ended: () => performance.now() - endedAt < 500, sound: () => audio.tabTap(), engine: engineTap, bye: () => { tourAt = Math.max(tourAt, S.rt + 1.3); }, where: id => { while (jobs.length) { jobs.shift()(); art.settle(); } F.showWhere(id); } });
   ui.setViewport(view.w, view.h);
   onBump(F.bump); onEdge(() => audio.thud());
   const hnd = { first, tap, toWorld, w: () => view.w, live: () => running };
   bindInput(cv, hnd);
   // a drag that starts on the Play pill (it lies where the thumb rests) drives like any other, and the pill tucks away meanwhile
-  for (const id of ['pill', 'links']) hnd.adopt(document.getElementById(id), { drive: () => ui.pillTuck(true), end: () => { if (!F.holdOn()) ui.pillTuck(false); } });
+  for (const id of ['pill', 'links', 'morep']) hnd.adopt(document.getElementById(id), { drive: () => ui.pillTuck(true), end: () => { if (!F.holdOn()) ui.pillTuck(false); } });
   // ... and so does one that starts on an open note's card: it steers at once and the card goes (a tap on it is the card's own click)
   const nt = document.getElementById('note'); if (SMALL && nt) hnd.adopt(nt, { drive: () => ui.dropSmall('drive') });
   // A tap on a woken screen plays it (spec 6.3). The player must open inside a real gesture so sound is allowed:
@@ -108,6 +108,8 @@ async function boot() {
   // a drag that begins on it drives, and only then counts as the first touch; a tap on it is its own click.
   audio.init({ change: soundChange });
   hnd.adopt(document.getElementById('startb'), { lazy: true, drive: () => { first(); dropStart(true); } });
+  // ... and the intro card over the opening frame: a drag that begins on it drives (and puts it away); a tap on it is its own
+  hnd.adopt(document.getElementById('intro'), { lazy: true, drive: () => { first(); dropStart(true); } });
   soundBoot();
   cv.addEventListener('touchmove', e => e.preventDefault(), { passive: false });       // older iOS: no scroll, no bounce
   document.addEventListener('gesturestart', e => { if (running) e.preventDefault(); });   // no pinch
@@ -124,6 +126,7 @@ async function boot() {
   if (DEBUG) debugHooks(fontsOk);
   landName();
   stage.classList.add('on');
+  if (location.hash !== '#ad1' && location.hash !== '#reel') ui.introShow();      // the intro card (CONTENT-v2 I1): what this is and what to do
   // Deep links (spec 9.8). #ad1: straight onto the first ad's poster with its Play pill; behind it the game is already
   // at the phone, the first ad found. #reel: the reel, open.
   if (location.hash === '#ad1') { first(); F.deepAd1(); cam.x = van.x; cam.y = van.y; cam.zoom = 1; cam.anchor = 0.46; ui.openPoster(S.byId.ad1); }
@@ -172,6 +175,7 @@ function stop() { if (!running) return; running = false; cancelAnimationFrame(ra
 function first(fresh) {
   const r = F.threeTouch(fresh !== false); if (r === 2) endedAt = performance.now();
   if (!S.firstInput) { S.firstInput = true; firstAt = S.rt; van.lights = true; F.tourStop(); }
+  ui.introBye();                                   // the first touch, drive or key puts the intro card away
   return r;
 }
 function toWorld(cx, cy) { const k = view.s / view.dpr; return [(cx - view.tx / view.dpr) / k, (cy - view.ty / view.dpr) / k]; }
@@ -212,7 +216,8 @@ function frame(now) {
   const dt = rdt * (S.slow > 0 ? 0.3 : 1);
   S.t += dt;
 
-  if (AUTO && !S.firstInput && S.rt >= tourAt) F.tourStart();
+  if (AUTO && !S.firstInput && S.rt >= tourAt && !ui.introUp()) F.tourStart();      // (the idle tour waits while the intro card is being read)
+  else if (AUTO && !S.firstInput && S.rt >= tourAt + 11 && ui.introUp()) ui.introBye();      // (a visitor who only watches: the card has had its read, it goes, and the tour follows it 1.3 s later)
   van.drag = sf.paper.inPile ? 0.8 : sf.flourAt(van.x + Math.cos(van.a) * sf.NOSE, van.y + Math.sin(van.a) * sf.NOSE) === 2 ? 0.85 : 1;
   // The moment holds the van still. A thumb that stayed down and keeps steering ends it early once the
   // first 0.8 s are over; when the moment is over, by itself or not, that thumb has the van again without having to move.
@@ -604,7 +609,7 @@ function dropStart(tip) {
 // A tap on the Start pill (audio.js has already asked for sound inside this same tap). The opening's own beat follows
 // it: the ghost thumb and the idle tour wait for the motor to have started, unless they were already under way.
 function engineTap() {
-  dropStart(false);
+  dropStart(false); ui.introBye();
   if (S.firstInput || S.rt >= tourAt) return;
   if (S.rt - hintAt < 0.75) { hintAt = S.rt + 0.35; tourAt = hintAt + 1.5; } else tourAt = Math.max(tourAt, S.rt + 1.3);
 }

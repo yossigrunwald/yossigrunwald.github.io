@@ -30,7 +30,7 @@ let wake = null, busy = () => false, pencil = null, cube = null, boxes = null, a
 // busyFn(): the other moment (the strips) is on or about to begin
 export function init(wakeFn, busyFn) {
   wake = wakeFn; if (busyFn) busy = busyFn;
-  const f = S.byId, app = f.app, ln = f.line, so = f.solo, a2 = f.ad2, a3 = f.ad3, bx = BOXES[0], by = BOXES[1];
+  const f = S.byId, app = f.app, ln = f.line, so = f.solo, a2 = f.ad2, ins = f.inside, bx = BOXES[0], by = BOXES[1];
   // app: found by the fifth card docking, not by a bump, so usually from some way off. Its label goes under the phone's
   // foot, where it hides nothing of the tray (it is slapped on when the camera of the app's moment reaches the phone; like
   // every label it leaves the screen with its thing), and once more when the van arrives. It never sits on the phone
@@ -45,7 +45,10 @@ export function init(wakeFn, busyFn) {
   ln.lab = { up: [ln.x, ln.y - hh - 9], down: [ln.x, ln.y + hh + 9], min: 2.2, read: 3, only: ln.head.innerHTML, flip: false, below: false, pick(v) { this.below = v.vy < -20; this.flip = v.vy > 20; } };
   so.lampA = 0.44; so.type = -1; so.lab = { up: [so.x - 14, so.y - 124], down: [so.x - 14, so.y + 36] }; so.tabAt = [so.x - 34, so.y - 9, 0.05];
   a2.lab = { up: [a2.x, a2.y - 254], down: [a2.x, a2.y + 12] }; a2.tabAt = [a2.x + 38, a2.y - 15, -0.07];
-  a3.morph = 0; a3.lab = { up: [a3.x - 26, a3.y - 168], down: [a3.x - 26, a3.y + 12] }; a3.tabAt = [a3.x - 20, a3.y - 8, -0.08];
+  // inside: the phone on the grey cube (G4). k: the screen showing (0 quote, 1 job, 2 invoice, 3 paid) · pt: how long it
+  // has shown · sl: how far the slide to it has gone · run: the flow plays (once found) · stampAt: when the PAID stamp lands
+  ins.k = 0; ins.pt = 0; ins.sl = 1; ins.run = false; ins.stampAt = -9; ins.dingAt = 0; ins.loops = 0;
+  ins.lab = { up: [ins.x - 26, ins.y - 168], down: [ins.x - 26, ins.y + 12] }; ins.tabAt = [ins.x - 20, ins.y - 8, -0.08];
   // the three newer finds: the stamp at the east edge, the paper spike, the row of small screens
   const qu = f.quality, sc = f.scale, lv = f.live;
   if (qu) { qu.hop = 0; qu.inked = 0; qu.lab = { up: [qu.x - 34, qu.y - 74], down: [qu.x - 34, qu.y + 16] }; qu.tabAt = [qu.x - 2, qu.y + 9, -0.05]; }
@@ -288,18 +291,24 @@ function buildAd2() {
   });
 }
 
-// ---------- ad 3: a phone leaning on a plain grey cube ----------
-function buildAd3() {
-  const f = S.byId.ad3, x = f.x, y = f.y, cx = x - 66, cy = y - 3;
-  spr.lean = art.keep(() => da.leanPhone(), x, y); spr.cube = da.cubeFrames(true);      // only the plain cube for now: the rest are baked as it rounds off
-  f.scr = [x - 42, y - 155, x + 42, y - 5];
-  const L = addScreen('ad3', makeLoop(f.video, true, 168, 300), f, f.scr);
+// ---------- inside the app: the phone leaning on the plain grey cube (G4, 2026-11-19: it showed the 3D ad until then) ----------
+// Its screen shows the app's flow, one screen at a time: a quote, a job in its slot, an invoice, paid. Found, the flow
+// plays: a quick first pass to the PAID stamp (it lands with a ding and the cube hops), then a slow round for as long as
+// the phone is in view. Each new screen slides in from the right (under reduced motion it just changes). The four
+// screens are flat sprites, held only while the van is near (art.keep); the stamp is drawn on the last one per frame.
+const INSIDE_KEYS = ['quote', 'job', 'invoice', 'paid'];
+function insideWords(f) { const w = {}; f.el.querySelectorAll(':scope > [data-w]').forEach(e => { w[e.dataset.w] = e.textContent.trim(); }); return INSIDE_KEYS.map(k => w[k] || ''); }
+function bakeInside(f) { const ws = insideWords(f); spr.inside = [0, 1, 2, 3].map(k => art.keep(() => da.insidePanel(k, ws[k]), f.x, f.y - 80)); }
+function buildInside() {
+  const f = S.byId.inside, x = f.x, y = f.y, cx = x - 66, cy = y - 3, sx = x - 42, sy = y - 155, st = da.INSIDE.stamp;
+  spr.lean = art.keep(() => da.leanPhone(), x, y); spr.cube = da.cubeFrames(true);      // only the plain cube
+  bakeInside(f);
   cube = prop({
     x: cx, y: cy, sp: spr.cube[0], sortY: cy, find: f, noTab: true, coll: cbox(cx - 25, cy - 38, cx + 25, cy), tall: [cx - 27, cx + 27, cy - 84], pop: 0,
     draw(ctx, p) {
-      const m = f.morph, i = m <= 0 || spr.cube.length < 5 ? 0 : m >= 1 ? 4 : 1 + (m * 3 | 0), q = p.pop;
+      const q = p.pop;
       if (q > 0) { ctx.save(); ctx.translate(cx, cy); ctx.scale(1 + 0.16 * q, 1 + 0.16 * q); ctx.translate(-cx, -cy); }
-      art.drawSpr(ctx, spr.cube[i], cx, cy);
+      art.drawSpr(ctx, spr.cube[0], cx, cy);
       if (q > 0) ctx.restore();
     }
   });
@@ -307,7 +316,20 @@ function buildAd3() {
     // its collider reaches as far back as the cube's does: one flat-backed block from the cube to the desk's edge, so a
     // van pushed into it from behind slides west round the cube and is never held in a notch between cube, phone and edge
     x, y, sp: spr.lean, sortY: y + 1, find: f, coll: cbox(x - 46, y - 41, x + 48, y + 1), tall: [x - 48, x + 48, y - 165],
-    draw(ctx, p) { phoneBody(ctx, x, y, 84, 150, 10); grab(L); drawScreen(ctx, L, x - 42, y - 155, 84, 150); glass(ctx, x, y, 84, 150, 10); }
+    draw(ctx, p) {
+      phoneBody(ctx, x, y, 84, 150, 10);
+      const P = spr.inside;
+      if (f.sl < 1) {
+        const e = ease(f.sl); ctx.save(); ctx.beginPath(); ctx.rect(sx, sy, 84, 150); ctx.clip();
+        art.drawSpr(ctx, P[(f.k + 3) % 4], sx - 84 * e, sy); art.drawSpr(ctx, P[f.k], sx + 84 * (1 - e), sy); ctx.restore();
+      } else art.drawSpr(ctx, P[f.k], sx, sy);
+      if (f.k === 3 && S.t >= f.stampAt) {                          // PAID: the stamp comes down on the invoice, big, and settles
+        const u = S.reduced ? 1 : (S.t - f.stampAt) / 0.16, a = ctx.globalAlpha;
+        if (u < 1) ctx.globalAlpha = a * u;
+        da.stampMark(ctx, sx + st[0], sy + st[1], st[2] * (u < 1 ? 1 + 0.8 * (1 - u) : 1)); ctx.globalAlpha = a;
+      }
+      glass(ctx, x, y, 84, 150, 10);
+    }
   });
 }
 
@@ -481,7 +503,7 @@ function dress() {
 }
 
 export function canvases() { return []; }
-export function jobs() { return [buildApp, buildAd2, buildAd3, buildLine, buildSolo, buildStrip, buildQuality, buildScale, buildLive, dress]; }
+export function jobs() { return [buildApp, buildAd2, buildInside, buildLine, buildSolo, buildStrip, buildQuality, buildScale, buildLive, dress]; }
 // lettering baked again when a font face arrives late
 export function rebakeLettering() {
   S.cards.forEach(c => { if (c.sp) { c.sp = art.cardSprite(c.word); c.big = da.cardBig(c.word, c.gloss); } });
@@ -490,6 +512,7 @@ export function rebakeLettering() {
   if (spr.planNums) bakeFirst();
   if (spr.tally) spr.tally = da.tallyDigits();
   if (spr.arrow && arrowP) { art.retire(spr.arrow, true); spr.arrow = art.keep(() => da.tapeArrow(arrowTxt), arrowP.x, arrowP.y); arrowP.sp = spr.arrow; }
+  if (spr.inside) { spr.inside.forEach(q => art.retire(q, true)); bakeInside(S.byId.inside); }
   const lv = S.byId.live; if (spr.live && lv && lv.prop) { const tag = lv.q('[data-tag]').textContent.trim(); spr.live.forEach(q => art.retire(q, true)); spr.live = [0, 1, 2].map(n => art.keep(() => da.liveScreens(n, tag), lv.x, lv.y)); lv.prop.sp = spr.live[0]; }
 }
 
@@ -505,7 +528,7 @@ export function onWake(f, quick) {
     }
     case 'solo': f.type = 0; return true;
     case 'ad2': S.inkUntil = S.t + 6; if (pencil) { pencil.roll = true; pencil.vx = -50; } return true;      // the pencil rolls off; the van draws in ink for 6 s
-    case 'ad3': f.morph = 0.0001; if (spr.cube.length < 5) spr.cube = da.cubeFrames(); return true;
+    case 'inside': f.run = true; f.pt = 0; f.loops = 0; return true;
     case 'quality': f.hop = 0.0001; return true;
     case 'scale': f.clicks = 5; f.ct = 0.25; f.roll = 0; if (onScreen(f.x, f.y - 30, 60)) burst(2, f.x, f.y - 34, 6, 150, 0.6, 4); return true;
     case 'live': f.lit = 0.0001; return true;
@@ -586,11 +609,21 @@ export function update(dt, rdt) {
     pencil.vx = Math.max(-250, pencil.vx - 380 * dt); pencil.p.x += pencil.vx * dt;
     if (pencil.p.x < G.desk[0] - 4) pencil.gone = Math.min(1, pencil.gone + dt / 0.35);
   }
-  const a3 = F.ad3;
-  if (a3.morph > 0 && a3.morph < 1) {
-    a3.morph = Math.min(1, a3.morph + dt / 0.6);
-    if (a3.morph >= 1 && cube) { cube.sp = spr.cube[4]; spr.cube = [null, null, null, null, spr.cube[4]]; cube.pop = 1; audio.ding(3); if (onScreen(cube.x, cube.y, 60)) burst(3, cube.x, cube.y - 30, 10, 130, 0.6, 4); }
-  } else if (cube && cube.pop > 0) cube.pop = Math.max(0, cube.pop - dt / 0.3);
+  const ins = F.inside;
+  if (ins && ins.run) {
+    // the first pass is quick (0.8 s a screen, to the stamp); after it each screen stays 2.2 s
+    ins.pt += dt; if (ins.sl < 1) ins.sl = S.reduced ? 1 : Math.min(1, ins.sl + dt / 0.28);
+    if (ins.pt >= (ins.loops ? 2.2 : 0.8) && !(ins.k === 3 && !ins.loops && ins.pt < 2.4)) {
+      ins.k = (ins.k + 1) % 4; ins.pt = 0; ins.sl = S.reduced ? 1 : 0;
+      if (ins.k === 0) ins.loops++;
+      if (ins.k === 3) { ins.stampAt = S.t + (S.reduced ? 0 : 0.3); if (!ins.loops) ins.dingAt = ins.stampAt; }
+    }
+    if (ins.dingAt && S.t >= ins.dingAt) {
+      ins.dingAt = 0; audio.ding(3);
+      if (cube) { cube.pop = 1; if (onScreen(cube.x, cube.y, 60)) burst(2, ins.x - 4, ins.y - 92, 12, 150, 0.7, 4); }
+    }
+  }
+  if (cube && cube.pop > 0) cube.pop = Math.max(0, cube.pop - dt / 0.3);
   const qu = F.quality;
   if (qu && qu.hop > 0 && qu.hop < 1) {
     const was = qu.hop; qu.hop = Math.min(1, qu.hop + dt / 1.1);

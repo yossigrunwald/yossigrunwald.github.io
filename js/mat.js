@@ -32,6 +32,12 @@ const onScreen = (x, y, m) => { const v = S.vr; return x > v[0] - m && x < v[2] 
 const disc = (ctx, x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
 const dist = f => Math.hypot(van.x - f.x, van.y - f.y);
 let gate = null, marks = null, sheets = {}, chairFrames = null, bunt = null;
+// The camera (G5, CONTENT-v2 I8): once the freelance kit is found, a bump on the camera (or a tap, which drives the van
+// there to bump it) takes a picture: a white flash, the shutter (the existing tick, twice), and an instant print of the
+// van slides out beside the camera, stays a moment and fades. snap: the print that is out (null when none: nothing is
+// held or drawn) · vanPic(i): the van's sprite at heading i (finds.js) · SNAP: how long it slides, stays, fades (s).
+let snap = null, snapAt = -9, vanPic = null;
+const SNAP = { slide: 0.45, stay: 1.7, fade: 0.7 };
 // The chase (see drawChase): t = seconds into a run, or -1 between runs · wait = seconds to the next run · tags = the
 // track's reflective tags in pairs, each { d: how far along the track, path, at: its two middles }
 // w: the same inside the woods, from sheet to sheet (see tickWoods): t, wait as above · from, to = the reflective
@@ -45,7 +51,8 @@ function sheetAt(f, w, h, lift, dx = 0) {
   f.sx = f.x + dx; f.sw = w; f.sh = h; f.lift = lift; f.show = 0; f.img = null;
   const py = f.y - (lift + h + 3.5); f.scr = [f.sx - w / 2, py, f.sx + w / 2, py + h];
 }
-export function init() {
+export function init(vanFrame) {
+  vanPic = vanFrame || null;
   const f = S.byId;
   for (const id of ['skit2', 'skit3']) { const s = f[id]; s.near = 0; s.scr = [s.x - 42, s.y - 155, s.x + 42, s.y - 5]; s.lab = { up: [s.x, s.y - 168], down: [s.x, s.y + 46] }; s.tabAt = [s.x - 25, s.y - 8, -0.08]; }
   const ch = f.chair; ch.idx = 1; ch.tip = 0;
@@ -171,6 +178,7 @@ function buildFreelance() {
   });
   M({
     x: tx, y: ty, sp: spr.tripod, sortY: front - 0.2, find: f, noTab: true, coll: cbox(x - 96, y - 44, x - 39, front), tall: [tx - 20, tx + 20, ty - 78],
+    again: () => takeSnap(tx, ty),                                   // found and bumped again: it takes a picture (G5)
     draw(ctx) {
       art.drawSpr(ctx, spr.tripod, tx, ty);
       const L = ma.LENS, cx = tx + L.x, cy = ty + L.y, o = f.iris, r = f.found ? 1.2 + 2.6 * (o < 0.6 ? ease(o / 0.6) * 1.12 : 1.12 - 0.12 * ease((o - 0.6) / 0.4)) : 1.2;   // the iris opens wide, then settles
@@ -188,6 +196,38 @@ function buildFreelance() {
       art.drawSpr(ctx, on ? spr.standOn : spr.standOff, lx, ly);
     }
   });
+}
+
+// the camera takes a picture: at most one print out at a time, and not again within 1.2 s of the last
+function takeSnap(tx, ty) {
+  if (snap || S.rt - snapAt < 1.2) return;
+  snapAt = S.rt;
+  const i = ((Math.round(van.a / 6.283185307 * 64) % 64) + 64) % 64, sp = vanPic ? vanPic(i) : null;
+  snap = { t: 0, x: tx, y: ty, clack: false, sp: ma.instantPrint(sp, art.drawSpr) };
+  audio.tick();
+}
+function tickSnap(rdt) {
+  snap.t += rdt;
+  if (!snap.clack && snap.t >= 0.09) { snap.clack = true; audio.tick(); }      // the shutter: click, clack
+  if (snap.t >= SNAP.slide + SNAP.stay + SNAP.fade) { const c = snap.sp && snap.sp.c; if (c) c.width = c.height = 0; snap = null; }
+}
+// over every prop (drawChase): the flash at the lens, then the print. Under reduced motion no flash and no slide.
+function drawSnap(ctx) {
+  if (!snap) return;
+  const t = snap.t, L = ma.LENS, lx = snap.x + L.x, ly = snap.y + L.y, a = ctx.globalAlpha;
+  if (!S.reduced && t < 0.22) {
+    const u = t / 0.22, v = S.vr;
+    if (t < 0.12) { ctx.globalAlpha = a * 0.3 * (1 - t / 0.12); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(v[0], v[1], v[2] - v[0], v[3] - v[1]); }      // the whole view goes white for a blink
+    ctx.fillStyle = '#FFFFFF';
+    for (const [r, k] of [[16 + 70 * u, 0.35], [10 + 40 * u, 0.55], [5 + 18 * u, 0.9]]) { ctx.globalAlpha = a * k * (1 - u); disc(ctx, lx, ly, r); }      // three hard steps of light at the lens
+    ctx.globalAlpha = a;
+  }
+  if (!snap.sp) return;
+  const out = S.reduced ? 1 : ease(Math.min(1, t / SNAP.slide)), gone = (t - SNAP.slide - SNAP.stay) / SNAP.fade;
+  ctx.globalAlpha = a * (gone > 0 ? Math.max(0, 1 - gone) : 1);
+  // (it slides out to the tripod's west, over the open mat: straight down it would land on the roof of the van that has just bumped it)
+  ctx.save(); ctx.translate(lx - 2 - 50 * out, ly - 6 + 24 * out + (gone > 0 && !S.reduced ? 10 * gone : 0)); ctx.rotate(-0.12 * out);
+  art.drawSpr(ctx, snap.sp, 0, 0); ctx.restore(); ctx.globalAlpha = a;
 }
 
 // ---------- the dolly track across the mat's south-west quarter, and the set dressing round it ----------
@@ -603,6 +643,7 @@ function star(ctx, x, y, r) {
 }
 export function drawChase(ctx) {
   drawWoods(ctx);
+  drawSnap(ctx);
   const t = chase.t; if (t < 0) return;
   ctx.fillStyle = '#F4F1E8';
   for (const g of chase.tags) {
@@ -646,6 +687,7 @@ function drawWoods(ctx) {
 let lazyT = 0;
 export function update(dt, rdt) {
   const F = S.byId;
+  if (snap) tickSnap(rdt);
   if (!F.camp.found && S.firstInput && !S.reduced && chase.tags.length && surfaceAt(van.x, van.y) === 'mat') {      // (not under reduced motion: it is a run of flashes; the ember and its warmth on the ground stay)
     if (chase.t >= 0) { chase.t += rdt; if (chase.t >= 1.4) { chase.t = -1; chase.wait = 3.6; } }
     else if ((chase.wait -= rdt) <= 0) chase.t = 0;

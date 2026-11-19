@@ -1,6 +1,6 @@
 // art.js — the slab routine that bakes every sprite (spec 8.1), ground tiles, prop recipes, van headings.
 // Everything is drawn once into offscreen sprites. Nothing in this file runs per frame except drawSpr/drawShadow.
-import { PAL, mulberry32, SEED, S5 } from './world.js';
+import { PAL, TRACK, mulberry32, SEED, S5 } from './world.js';
 
 export const SS = 2;            // sprite pixels per world unit
 export const HK = 0.6;          // screen px per unit of height
@@ -359,10 +359,17 @@ export function tiles() {
 }
 
 // ---------- the hub: a round of plywood with the name routed in and four tape arrows ----------
-// where the two routed lines sit on the hub, in world units (centre y on screen, width, height): the first-paint HTML name lands on them
-export const hubText = { name: null, roles: null };
+// where the routed name sits on the hub, in world units (centre y on screen, width, height): the first-paint HTML name lands on it.
+// roles: the line under the name until 2026-11-19 (G8). It is gone, so it stays null (main.js reads null as "no line").
+// labels: the job labels' tape pieces on the disc, [x0, y0, x1, y1] in disc units (finds.drawDashes keeps its dashes off them).
+export const hubText = { name: null, roles: null, labels: [] };
 // five: with a fifth arrow, green, to the steel bench in the north-east (stage 5)
-export function hubSprite(name, roles, five) {
+// labels: [{ to, text }] read from the page (#finds [data-hub]): each arrow's own job label, so the jobs read as separate
+// entries, the way a resume lists them (CONTENT-v2, A, Hub words). Four lie on the disc, each a piece of its own track's
+// tape by its arrow, lettered in ink in the stencil: north between the arrow and the name, east level with its arrow,
+// west under its arrow, south above its arrow (clear of the ring that slides up under the van at the start). The green one has no room on the disc (its arrow sits right over
+// the name's last letters), so it is lettered on the green floor tape that arrow points at (beltart.tapeSprite).
+export function hubSprite(name, labels, five) {
   const R = 160, r = mulberry32(SEED ^ 0x77);
   const det = g => {
     for (let k = 0; k < 8; k++) { g.fillStyle = `rgba(255,222,172,${0.05 + r() * 0.06})`; g.fillRect(-R + r() * 2 * R, -R, 22 + r() * 46, 2 * R); }
@@ -388,7 +395,28 @@ export function hubSprite(name, roles, five) {
       return { cy: y - asc / 2 - 8 * HK, w: width, h: asc };          // the top of the hub is 8 units up
     };
     hubText.name = routed(name.toUpperCase(), -50, 254, 1);
-    hubText.roles = routed(roles.toUpperCase(), 85.6, 244, 1, '#34180A');      // the headline: set tight, so it is as large as its chord of the disc allows, and cut a step darker than the name
+    hubText.roles = null; hubText.labels = [];
+    // the job labels: capitals about 14 units tall (9 px on a phone at the hub's zoom: read without zooming), drawn in
+    // only where a label would run past its room. A tape piece 20 tall, set a hair off square, as tape is when it is put down.
+    // North sits between its arrow and the name (moved west, when the green arrow is there, so it ends short of that
+    // arrow's tail); east level with its arrow, inside its tail; west under its arrow (it is the long one: level, it would
+    // reach the van standing in the middle); south above its arrow.
+    const nameTop = -50 - hubText.name.h, room = { w: 172, v: 72, k: 132, c: 96 };
+    for (const lb of labels || []) {
+      if (!room[lb.to]) continue;
+      const txt = lb.text.toUpperCase();
+      let fs = 17; g.font = `900 ${fs}px ${STENCIL}`;
+      try { g.letterSpacing = '0.7px'; } catch (e) { /* older engines: no tracking */ }
+      let tw = g.measureText(txt).width;
+      if (tw > room[lb.to] - 12) { fs *= (room[lb.to] - 12) / tw; g.font = `900 ${fs}px ${STENCIL}`; tw = g.measureText(txt).width; }
+      const w = tw + 12, h = 20;
+      const at = { w: [five ? Math.min(0, 58 - w / 2) : 0, (nameTop - 108) / 2, -1], v: [103 - w / 2, 0, 1.5], k: [-139 + w / 2, 27, -1.5], c: [0, 80, 1] }[lb.to];
+      const done = drawTape(g, at[0], at[1], w, h, at[2], TRACK[lb.to].tape, 1);
+      g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 0.4, 1.2);
+      done();
+      try { g.letterSpacing = '0px'; } catch (e) { /* same */ }
+      hubText.labels.push([at[0] - w / 2, at[1] - h / 2, at[0] + w / 2, at[1] + h / 2]);
+    }
     // four tape arrows at the rim: gold north, pink east, masking south, blue west
     const arrow = (ang, col, rad = 126) => {
       g.save(); g.rotate(ang); g.translate(0, -rad);
@@ -828,6 +856,66 @@ export function cableSprite() {
 export function crumbs() {
   const r = mulberry32(31);
   return flat(120, 60, 60, 30, g => { for (let i = 0; i < 34; i++) { g.fillStyle = r() > 0.5 ? '#B8702A' : '#D7913E'; const x = 60 + (r() - 0.5) * 110 * r(), y = 30 + (r() - 0.5) * 50 * r(); g.fillRect(x, y, 1 + r() * 2, 1 + r() * 1.6); } }, 0);
+}
+
+// ---------- the earlier jobs, on the block (G8, 2026-11-19: they came live before the plank) ----------
+// matzah: a wind-up kitchen timer sitting in the deep drift, flour heaped against its foot (the bakery's line ran on the
+// clock). Its pointer is drawn per frame (finds.js), so the dial here has only its ticks. Origin = the middle of its foot.
+export const TIMER = { r: 12, h: 9 };
+export function timerSprite() {
+  const R = TIMER.r, Z = TIMER.h;
+  return bake([
+    cyl(0, 0, R, 0, Z, '#F4F1E8', '#D6D1C2', {
+      det: g => {
+        g.strokeStyle = 'rgba(20,17,15,.55)'; g.lineWidth = 0.9; g.beginPath(); g.arc(0, 0, R - 2.2, 0, 6.2832); g.stroke();
+        g.fillStyle = PAL.ink; for (let i = 0; i < 12; i++) { const a = i / 12 * 6.2832; g.save(); g.rotate(a); g.fillRect(-0.45, -(R - 2.6), 0.9, i % 3 ? 1.8 : 3.2); g.restore(); }
+        g.fillStyle = '#B9483A'; g.fillRect(-0.7, -R + 0.4, 1.4, 2.2);                     // the mark the pointer counts down to
+      }
+    }),
+    cyl(0, 0, 2.6, Z, Z + 1.6, '#B9483A', '#93382D', { hl: 0, ns: 1 }),
+    decal(g => {                                                                          // flour heaped against its foot: it lies in the drift
+      g.fillStyle = PAL.flourShade; g.beginPath(); g.ellipse(0.6, 7.6, R + 4.4, 4.6, 0, 0, 3.1416); g.fill();
+      g.fillStyle = PAL.flour; g.beginPath(); g.ellipse(-0.4, 6.6, R + 3.4, 4, 0, 0, 3.1416); g.fill();
+      g.fillStyle = 'rgba(255,253,248,.9)'; for (const [x, y] of [[-9, 6.8], [-3, 8.4], [5, 7.9], [10, 6.4]]) { g.beginPath(); g.arc(x, y, 1.1, 0, 6.2832); g.fill(); }
+    })
+  ]);
+}
+// before: an ID badge on its lanyard, lying flat: the strap folded in a narrow loop above it (a strap, not a ring: the
+// card is what reads), a steel clip, a white card with a masking-tape band, a grey photo square and two bars. No name,
+// no words. Origin = the badge's middle.
+export function badgeSprite() {
+  const S1 = '#3A4A55', S2 = '#26313A';
+  // the strap: one band about 3 units wide, its two ends meeting at the clip; the outline goes up one side and back
+  // down inside the other, so the middle of the loop stays open
+  const strap = [[-2.2, -15], [-7.2, -24], [-7.8, -30], [-5.2, -35.2], [0, -36.8], [5.2, -35.2], [7.8, -30], [7.2, -24], [2.2, -15],
+    [0.6, -17.6], [4.3, -24.6], [4.7, -29.6], [2.9, -32.7], [0, -33.5], [-2.9, -32.7], [-4.7, -29.6], [-4.3, -24.6], [-0.6, -17.6]];
+  return bake([
+    poly(strap, 0, 0.8, S1, S2, { hl: 0 }),
+    box(-2.2, -17.5, 4.4, 6.5, 0, 1.6, PAL.steel, '#6E7679', { hl: 0 }),
+    rbox(-14, -12, 28, 34, 3, 0, 1.8, '#FBFCFD', '#C5D0DA', {
+      det: g => {
+        g.fillStyle = PAL.masking; g.fillRect(-14, -12, 28, 7.6); g.fillStyle = '#4A5258'; g.beginPath(); rr(g, -3.4, -10.2, 6.8, 2, 1); g.fill();      // the band, and the slot the clip goes through
+        g.fillStyle = '#A9B4BF'; g.fillRect(-9, -2.4, 18, 13.6);                                                         // the photo square
+        g.fillStyle = '#8795A3'; g.beginPath(); g.arc(0, 2.6, 3.6, 0, 6.2832); g.fill(); g.fillRect(-5.6, 7.4, 11.2, 3.8);
+        g.fillStyle = PAL.ink; g.fillRect(-9, 14, 18, 2.4); g.fillStyle = '#A9B4BF'; g.fillRect(-9, 18, 12, 1.6);
+      }
+    })
+  ], { rot: 0.18 });
+}
+// study: a closed book lying on the block, a ribbon marker out of its foot. A navy cover with a ruled panel and no title,
+// a darker spine, the page edges bone. Origin = the book's middle.
+export function bookSprite() {
+  return bake([
+    decal(g => { g.fillStyle = '#B9483A'; g.beginPath(); g.moveTo(5, 20.8); g.lineTo(9, 20.8); g.lineTo(9.6, 31); g.lineTo(7.2, 28.6); g.lineTo(4.6, 31.4); g.closePath(); g.fill(); }),
+    rbox(-16, -21, 32, 42, 2, 0, 6.6, '#E9E3D0', '#D8CFB4', { hl: 0 }),
+    rbox(-16.6, -21.6, 33.2, 43.2, 2.4, 6.6, 8, '#2E4470', '#1C2B49', {
+      det: g => {
+        g.fillStyle = '#1C2B49'; g.fillRect(-16.6, -21.6, 5, 43.2);                                       // the spine
+        g.strokeStyle = 'rgba(233,229,218,.75)'; g.lineWidth = 0.9; g.strokeRect(-8.6, -14.6, 21, 26);
+        g.strokeRect(-6.6, -12.6, 17, 7.4);
+      }
+    })
+  ], { rot: -0.22 });
 }
 
 // ---------- particles ----------

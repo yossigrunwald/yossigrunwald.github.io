@@ -75,11 +75,24 @@ export function plateSprite(lit) {
 // ---------- the floor tape from the hub's rim to the bench: green tape, a chevron every 28 units. Origin = its middle ----------
 export const TAPE = { w: 388, h: 14 };
 export const chevPath = (g, x, y, k) => { g.beginPath(); g.moveTo(x - 4 * k, y - 5 * k); g.lineTo(x - 1 * k, y - 5 * k); g.lineTo(x + 3 * k, y); g.lineTo(x - 1 * k, y + 5 * k); g.lineTo(x - 4 * k, y + 5 * k); g.lineTo(x, y); g.closePath(); };
-export function tapeSprite() {
-  const W = TAPE.w + 8, H = TAPE.h + 8;
+// label: the green arrow's job label (CONTENT-v2, A, Hub words), read from the page. The arrow has no room for it on the
+// hub, so it is lettered here, at the end of the tape that arrow points at, where the tape comes out from under the hub's
+// rim: ink stencil capitals as tall as the tape holds (11 units; the four on the disc stand 14), reading outward toward the bench. The printed
+// chevrons start after it.
+export function tapeSprite(label) {
+  const W = TAPE.w + 8, H = TAPE.h + 8, X0 = -TAPE.w / 2 + 20;      // (the tape's first 16 units lie under the hub)
   return flat(W, H, W / 2, H / 2, g => {
     const done = drawTape(g, W / 2, H / 2, TAPE.w, TAPE.h, 0, PAL.greenTape, 1.2);
-    g.fillStyle = 'rgba(8,60,46,.6)'; for (let x = -TAPE.w / 2 + 16; x < TAPE.w / 2 - 8; x += 28) { chevPath(g, x, 0, 1); g.fill(); }
+    let end = -TAPE.w / 2;
+    if (label) {
+      const txt = label.toUpperCase(); let fs = 13.6; g.font = `900 ${fs}px ${STENCIL}`;      // (capitals 11 units tall: as large as the 14-unit tape holds)
+      try { g.letterSpacing = '0.6px'; } catch (e) { /* older engines: no tracking */ }
+      let tw = g.measureText(txt).width; if (tw > 130) { fs *= 130 / tw; g.font = `900 ${fs}px ${STENCIL}`; tw = g.measureText(txt).width; }
+      g.fillStyle = PAL.ink; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(txt, X0, 0.9);
+      try { g.letterSpacing = '0px'; } catch (e) { /* same */ }
+      end = X0 + tw + 6;
+    }
+    g.fillStyle = 'rgba(8,60,46,.6)'; for (let x = -TAPE.w / 2 + 16; x < TAPE.w / 2 - 8; x += 28) { if (x - 4 < end) continue; chevPath(g, x, 0, 1); g.fill(); }
     done();
   }, 0.6);
 }

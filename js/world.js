@@ -7,6 +7,8 @@ export const MEDIA = 'resume/media/';    // the game lives at the site root; its
 // (quality, scale, live), the weekly recap in the woods, and the garage as a counted find · 5 the belt (the steel bench
 // in the north-east: belt.js), with what waited for it: the stamp's tape arrow, the bench's second look, the green strip
 // of the moment, the hub's fifth arrow · 6 (not built) the rest of the kitchen and the back plank.
+// (2026-11-19, G8: three finds of the earlier jobs came live at 5 without the plank, each on a free spot of the block:
+// the bakery's timer in the deep drift, the group home's badge and the yeshiva's book on the block's south edge.)
 // 5 is live. ?stage=4 gives back the build that was approved before the bench (the tests diff against it).
 export const STAGE = (() => { const s = +new URLSearchParams(location.search).get('stage'); return s >= 1 && s <= 5 ? s : 5; })();
 export const S5 = STAGE >= 5;                                   // everything the bench adds is behind this, or behind a data-stage="5"
@@ -186,6 +188,10 @@ export function readSays(doc = document) {
   const out = {};
   doc.querySelectorAll('[data-say]').forEach(el => { const d = el.dataset; if (on(el)) out[d.say] = { ...words(el, d), id: d.say, say: true, tab: '', live: false }; });
   return out;
+}
+// the hub's job labels, one for each tape arrow (CONTENT-v2, A, Hub words): { to: the arrow's track, text }
+export function readHub(doc = document) {
+  return [...doc.querySelectorAll('[data-hub] > [data-to]')].filter(on).map(el => ({ to: el.dataset.to, text: el.textContent.trim() }));
 }
 // the notes and the small things (never counted): one object each, in the shape a tape needs (head, line, track, x, y).
 // kind: flat (driven over) · stand (the van pushes it aside) · wall (fixed to a built thing). r: its own radius.

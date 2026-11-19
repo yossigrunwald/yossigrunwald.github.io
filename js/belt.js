@@ -7,7 +7,7 @@
 // Arclength s runs round the loop from its south-west corner in the direction of flow (east along the south side,
 // north up the east side, west along the north side, south down the west side), 2080 units in all. Six stretches of
 // open belt lie between the post and the five machines; stretch k ends at machine k, and stretch 5 is the return.
-import { S, PAL, S5, addNode, standable, collidersNear, collDist } from './world.js';
+import { S, PAL, S5, addNode, standable, collidersNear, collDist, readHub } from './world.js';
 import * as art from './art.js';
 import * as ba from './beltart.js';
 import { prop, cbox, NOSPR } from './kit.js';
@@ -56,6 +56,7 @@ const blink = new Float32Array(5), rock = new Float32Array(6), noseAt = new Floa
 // carries a second box, 32 = which way it steps when the van is dead centre. po: how far it has stepped off the belt
 const ps = new Float32Array(MAXP), po = new Float32Array(MAXP), pk = new Uint8Array(MAXP);
 let hello = null, quiet = () => false, ready = false, side = 0, fifthAt = 0, fifth = 0, laneAt = -99, swapAt = 0, pre = false, ripAt = -99, cardAt = -99, pats = null;
+let rejectNext = false;      // social's second look (G10): the next film card it takes goes down the reject chute, whatever its turn
 // the clocks a frame writes: 0 until the post's next parcel · 1 the pad is lit · 2 the post's sockets run (-1: not) ·
 // 3 trading's paper chatter · 4 the length of its curl · 5 the sign's flare (-1: not yet, -0.5: due, it waits for the
 // post's tape to go) · 6 how far round the lane tape is lit
@@ -306,9 +307,10 @@ function buildFlats() {
   for (let d = 0; d < 4; d++) { T.chevOff[d] = ba.chevTile(d, false); T.chevOn[d] = ba.chevTile(d, true); }
   T.glowA = art.glow(PAL.lamp, 14, 0.9); T.glowG = art.glow(PAL.greenTape, 14, 0.9); T.glowS = art.glow(PAL.greenTape, 7, 0.9);
   T.plate = ba.plateSprite(false); T.plateLit = ba.plateSprite(true); T.dome = ba.domeSprite();
-  M.tape = art.keep(() => ba.tapeSprite(), 298, -118);
+  M.tape = art.keep(() => ba.tapeSprite(tapeWord()), 298, -118);
   bakePad();
 }
+const tapeWord = () => (readHub().find(l => l.to === 'g') || {}).text || '';      // the green arrow's job label, from the markup (lettered on the floor tape)
 const liveWord = () => { const f = S.byId.team; return (f && f.how && f.how.words.live) || ''; };      // the pad's one word, from the markup
 function bakePad() { const w = liveWord(); M.pad = art.keep(() => ba.padSprite(w, false), 744, -200); M.padLit = art.keep(() => ba.padSprite(w, true), 744, -200); }
 function buildSign() {
@@ -344,7 +346,7 @@ export function jobs() {
     bakeOne('trade', ba.tradeSprite, 960, -484), bakeOne('memory', ba.memorySprite, 820, -764), bakeOne('apply', ba.applySprite, 634, -764), buildSign] : [];
 }
 // the sign and the pad again, when a font face arrives late
-export function rebakeLettering() { if (!S5 || !ready) return; if (M.sign) buildSign(); if (M.pad) { art.retire(M.pad, true); art.retire(M.padLit, true); bakePad(); } }
+export function rebakeLettering() { if (!S5 || !ready) return; if (M.sign) buildSign(); if (M.pad) { art.retire(M.pad, true); art.retire(M.padLit, true); bakePad(); } if (M.tape) { art.retire(M.tape, true); M.tape = art.keep(() => ba.tapeSprite(tapeWord()), 298, -118); } }
 export function canvases() { return [T.parcel, T.chevOff, T.chevOn, T.glowA, T.glowG, T.glowS, T.plate, T.plateLit, T.dome]; }      // for the debug memory count (the kept ones are counted with art's)
 
 // ---------- parcels ----------
@@ -359,7 +361,8 @@ function countIn(k) { let c = 0; for (let j = 0; j < state.n; j++) if (ps[j] >= 
 // machine i takes a parcel: it is inside for 0.6 s (social's every fourth goes round again: 1.6 s); trading lets one in three by
 function feed(i, kind) {
   mt[i] = 0; mo[i] = 0; mk[i] = kind & 15; mc[i]++;
-  md[i] = i === 1 && mc[1] % 4 === 0 ? 1.6 : 0.6;
+  md[i] = i === 1 && (mc[1] % 4 === 0 || rejectNext) ? 1.6 : 0.6;
+  if (i === 1) rejectNext = false;
   mp[i] = i === 2 && mc[2] % 3 !== 1 ? 0 : 1;
   if (i === 3) { cardAt = S.t; ripAt = S.t + 0.4; }
 }
@@ -397,6 +400,9 @@ function start(k, click) {
 }
 
 // ---------- when a machine is found (finds.wake has counted it): it starts, and the stretch that leaves it ----------
+// A found machine's second look has just opened (finds.js). Social's line is the reject chute's own ("Not good enough
+// yet. Back it goes, to come out better."), so the next card it takes is sent round the chute as the line lands.
+export function onAgain(f) { if (S5 && ready && f.id === 'social' && on[1]) rejectNext = true; }
 export function onWake(f) {
   const i = IDS.indexOf(f.id); if (i < 0 || !S5) return false;
   on[i] = 1; onAt[i] = S.t; blink[i] = 0; fifth = i; start(i + 1, false);

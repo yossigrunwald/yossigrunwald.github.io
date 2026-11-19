@@ -37,7 +37,6 @@ html.g #stage{display:block;position:fixed;inset:0;height:100dvh;overflow:hidden
 #first{position:absolute;left:50%;top:calc(50% + 84px);transform:translate(-50%,-50%);text-align:center;color:var(--bone);pointer-events:none;transition:opacity .3s linear;width:max-content}
 #first p{width:max-content;margin-left:auto;margin-right:auto;transition:transform .3s cubic-bezier(.3,.8,.4,1);transform-origin:50% 50%;will-change:transform}
 #first .fn{margin-top:0;margin-bottom:0;font:900 min(12.4vw,62px)/.86 var(--stencil);letter-spacing:.01em;text-transform:uppercase;white-space:nowrap}
-#first .fr{margin-top:9px;margin-bottom:0;font:900 min(4.6vw,23px)/1 var(--stencil);letter-spacing:.09em;text-transform:uppercase;color:#C9CED2;white-space:nowrap}
 #stage.on #first{opacity:0}
 @media (max-height:820px){#first{top:calc(50% + 60px)}}
 @media (max-height:770px),(orientation:landscape){#first{top:calc(50% + 38px)}}
@@ -136,7 +135,6 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
   <canvas id="c" aria-hidden="true" tabindex="-1"></canvas>
   <div id="first" aria-hidden="true">
     <p class="fn">Yossi Grunwald</p>
-    <p class="fr">Founder · AI Automation · Video</p>
   </div>
   <div id="hud">
     <div id="tm" role="status" aria-label="Finds">
@@ -146,6 +144,12 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <a id="chip" href="resume/media/ad1-workeey.mp4"><span class="zz"><b class="zz"><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> Workeey ad <span class="md">·</span> <em>0:30</em></b></span></a>
     <button id="snd" type="button" hidden aria-label="Sound off" data-on="Sound on" data-off="Sound off"><span class="tb zz"><b class="zz"><svg viewBox="0 0 24 20" aria-hidden="true"><path class="sp" d="M2.4 7.1h3.2v5.8H2.4zM7.6 6.6l5-4v14.8l-5-4z"/><path class="wv" d="M15.3 6.6a4.8 4.8 0 0 1 0 6.8M18.2 3.9a8.6 8.6 0 0 1 0 12.2"/><path class="sh" d="M3.6 2.4 20.6 17.6"/><path class="sl" d="M3.6 2.4 20.6 17.6"/></svg></b></span><span class="tp zz" aria-hidden="true"><b class="zz">Tap for sound</b></span></button>
     <button id="reelb" type="button" aria-label="The reel: every video" aria-expanded="false"><svg viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg><b>reel</b></button>
+    <!-- The achievements (CONTENT-v2 I3): the counter above is the way in (a button laid over it), and so is the tab on
+         the left edge under it. The toast is slapped over the tab for two seconds when a find unlocks: the band it
+         lives in, under the counter, is one no tape ever enters (ui.js: tapes keep below y 92). -->
+    <button id="tmb" type="button" aria-label="Achievements" aria-controls="ach" aria-expanded="false"></button>
+    <button id="achb" type="button" aria-label="Achievements" aria-controls="ach" aria-expanded="false"><span class="zz"><b class="zz">ACHIEVEMENTS<svg viewBox="0 0 8 12" aria-hidden="true"><path d="M2 2l4 4-4 4"/></svg></b></span></button>
+    <p id="achtoast" aria-hidden="true"><span class="zz"><b class="zz">Unlocked · <em></em></b></span></p>
   </div>
   <div id="smalls" aria-live="polite"><button id="note" type="button" hidden></button></div>
   <div id="labels" aria-live="polite"></div>
@@ -165,11 +169,27 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
   </div>
   <button id="pill" type="button" hidden><span class="pp" aria-hidden="true"><svg viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></span><span class="pt"></span></button>
   <button id="startb" type="button" hidden><span class="pp" aria-hidden="true"><svg viewBox="0 0 24 20"><path class="sp" d="M2.4 7.1h3.2v5.8H2.4zM7.6 6.6l5-4v14.8l-5-4z"/><path class="wv" d="M15.3 6.6a4.8 4.8 0 0 1 0 6.8M18.2 3.9a8.6 8.6 0 0 1 0 12.2"/></svg></span><span class="pt"><span class="part">Start the engine</span><span class="sep">·</span><span class="part">sound on</span></span></button>
+  <!-- The intro card (CONTENT-v2 I1): over the opening frame, with the Start pill under it. It goes with the first tap
+       on it or on the pill, the first drive, or the first key; nothing waits on it. One of the two control lines shows
+       (game.css: a coarse pointer gets the touch line). -->
+  <section id="intro" hidden aria-labelledby="introh">
+    <div class="ib"><div class="ic"><div class="ip">
+      <h2 id="introh"><span><b>THIS IS MY RESUME. YOU DRIVE IT.</b></span></h2>
+      <p>Each table is one of my jobs. Bump into things to find out what I do.</p>
+      <p>What you find goes into your achievements, on the side.</p>
+      <p class="it">Drag or tap to drive.</p>
+      <p class="ik">Arrow keys or WASD to drive.</p>
+      <p>Rather read? <a href="#plain" data-view="plain">Open the plain resume.</a></p>
+    </div></div></div>
+  </section>
+  <!-- See more details (CONTENT-v2 I4): it stands over the find's own pill (or alone, where a find has none) and opens
+       the find's details card. Every main find that is not a machine on the bench has one. -->
+  <button id="morep" type="button" hidden><span class="pp" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 2.6v10.8M2.6 8h10.8"/></svg></span><span class="pt">See more details</span></button>
   <div id="links" hidden></div>
   <div id="reel" hidden>
     <div class="rsh" role="dialog" aria-label="The reel: every video">
       <h2><span class="zig"><b class="zig">The reel</b></span></h2>
-      <p class="rn"><b id="reeln">0</b> of 10 found</p>
+      <p class="rn"><b id="reeln">0</b> of 9 found</p>
       <div id="reell"></div>
     </div>
     <div class="rft" aria-hidden="true"></div>
@@ -201,6 +221,40 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <div class="hft" aria-hidden="true"></div>
     <p id="howfoot" hidden></p>
     <button id="hx" type="button" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
+  </div>
+  <!-- A find's details card (CONTENT-v2 I4). It holds no words of its own: its heading, its picture and its rundown are
+       copied in from the find when it opens (the find's data-more block, its picture from the Watch strip). -->
+  <div id="det" hidden>
+    <div class="dsh" role="dialog" aria-labelledby="deth" tabindex="-1">
+      <h2 id="deth"><span class="zig"><b class="zig"></b></span></h2>
+      <div id="detpic" hidden></div>
+      <div id="detbody"></div>
+    </div>
+    <div class="dft" aria-hidden="true"></div>
+    <button id="detx" type="button" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
+  </div>
+  <!-- The achievements panel (CONTENT-v2 I3): a drawer from the left. One group per job, like a resume's sections, in
+       section B's order; a group shows once it holds a live find. data-finds = its finds in order · data-track = its
+       tape colour. A group heading left empty here is its track's job label on the hub ([data-hub], one source).
+       An unlocked row shows the find's own HEAD and TAB; a locked one, the line in #achnf. -->
+  <div id="ach" hidden>
+    <div class="ash" role="dialog" aria-labelledby="achh" tabindex="-1">
+      <h2 id="achh"><span class="zig"><b class="zig">ACHIEVEMENTS</b></span></h2>
+      <p class="asub">What you've found out about me so far.</p>
+      <p class="arn"><b id="achn">0</b> of <b id="acht">0</b> found</p>
+      <div id="achl">
+        <section class="ag" data-track="w" data-finds="ad1 app line solo quality scale live ad2 inside"><h3><span class="zz"><b class="zz"></b></span></h3><ul></ul></section>
+        <section class="ag" data-track="g" data-finds="team social trade memory apply"><h3><span class="zz"><b class="zz"></b></span></h3><ul></ul></section>
+        <section class="ag" data-track="v" data-finds="skit1 skit2 skit3 chair freelance camp recap promo colorwar"><h3><span class="zz"><b class="zz"></b></span></h3><ul></ul></section>
+        <section class="ag" data-track="k" data-finds="bread service next"><h3><span class="zz"><b class="zz"></b></span></h3><ul></ul></section>
+        <section class="ag" data-track="e" data-finds="matzah before records"><h3><span class="zz"><b class="zz">EARLIER EXPERIENCE</b></span></h3><ul></ul></section>
+        <section class="ag" data-track="e" data-finds="study"><h3><span class="zz"><b class="zz">EDUCATION</b></span></h3><ul></ul></section>
+        <section class="ag" data-track="e" data-finds="hand"><h3><span class="zz"><b class="zz">OFF THE CLOCK</b></span></h3><ul></ul></section>
+        <section class="ag" data-track="c" data-finds="home"><h3><span class="zz"><b class="zz"></b></span></h3><ul></ul></section>
+      </div>
+      <p id="achnf" hidden>Not found yet</p>
+    </div>
+    <button id="achx" type="button" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
   </div>
 </div>
 
@@ -566,20 +620,33 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
      data-find = id · data-track = w (Workeey, gold) g (AI automation, green) v (video, pink) k (kitchen, blue) e (earlier
      and off the clock, masking tape) c (contact) · data-x / data-y = world position · data-tab = the one-word tab
      data-stage = the build stage that switches it on: 1 the hub slice · 2 the desk · 3 the mat · 4 the new words (live now)
-     · 5 the belt · 6 the rest of the kitchen and the back plank.
+     · 5 the belt (and, since 2026-11-19, the bakery, the group home's badge and the yeshiva's book on free spots of the
+     block) · 6 the rest of the kitchen and the back plank. data-w = a word lettered on the thing itself.
      In a find: data-head, data-line, data-date (the sticker) · data-gain = a line the tape gains later: "played" once the
      first ad has been played, "full" once the tray is full, "again" when the van comes back (the second look) · .links =
      its buttons. data-say = a small thing that says its words when bumped and is not counted.
      The last two lists (data-section="notes" and "small") are the notes and the small things: their own comment says how. -->
 <div id="finds" hidden>
-  <!-- The words under his name on the hub sign (the game reads them here; the plain resume no longer shows them). -->
-  <p data-roles>Founder · AI Automation · Video</p>
+  <!-- The hub: his name is routed into the disc (data-name, the plain resume's own heading). Each tape arrow carries its
+       own job label (CONTENT-v2, A, Hub words): data-to = the track of the arrow it stands by. The game reads them here. -->
+  <ul class="hub" data-hub>
+    <li data-to="w">WORKEEY · FOUNDER</li>
+    <li data-to="g" data-stage="5">AI AUTOMATION</li>
+    <li data-to="v">VIDEO</li>
+    <li data-to="k">KITCHEN · REN</li>
+    <li data-to="c">CONTACT</li>
+  </ul>
   <ul class="finds" data-section="workeey">
     <li data-find="ad1" data-track="w" data-x="0" data-y="-300" data-tab="FOUNDER" data-stage="1"
         data-video="ad1-workeey" data-len="0:30" data-pill="Play the Workeey ad · 0:30 · sound on" data-lure="Workeey ad">
       <b data-head>FOUNDER, WORKEEY</b> <span data-line>Built and launched Workeey, an app for small trade businesses. Start with the ad.</span>
       <small data-date>Jun 2026 to now</small>
       <span data-gain="played">I made the ad too.</span>
+      <div data-more>
+        <p>Workeey is a simple all-in-one app for self-employed tradespeople: plumbers, electricians, HVAC techs, handymen and other trades who quote, schedule and bill their own work.</p>
+        <p>I started it in June 2026, and today it's live on the web and on Google Play.</p>
+        <p>The ad on this phone is mine too: thirty seconds on what the app does, edited in Premiere.</p>
+      </div>
     </li>
     <li data-find="app" data-track="w" data-x="0" data-y="-1340" data-tab="APP" data-stage="2">
       <b data-head>WHAT WORKEEY DOES</b> <span data-line>One free app that runs a small trade business, from quote to payment.</span>
@@ -597,43 +664,87 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
         <li data-card data-x="30" data-y="-1190" data-stage="2"><b>WORKS OFFLINE</b>: <span>syncs later</span></li>
       </ul>
       <span class="links"><a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a> <a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Google Play</a> <a href="https://www.youtube.com/watch?v=Ldk2HETGtWQ" data-yt="Ldk2HETGtWQ" target="_blank" rel="noopener">See it in use · 1:11</a></span>
+      <div data-more>
+        <p>It opens on today's jobs, money owed and overdue invoices.</p>
+        <p data-li>Client records: contact details, address, notes and photos, with jobs, invoices and payments a tap away.</p>
+        <p data-li>Quotes a customer can approve, decline or ask to change from a link, with no app and no account.</p>
+        <p data-li>Before-and-after job photos, backed up off the phone and added to invoices as proof of work.</p>
+      </div>
     </li>
     <li data-find="line" data-track="w" data-x="-340" data-y="-1256" data-tab="WHY" data-stage="2">
       <b data-head>WHY I BUILT IT</b>
       <q data-line>People in the trades should be able to finish the job and go home, not start a second shift of paperwork.</q>
       <span data-sign>Yossi Grunwald, Founder</span>
       <span data-small>Built for plumbers, electricians, HVAC techs, handymen and freelancers.</span>
+      <div data-more>
+        <p>That second shift is quotes, invoices and chasing payment.</p>
+        <p>The work happens on site, so the paperwork should be finished there too. That's why Workeey is one app for the phone.</p>
+        <p>Every design decision in it is measured against one rule: fewer taps, less clutter, less mental load.</p>
+      </div>
     </li>
     <li data-find="solo" data-track="w" data-x="340" data-y="-1250" data-tab="HOW" data-stage="2">
       <b data-head>HOW I BUILT IT</b> <span data-line>I built it myself, from first idea to live product.</span>
       <small data-date>2026</small>
       <span data-gain="again" data-stage="5">Every product decision is mine.</span>
+      <div data-more>
+        <p>The product is mine end to end: I decide what it does, how it looks and what comes next.</p>
+        <p>It took a wide set of skills: product design, full-stack development, databases, payment integrations, offline sync, automated testing, Android publishing and SEO.</p>
+        <p>I started in June 2026, and I'm still building it.</p>
+      </div>
     </li>
     <li data-find="quality" data-track="w" data-x="424" data-y="-640" data-tab="CHECKED" data-stage="4">
       <b data-head>NOTHING SHIPS UNCHECKED</b> <span data-line>Changes are reviewed and tested before they go live.</span>
+      <div data-more>
+        <p>Every significant change is read for bugs and checked against written design rules.</p>
+        <p>Anything risky is also clicked through in a real browser, the way a visitor would use it.</p>
+        <p>Then the automated tests run, and only work that passes them goes live.</p>
+      </div>
     </li>
     <li data-find="scale" data-track="w" data-x="-120" data-y="-850" data-tab="SCALE" data-stage="4">
       <b data-head>THE BUILD SO FAR</b> <span data-line>About 2,650 changes shipped to the live product, backed by 600+ automated test suites.</span>
       <small data-date>As of Nov 2026</small>
+      <div data-more>
+        <p>That count started in June 2026. It covers a web app, an Android app and a public website.</p>
+        <p>Behind them run about 48 server functions.</p>
+        <p>A change that touches shared parts runs every one of the test suites, about five hours of checks, before it can ship.</p>
+      </div>
     </li>
     <li data-find="live" data-track="w" data-x="150" data-y="-1060" data-tab="LIVE" data-stage="4">
       <b data-head>WHERE IT'S LIVE</b> <span data-line>It's live on the web and on the Google Play Store. Coming soon to iPhone.</span>
       <small data-date>Nov 2026</small>
       <span data-tag>coming soon</span>
       <span class="links"><a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a> <a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Google Play</a></span>
+      <div data-more>
+        <p>Anyone can try it as a guest, with no account.</p>
+        <p>iPhone owners don't have to wait: Workeey already runs in the iPhone's browser.</p>
+        <p>It's free to start, and the free plan is not a trial: jobs, clients, the schedule, notes and invoicing stay free.</p>
+      </div>
     </li>
     <li data-find="ad2" data-track="w" data-x="-380" data-y="-620" data-tab="DRAWN" data-stage="2"
         data-video="ad2-one-line" data-len="1:30" data-pill="Watch · 1:30">
       <b data-head>THE LINE-ART AD</b> <span data-line>A 90-second line-drawing animation, edited and scored in Premiere.</span>
       <small data-date>2026</small>
+      <div data-more>
+        <p>The whole ad is drawn as one line on white paper, with a narrator and a choir behind it.</p>
+        <p>The final edit and the sound design are mine, done in Premiere.</p>
+        <p>It isn't posted on any social channel, so this site is the place to see it.</p>
+      </div>
     </li>
-    <li data-find="ad3" data-track="w" data-x="380" data-y="-900" data-tab="3D" data-stage="2"
-        data-video="ad3-blender-v7" data-len="0:40" data-pill="Watch · 0:40">
-      <b data-head>THE 3D AD</b> <span data-line>A character ad made in Blender: a worker and the app's talking mascot.</span>
-      <small data-date>2026</small>
+    <li data-find="inside" data-track="w" data-x="380" data-y="-900" data-tab="FLOW" data-stage="2">
+      <b data-head>INSIDE THE APP</b> <span data-line>One job, start to finish: quoted, scheduled, invoiced and paid from a link.</span>
+      <small data-date>Free to start</small>
+      <span data-w="quote">QUOTE</span> <span data-w="job">JOB</span> <span data-w="invoice">INVOICE</span> <span data-w="paid">PAID</span>
+      <div data-more>
+        <p>A quote goes out as a link, a finished job becomes an invoice in one tap, and the customer pays from a link by card, Apple Pay, Google Pay or US bank transfer. Reminder texts go out until it's paid.</p>
+        <p>The hard parts sit behind the screen: work entered with no signal is saved and syncs when the phone is back in range, and every quote link records exactly which version the customer approved, and when.</p>
+        <p>It also stays in sync with QuickBooks and Google Calendar.</p>
+      </div>
     </li>
     <li data-say="strip" data-track="w" data-x="-300" data-y="-1446">
       <span data-line>Workeey plugs into your bank, so payments show up in the app.</span>
+    </li>
+    <li data-say="cleared" data-track="w" data-x="0" data-y="-760">
+      <b data-head>DESK CLEARED.</b> <span data-line>That's the feeling I built Workeey for.</span>
     </li>
   </ul>
 
@@ -657,6 +768,7 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <li data-find="social" data-track="g" data-x="870" data-y="-160" data-tab="SOCIAL" data-stage="5" data-pill="See how it works">
       <b data-head>SOCIAL MEDIA, AUTOMATED</b> <span data-line>Plans, makes, checks and posts video every day. Anything below standard is rebuilt.</span>
       <small data-date>Since autumn 2026</small>
+      <span data-gain="again">Not good enough yet. Back it goes, to come out better.</span>
       <p data-how>Every day the system plans, scripts, renders and posts short videos on three platforms. Nothing is queued until a speech-to-text pass confirms each voice says its script and the first frame, every cut and the loop point have been inspected; whatever fails is rebuilt, not posted. I see each day's plan the night before and can veto anything. The hard lesson was that posting more reached fewer people, so a firm daily cap was written into the code.</p>
       <ol data-steps>
         <li>An agent plans tomorrow's posts.</li>
@@ -673,6 +785,7 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <li data-find="trade" data-track="g" data-x="960" data-y="-484" data-tab="TRADING" data-stage="5" data-pill="See how it works">
       <b data-head>FULLY AUTOMATED TRADING</b> <span data-line>AI scored every idea. Plain code it could not override enforced the limits.</span>
       <small data-date>Built 2026</small>
+      <span data-gain="again">It watched the market more closely than I ever could.</span>
       <p data-how>A scanner shortlisted what was moving, an AI analyst researched and scored each idea, and only the strongest went ahead, each with its exit planned before the order went in. Early versions acted too often on weak ideas, so the bar to act was raised and firm limits were written into plain code the AI could not override. When a sleeping computer once froze the system mid-day, the key exits were moved to where they would hold with the machine off, and a watchdog was added to restart it and re-run anything missed.</p>
       <ol data-steps>
         <li>A scanner shortlisted what was moving.</li>
@@ -732,31 +845,62 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
         data-video="skit-20" data-len="0:20" data-pill="Watch · Her Wi-Fi · 3D short · 0:20">
       <b data-head>PULL UP AND WATCH</b> <span data-line>Have a look at videos I've shot, edited and directed. Start with this skit.</span>
       <small data-date>Since 2021</small>
+      <div data-more>
+        <b data-more-head>MY VIDEO WORK</b>
+        <p>I've made videos since 2021: for a summer camp, for private clients, and now for Workeey.</p>
+        <p>I do the whole job: shooting, editing, color grading, motion graphics and sound design.</p>
+        <p>This one is Her Wi-Fi, a short 3D comedy I direct for Workeey's social channels.</p>
+      </div>
     </li>
     <li data-find="skit2" data-track="v" data-x="400" data-y="-40" data-tab="SHORTS" data-stage="3"
         data-video="skit-21b" data-len="0:13" data-pill="Watch · Fixed Itself · 0:13">
       <b data-head>3D COMEDY SHORTS</b> <span data-line>Comedy about life in the trades, made in Blender for Workeey's channels.</span>
       <small data-date>2026</small>
+      <div data-more>
+        <p>Each short plays one everyday moment from the trades for a laugh, in ten to twenty seconds.</p>
+        <p>I direct the series: 3D animation, built in Blender.</p>
+        <p>This one is Fixed Itself. The series carries on with more episodes on Workeey's TikTok.</p>
+      </div>
     </li>
     <li data-find="skit3" data-track="v" data-x="590" data-y="50" data-tab="SERIES" data-stage="3"
         data-video="skit-23" data-len="0:17" data-pill="Watch · 0:17">
       <b data-head>SAME CAST, NEW STORY</b> <span data-line>The Burgers. Part of a running series.</span>
       <small data-date>2026</small>
       <span class="links"><a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">More on TikTok</a></span>
+      <div data-more>
+        <p>The same characters come back in each episode, every time in a new story.</p>
+        <p>Other episodes: Her Wi-Fi and Fixed Itself, here on the mat, and Who Does This and Half Done on Workeey's TikTok.</p>
+        <p>Like the rest of the series, it's 3D animation made in Blender for Workeey's social channels.</p>
+      </div>
     </li>
     <li data-find="chair" data-track="v" data-x="330" data-y="300" data-tab="DIRECTING" data-stage="3">
       <b data-head>3D ANIMATION</b> <span data-line>Character scenes in Blender, with voices and music.</span>
       <small data-date>2026</small>
       <span data-back>DIRECTOR</span>
+      <div data-more>
+        <p>I direct 3D character scenes: who is in the shot, what happens, where the camera goes and how it's cut.</p>
+        <p>My 3D work includes a character ad for Workeey, with a worker and the app's talking mascot, and a running series of comedy shorts.</p>
+        <p>All of it is built in Blender.</p>
+      </div>
     </li>
     <li data-find="freelance" data-track="v" data-x="780" data-y="280" data-tab="FREELANCE" data-stage="3">
       <b data-head>FREELANCE VIDEO EDITOR</b> <span data-line>Promos, event highlights and personal videos for private clients.</span>
       <span data-gain="again">I shoot as well: camera, lighting, drone.</span>
+      <div data-more>
+        <p>I deal with each client directly, by phone and email, through to the final delivery.</p>
+        <p>The whole edit is mine: cutting, color grading, motion graphics and sound design, with Photoshop for stills and graphics.</p>
+        <p>I've also taught video editing to other people.</p>
+      </div>
     </li>
     <li data-find="camp" data-track="v" data-x="728" data-y="800" data-tab="CAMP" data-stage="3"
         data-yt="8qOgSQZAnRg" data-pill="Watch the 2023 summer film · 40 min">
       <b data-head>CAMP CHABURAH</b> <span data-line>Four summers as videographer and editor. Here's the 2023 summer film.</span>
       <small data-date>Summers 2021 to 2024</small>
+      <div data-more>
+        <p>Each summer I shot video and stills, then edited weekly recap videos and promos, with the color grading, motion graphics and sound.</p>
+        <p>The 2023 summer film runs forty minutes: the summer's highlights in one piece.</p>
+        <p>By my last summer there, I was coordinating a small media team.</p>
+      </div>
     </li>
     <li data-find="recap" data-track="v" data-x="966" data-y="735" data-tab="RECAP" data-stage="4"
         data-yt="9_UsrZwbCWQ" data-pill="Watch a 2024 week">
@@ -764,15 +908,30 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
       <small data-date>Summer 2024</small>
       <span data-gain="again">A videographer and a photographer, and I ran the weekly shoot schedule.</span>
       <span data-sheet>WEEK 3 · SUMMER 2024</span>
+      <div data-more>
+        <p>Every week of camp got its own recap: that week's best moments, shot, edited and delivered while camp was still going.</p>
+        <p>This one is week 3 of summer 2024.</p>
+        <p>In 2024 I also assigned the work for a videographer and a photographer and planned each week's shoot.</p>
+      </div>
     </li>
     <li data-find="promo" data-track="v" data-x="646" data-y="1030" data-tab="PROMO" data-stage="3"
         data-yt="wlfIZ-MSCxU" data-pill="Watch the promo">
       <b data-head>THE CAMP PROMO</b> <span data-line>Camp Chaburah's 2023 promotional film.</span>
       <small data-date>2023</small>
+      <div data-more>
+        <p>A promo has one job: make people want to be there.</p>
+        <p>I made this one for Camp Chaburah's 2023 summer, from the shoot to the final color, motion graphics and sound.</p>
+        <p>Its title card says Camp Pelah, which is part of Camp Chaburah.</p>
+      </div>
     </li>
     <li data-find="colorwar" data-track="v" data-x="960" data-y="1000" data-tab="ENTRANCE" data-stage="3"
         data-yt="cq0rZWnLQL8" data-pill="Watch">
       <b data-head>COLOR WAR</b> <span data-line>An event highlight: the color war entrance.</span>
+      <div data-more>
+        <p>Live events happen once, with no second take. An event highlight turns the day into something people want to watch again.</p>
+        <p>This one is a color war entrance, cut to keep the energy up from start to finish.</p>
+        <p>Event highlights are part of my work for private clients too.</p>
+      </div>
     </li>
     <li data-say="slate" data-track="v" data-x="364" data-y="168">
       <b data-head>TAKE YOUR PICK.</b> <span data-line>The screens around you are a sample.</span>
@@ -784,47 +943,93 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <li data-find="bread" data-track="k" data-x="-228" data-y="35" data-tab="REN" data-stage="1">
       <b data-head>REN, BROOKLYN</b> <span data-line>I bake the restaurant's bread and work the line.</span>
       <small data-date>2026 to now</small>
+      <div data-more>
+        <p>REN is a restaurant in Brooklyn. I started there in 2026, and today I bake its bread.</p>
+        <p>I also handle daily prep, and during service I work the cold line, with experience on the hot and dessert lines.</p>
+        <p>I keep the line stocked and back up the other stations when service gets busy.</p>
+      </div>
     </li>
     <li data-find="service" data-track="k" data-x="-600" data-y="200" data-tab="SERVICE" data-stage="6">
       <b data-head>ON THE LINE</b> <span data-line>I work the cold line during service, with experience on hot and dessert.</span>
+      <div data-more>
+        <p>During service, the cold line is my usual station.</p>
+        <p>I've also worked the hot line and the dessert line, so I can step in where the kitchen needs a hand.</p>
+        <p>Before service, I handle the daily prep, working to the prep lists and the service timing.</p>
+      </div>
     </li>
     <li data-find="next" data-track="k" data-x="-330" data-y="330" data-tab="STATIONS" data-stage="6">
       <b data-head>KEEPING PACE AT REN</b> <span data-line>Keep the line stocked and support the other stations at the pace of service.</span>
       <small data-date>Now</small>
+      <div data-more>
+        <p>During service, a kitchen only runs if every station has what it needs.</p>
+        <p>I help keep it that way, restocking the line and helping out at the other stations as the orders come in.</p>
+        <p>I learned the kitchen on the job, and REN keeps teaching me more of it.</p>
+      </div>
     </li>
   </ul>
 
   <ul class="finds" data-section="earlier">
-    <li data-find="matzah" data-track="e" data-x="-680" data-y="430" data-tab="BAKERY" data-stage="6">
+    <li data-find="matzah" data-track="e" data-x="-600" data-y="415" data-tab="BAKERY" data-stage="5">
       <b data-head>BUBBIV MATZAH BAKERY</b> <span data-line>Production worker, rolling dough.</span>
       <small data-date>Seasonal, 2022 to 2023</small>
+      <div data-more>
+        <p>The bakery runs a timed production line, and every station has to keep pace with the clock.</p>
+        <p>My station was rolling the dough, seasonal work from 2022 to 2023.</p>
+        <p>The dough stayed with me: today I bake the bread at REN.</p>
+      </div>
     </li>
-    <li data-find="before" data-track="e" data-x="-250" data-y="585" data-tab="CARE" data-stage="6">
+    <li data-find="before" data-track="e" data-x="-470" data-y="470" data-tab="CARE" data-stage="5">
       <b data-head>DIRECT SUPPORT PROFESSIONAL</b> <span data-line>Yedei Chesed group home. Daily living, personal care and safety for residents with special needs.</span>
       <small data-date>2024 to 2025</small>
+      <div data-more>
+        <p>At Yedei Chesed, I supported residents of a group home for people with special needs, from October 2024 to June 2025.</p>
+        <p>Day to day that meant help with daily living, personal care and keeping everyone safe. I administered and documented medication every day, and kept routines, schedules and activities running.</p>
+        <p>I balanced the role with daily study at Yeshiva Gadlus Hatorah.</p>
+      </div>
     </li>
     <li data-find="records" data-track="e" data-x="-350" data-y="585" data-tab="RECORDS" data-stage="6">
       <b data-head>MEDICATION AND DAILY RECORDS</b> <span data-line>Administered and documented residents' medication every day. Kept routines, schedules and activities running.</span>
       <small data-date>2024 to 2025</small>
+      <div data-more>
+        <p>In a group home, medication has to be right every time. I administered residents' medication and documented it every day.</p>
+        <p>I also kept the house on track: daily routines, schedules and activities.</p>
+        <p>Record keeping and documentation have been part of my skills ever since.</p>
+      </div>
     </li>
-    <li data-find="study" data-track="e" data-x="-470" data-y="585" data-tab="STUDY" data-stage="6">
+    <li data-find="study" data-track="e" data-x="-370" data-y="470" data-tab="STUDY" data-stage="5">
       <b data-head>YESHIVA GADLUS HATORAH</b> <span data-line>Two years of post-high-school study in Monsey, New York.</span>
       <small data-date>2023 to 2025</small>
+      <div data-more>
+        <p>I studied there from 2023 to 2025, after high school, with summers off.</p>
+        <p>For eight months of my second year, I also worked half of every day at a group home as a Direct Support Professional.</p>
+        <p>I kept up with both.</p>
+      </div>
     </li>
     <li data-find="hand" data-track="e" data-x="-600" data-y="585" data-tab="HOBBIES" data-stage="6">
       <b data-head>OFF THE CLOCK</b> <span data-line>I draw and paint. Also woodworking, chess and snowboarding.</span>
+      <div data-more>
+        <p>Drawing and painting come first. I'm self-taught, and when I work from a reference I can match it very closely.</p>
+        <p>I also make things out of wood, play chess and snowboard.</p>
+        <p>I love to experiment, at work and off the clock.</p>
+      </div>
     </li>
   </ul>
 
   <ul class="finds" data-section="contact">
     <li data-find="home" data-track="c" data-x="0" data-y="400" data-tab="CONTACT" data-stage="4">
-      <b data-head>LET'S TALK</b> <span data-line>Like what you found? Tell me a good time to talk.</span>
+      <b data-head>LET'S TALK</b> <span data-line>Your move. Tell me a good time to talk.</span>
       <span class="links">
         <a href="#contact" data-mail>Email</a>
         <a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" rel="noopener">LinkedIn</a>
         <a href="https://www.youtube.com/@Workeey-app" target="_blank" rel="noopener">Workeey YouTube</a>
         <a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">Workeey TikTok</a>
       </span>
+      <div data-more>
+        <p>To reach me by email, tap Email and the address shows up.</p>
+        <p>I'm in Brooklyn, New York, and I speak English and Yiddish.</p>
+        <p>You'll also find me on LinkedIn, and Workeey on YouTube and TikTok.</p>
+        <p>Thanks for driving all the way down here.</p>
+      </div>
     </li>
     <li data-say="back" data-track="c" data-x="0" data-y="300">
       <span data-line>Brooklyn, NY. English and Yiddish.</span>

@@ -148,7 +148,7 @@ export function view(game) {
 //   small sounds -> out (0.55) -+
 //   engine, surfaces -> cont ---+-> duck (1, or 0 while a video is open) -> the speaker (and, with ?debug=1, an analyser)
 let out = null, cont = null, duck = null, ana = null, noiseBuf = null, N = null;
-const E = {}, X = {}; let SV = {};
+let E = {}; const X = {}; let SV = {};
 const gain = (c, v) => { const g = c.createGain(); g.gain.value = v; return g; };
 const biquad = (c, type, f, q) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
 // steer a continuous voice: one setTargetAtTime, and none at all when the target has not moved
@@ -163,37 +163,87 @@ function voices(c) {
   noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
   const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   N = c.createBufferSource(); N.buffer = noiseBuf; N.loop = true; N.start();
-  engine(c); surfaces(c); extras(c);
+  E = engine(c, cont, noiseBuf); surfaces(c); extras(c);
   D.still = 9; D.r = 0; D.st = null; D.cur = '';
 }
 
-// ---------- 3. the engine: a small toy-van motor ----------
-// A phone speaker plays next to nothing under 250 Hz, so the motor's body is made to sit between 250 and 1200 Hz:
-//   the putter: a slow sawtooth is a row of taps (14 a second standing, 58 at full speed), and each tap rings two
-//     resonances (about 310 and 700 Hz, climbing with the revs). Slow, they are separate putts; fast, they run into a purr.
-//   the whirr: a soft triangle six times the tap rate (silent standing, about 350 Hz at full speed): the pitch that climbs.
-// Then one low-pass, which is the surface's say in the motor's tone (duller on flour, darker on the mat).
-const IDLE = 14, TOP = 58, ENG = 1.05;
-function engine(c) {
-  E.o1 = c.createOscillator(); E.o1.type = 'sawtooth'; E.o1.frequency.value = IDLE;
-  E.o2 = c.createOscillator(); E.o2.type = 'sawtooth'; E.o2.frequency.value = IDLE * 2.004;
-  E.o3 = c.createOscillator(); E.o3.type = 'triangle'; E.o3.frequency.value = IDLE * 10;
-  E.g2 = gain(c, 0.15); E.g3 = gain(c, 0);
-  E.hp = biquad(c, 'highpass', 700, 0.5);           // (under its corner a high-pass tilts the taps' spectrum upward: next to nothing is left below 250 Hz)
-  E.f1 = biquad(c, 'bandpass', 310, 5.5); E.f2 = biquad(c, 'bandpass', 700, 7); E.a2 = gain(c, 0.4);      // (narrow enough to ring a few milliseconds: a putt, not a tick)
-  E.lp = biquad(c, 'lowpass', 2000, 0.5);
-  E.g = gain(c, 0);
-  E.o1.connect(E.hp); E.o2.connect(E.g2); E.g2.connect(E.hp);
-  E.hp.connect(E.f1); E.f1.connect(E.lp); E.hp.connect(E.f2); E.f2.connect(E.a2); E.a2.connect(E.lp);
-  E.o3.connect(E.g3); E.g3.connect(E.lp);
-  E.lp.connect(E.g); E.g.connect(cont);
-  E.o1.start(); E.o2.start(); E.o3.start();
+// ---------- 3. the engine: a small van's four-cylinder motor (new voice 2026-11-19: quieter, closer to a real one) ----------
+// A van idling is a row of exhaust pulses, one for each cylinder that fires: about 27 a second standing (800 rpm), each a
+// sharp push that dies away, and never two quite alike. So the motor is built from that, not from a toy's putter:
+//   the stack: ONE oscillator plays a whole engine cycle (two turns of the crank, four firings) from a table of harmonics.
+//     The four pulses differ a little in height and in timing, as four real cylinders do: that puts quiet half-orders
+//     between the firing harmonics, the lumpy idle. A phone plays nothing under 250 Hz, but it plays the stack's upper
+//     harmonics, and the ear hears the beat of the firings from those.
+//   the roughness: low noise moves the stack's level from one firing to the next (more standing, smoother pulling).
+//   the breath: noise in the exhaust's band, let through by the pulses themselves: a short chuff with every firing.
+//   the pipe: one broad resonance near 480 Hz, fixed (it is the length of the pipe, not the revs).
+//   then a low-pass that OPENS with the revs (dull standing, brighter pulling), a high-pass that keeps the rumble out of
+//   the sub-bass a phone cannot play, and last the surface's own low-pass, exactly as before (each table still differs).
+// Pitch: the firing rate climbs gently, 27 to 72 a second (1.4 octaves; the old motor climbed 2), and wanders by about
+// one percent. Level: about a third of the old motor's amplitude at the same speed, 10 dB down, quietest standing.
+// (A low-pass's or a high-pass's Q is in dB in Web Audio: 0 is a gentle shoulder, not a resonance.)
+// game/test/sound/measure.html renders this motor and a frozen copy of the old one offline and prints both levels.
+const FIRE0 = 27, FIRE1 = 72, ENG = 0.076;      // (ENG: measured in the real Chromium with game/test/sound/measure.html)
+let STACK = null;                                    // the cycle's harmonics, worked out once for the page (in closed form)
+function stack() {
+  // Each pulse: an instant rise, then a decay of a twelfth of a firing period. Pulse k sits at AT[k] of the cycle, HT[k] tall.
+  const AT = [0, 0.2535, 0.4985, 0.7515], HT = [1, 0.8, 0.92, 0.74], a = 0.02, K = 300;
+  const re = new Float32Array(K + 1), im = new Float32Array(K + 1), tail = 1 - Math.exp(-1 / a);
+  for (let n = 1; n <= K; n++) {                     // c_n = sum over pulses of h e^(-i 2 pi n at) (1 - e^(-1/a)) / (1/a + i 2 pi n)
+    const w = 2 * Math.PI * n, dr = 1 / a, d2 = dr * dr + w * w;
+    let cr = 0, ci = 0;
+    for (let k = 0; k < 4; k++) {
+      const ph = -w * AT[k], er = Math.cos(ph) * HT[k] * tail, ei = Math.sin(ph) * HT[k] * tail;
+      cr += (er * dr + ei * w) / d2; ci += (ei * dr - er * w) / d2;      // (er + i ei) / (dr + i w)
+    }
+    re[n] = 2 * cr; im[n] = -2 * ci;                 // a real series: cosine 2 Re(c_n), sine -2 Im(c_n)
+  }
+  return [re, im];
+}
+// Builds the motor on any context, into dest, silent; nz is a buffer of noise. (Exported below for the measuring page.)
+function engine(c, dest, nz) {
+  const m = { w: 0 };
+  if (!STACK) STACK = stack();
+  m.o = c.createOscillator(); m.o.setPeriodicWave(c.createPeriodicWave(STACK[0], STACK[1])); m.o.frequency.value = FIRE0 / 4;
+  m.nz = c.createBufferSource(); m.nz.buffer = nz; m.nz.loop = true; m.nz.playbackRate.value = 0.77;      // (its own read of the noise, slower: not in step with the wheels')
+  m.rough = gain(c, 1); m.jl = biquad(c, 'lowpass', 45, 0.7); m.jd = gain(c, 0);                        // the roughness: rough.gain = 1 + slow noise
+  m.br = biquad(c, 'bandpass', 650, 0.9); m.bm = gain(c, 0.3); m.bg = gain(c, 0);                       // the breath: bm.gain = 0.3 + the pulses
+  m.pipe = biquad(c, 'peaking', 480, 1.3); m.pipe.gain.value = 8;
+  m.hp = biquad(c, 'highpass', 220, 0);
+  m.open = biquad(c, 'lowpass', 750, 0);
+  m.lp = biquad(c, 'lowpass', 2000, 0.5);
+  m.g = gain(c, 0);
+  m.o.connect(m.rough); m.nz.connect(m.jl); m.jl.connect(m.jd); m.jd.connect(m.rough.gain);
+  m.nz.connect(m.br); m.br.connect(m.bm); m.o.connect(m.bm.gain); m.bm.connect(m.bg);
+  m.rough.connect(m.pipe); m.bg.connect(m.pipe);
+  m.pipe.connect(m.hp); m.hp.connect(m.open); m.open.connect(m.lp); m.lp.connect(m.g); m.g.connect(dest);
+  m.o.start(); m.nz.start();
+  return m;
+}
+// Steers the motor: r the revs (0 standing, 1 full, below 0 while the starter cranks), row the surface's row, lug pushed
+// against something, mul the starter's lift, awake false once it has fallen silent, M the debug mix. tone false: the
+// level alone (once silent, nothing else is steered until it wakes).
+function motor(m, t, r, row, lug, mul, awake, M, tone) {
+  const q = Math.min(1, Math.max(0, r));
+  if (tone) {
+    m.w += ((Math.random() * 2 - 1) * 0.05 - m.w) * 0.12;                // the revs hunt a little, slowly (more standing)
+    const fire = (FIRE0 + (FIRE1 - FIRE0) * r) * (1 + m.w * (1.4 - 0.6 * q));
+    set(m.o.frequency, fire / 4, t, 0.04);
+    set(m.jd.gain, 7 * (1 - 0.5 * q), t, 0.1);
+    set(m.bg.gain, 0.8 * (0.4 + 0.6 * q), t, 0.08);
+    set(m.open.frequency, (750 + 1750 * q) * (lug ? 0.8 : 1), t, 0.07);
+    set(m.lp.frequency, row.lp * (0.85 + 0.3 * q) * (lug ? 0.75 : 1), t, 0.07);
+  }
+  // (the level climbs fast off idle and is nearly flat above half speed: measured so that every speed sits about 10 dB
+  // under the old motor, standing 6 dB under full)
+  set(m.g.gain, awake ? ENG * M * row.eng * (row.trim || 1) * mul * (0.48 + 0.52 * (1 - (1 - q) ** 3)) : 0, t, awake ? 0.03 : 0.16);
 }
 
 // ---------- 4. the surfaces ----------
 // ONE ROW PER SURFACE, keyed by the name world.surfaceAt gives it ('woods' is the green mat on the dark one; 'floor' is
 // bare floor, and what an unknown name falls back to). A new table needs a row here and nothing else.
 //   lp, eng   the motor on this surface: its low-pass (Hz) and its level
+//   trim      the motor's level here once more (this motor only): a dark surface's low-pass takes less off its darker voice
 //   roll      what the wheels do: bands of noise, each [filter, Hz, Q, level]. It follows the speed and is silent standing
 //   am        [strokes a second at full speed, depth 0..1]: the roll comes in strokes (grass)
 //   hum       [Hz slow, Hz more at full speed, Q, level]: one thin band that climbs with the speed (a tyre on rubber)
@@ -206,8 +256,8 @@ const SURF = {
   desk: { lp: 2700, eng: 0.95, roll: [['bandpass', 1700, 0.7, 0.1]] },                                              // cleared desk: a clean light roll (the paper is its own voice)
   // (flour and the mat are heard apart at once: flour is all up high, a soft airy hush with the motor muffled under
   // it; the mat is all down low, a dull roll and one thin band that climbs with the speed, nothing above a kilohertz)
-  block: { lp: 760, eng: 0.7, roll: [['bandpass', 3900, 0.55, 0.15], ['highpass', 6200, 0.5, 0.045]], flour: [0.4, 1, 1.45] },      // flour: a soft bright hush, a sled on snow
-  mat: { lp: 400, eng: 1.2, roll: [['lowpass', 360, 0.7, 0.22]], hum: [250, 160, 12, 1.15] },                        // rubber: close, dark, a low tyre hum
+  block: { lp: 760, eng: 0.7, trim: 0.85, roll: [['bandpass', 3900, 0.55, 0.15], ['highpass', 6200, 0.5, 0.045]], flour: [0.4, 1, 1.45] },      // flour: a soft bright hush, a sled on snow
+  mat: { lp: 400, eng: 1.2, trim: 0.75, roll: [['lowpass', 360, 0.7, 0.22]], hum: [250, 160, 12, 1.15] },                        // rubber: close, dark, a low tyre hum
   woods: { lp: 1500, eng: 0.95, roll: [['bandpass', 2600, 0.8, 0.26]], am: [9, 0.7] },                              // grass: a swish in strokes
   // The steel bench of the AI table: two NARROW bands that ring (every other surface is broad or low) and a little air,
   // and a small "tink" at each plate joint, about five a second at full speed: told apart by tone and by rhythm.
@@ -260,7 +310,7 @@ function crackle(t) {
 // The loop calls this about thirty times a second (never more) with what the van is doing:
 //   d: { dt, speed (units a second), thr (0..1: how hard it is being asked to go), surface, flour (0, 1, 2 under the nose),
 //        paper (0..1: sheets being ploughed), groove (over a routed line of the hub), fire (0..1: how near the campfire) }
-const D = { r: 0, still: 9, kick: 0, wasThr: 0, lug: 0, cur: '', paper: 0, kOdo: 0, kGap: 16, sOdo: 0, st: null, sp: 0, key: 'floor', jit: 1 };
+const D = { r: 0, still: 9, kick: 0, wasThr: 0, lug: 0, cur: '', paper: 0, kOdo: 0, kGap: 16, sOdo: 0, st: null, sp: 0, key: 'floor' };
 const ROLL = 1, RUSTLE = 0.12, FLICK = 0.2, FIRE = 0.7;
 export function drive(d) {
   if (!ok() || !E.g) return;
@@ -283,18 +333,7 @@ export function drive(d) {
     D.r += (target - D.r) * (1 - Math.exp(-dt / (target > D.r ? 0.06 : 0.14)));
     // standing still it putters, and after a second and a half it falls silent; it wakes the moment the van is asked to move
     D.still = sp < 0.012 && thr < 0.05 && !D.st ? D.still + dt : 0;
-    const awake = D.still < 1.5, r = D.r, rp = Math.max(0, r);
-    if (D.still < 2.2) {                             // (once it has fallen silent nothing is steered until it wakes)
-      D.jit += (1 + (Math.random() - 0.5) * 0.05 - D.jit) * 0.3;
-      const f0 = (IDLE + (TOP - IDLE) * r) * D.jit;
-      set(E.o1.frequency, f0, t, 0.03); set(E.o2.frequency, f0 * 2.004, t, 0.03); set(E.o3.frequency, f0 * 10, t, 0.03);
-      set(E.g2.gain, 0.15 + 0.5 * rp, t, 0.05); set(E.g3.gain, 0.04 * Math.min(1, rp * 1.6), t, 0.06);
-      const wob = 1 + Math.sin(t * 1.9) * 0.03 + Math.sin(t * 0.83) * 0.02;      // the body breathes a little, so a long straight is not one held note
-      set(E.f1.frequency, (310 + 220 * r) * wob, t, 0.04); set(E.f2.frequency, (700 + 400 * r) * wob, t, 0.04);
-      set(E.lp.frequency, row.lp * (0.85 + 0.3 * rp) * (lug ? 0.75 : 1), t, 0.07);
-    }
-    // (the taps carry more as they come faster: the level is leaned back against that, so full speed is about three times the putter, not six)
-    set(E.g.gain, awake ? ENG * M.eng * row.eng * mul * (1.1 - 0.3 * Math.min(1, rp)) : 0, t, awake ? 0.03 : 0.16);
+    motor(E, t, D.r, row, lug, mul, D.still < 1.5, M.eng, D.still < 2.2);      // (once it has fallen silent nothing but its level is steered until it wakes)
     // the surface under the van: its row comes up, the one it left goes down, in about a fifth of a second
     for (const k in SV) {
       const v = SV[k], on = k === key;
@@ -334,6 +373,9 @@ export function rest() {
 }
 // the motor is started: it coughs once, catches and settles to its putter (drive() plays it out). False if nothing can sound.
 export function starter() { if (!ok() || !E.g) return false; D.st = { t: 0 }; D.still = 0; return true; }
+// For game/test/sound/measure.html only (the game never calls it): the same motor, built on any context and steered by
+// the same code, so the page measures what ships. Builds nothing and touches no live sound by itself.
+export const engineLab = { engine, motor, SURF, FIRE: [FIRE0, FIRE1], ENG };
 
 // ---------- 5. the small sounds ----------
 // D major pentatonic. The finds play the notes of one written tune in the order found.

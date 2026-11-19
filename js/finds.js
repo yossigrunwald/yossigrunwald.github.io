@@ -1,7 +1,7 @@
 // finds.js — the hub's props and colliders, find rules, wake animations, the second look, the moment and the idle tour.
 // The far desk (stage 2) lives in desk.js, the rest of the mat and the woods (stage 3) in mat.js; the prop registry,
 // the sprite shelf and the looping screens are in kit.js.
-import { S, PAL, TRACK, HUB_R, S5, readFinds, readSays, readCards, makeSheets, collDist } from './world.js';
+import { S, PAL, TRACK, HUB_R, S5, readFinds, readSays, readCards, readHub, makeSheets, collDist, surfaceAt } from './world.js';
 import * as art from './art.js';
 import { van, auto, input, goTo, stopAuto, R } from './van.js';
 import { emit, burst } from './surfaces.js';
@@ -46,7 +46,7 @@ export function readWorld() {
   S.live = S.finds.filter(f => f.live);
   S.cards = readCards().filter(c => c.live);
   const ps = makeSheets(S.cards); S.sheets = ps.sheets; S.piles = ps.piles;
-  desk.init(wake, () => three.on || three.hold > 0); mat.init();
+  desk.init(wake, () => three.on || three.hold > 0); mat.init(vanFrame);      // (the camera's print draws the van: vanFrame)
   belt.init(hello, () => three.on || three.hold > 0 || cine.on);      // the bench (stage 5): hello says a small thing's tape, the second is "a moment is on"
   small.init(() => three.on || three.hold > 0 || cine.on);            // the notes and the small things (nothing at all with ?small=0)
   const ad = S.byId.ad1; ad.scr = [-67.5, -545, 67.5, -305];
@@ -55,8 +55,8 @@ export function readWorld() {
 
 // everything with lettering on it, baked again (used when a font face arrives after boot)
 export function rebakeLettering() {
-  const name = document.querySelector('[data-name]').textContent.trim(), roles = document.querySelector('[data-roles]').textContent.trim(), ad = S.byId.ad1;
-  art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, roles, S5), 0, 0);
+  const name = document.querySelector('[data-name]').textContent.trim(), labels = readHub(), ad = S.byId.ad1;
+  art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, labels, S5), 0, 0);
   art.retire(spr.adTape); spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);
   desk.rebakeLettering(); mat.rebakeLettering(); belt.rebakeLettering(); small.rebakeLettering();
   S.live.forEach(fd => { if (fd.tabSp) fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
@@ -64,9 +64,9 @@ export function rebakeLettering() {
 
 // sprites needed for the first frame: hub, van, the three lures, the first pile (spec 9.4)
 export function bakeFirst() {
-  const name = document.querySelector('[data-name]').textContent.trim(), roles = document.querySelector('[data-roles]').textContent.trim();
+  const name = document.querySelector('[data-name]').textContent.trim(), labels = readHub();
   // (the big ones are kept only while the van is near them: art.keep)
-  spr.hub = art.keep(() => art.hubSprite(name, roles, S5), 0, 0);      // (S5: with the fifth arrow, to the bench)
+  spr.hub = art.keep(() => art.hubSprite(name, labels, S5), 0, 0);      // (S5: with the fifth arrow, to the bench; each arrow with its job label)
   spr.sheets = art.sheetSprites();
   spr.phone = art.keep(() => art.giantPhone(), 0, -300);
   const ad = S.byId.ad1;
@@ -170,7 +170,7 @@ export function drawGround(ctx) {
 }
 
 // Tape dashes on the hub (spec 7.2): after a major find, eight light up one after another toward the nearest major of
-// a track that has nothing found yet. They keep clear of the routed name, the roles and the four arrows.
+// a track that has nothing found yet. They keep clear of the routed name, the arrows and the arrows' job labels.
 const MAJOR = S5 ? { w: 'ad1', k: 'bread', v: 'skit1', g: 'team' } : { w: 'ad1', k: 'bread', v: 'skit1' };
 const MAJORS = S5 ? ['w', 'k', 'v', 'g'] : ['w', 'k', 'v'];      // the tracks that have a major (the bench's is its first machine)
 const dash = { tr: null, t: 0, ux: 0, uy: 0, o: null };
@@ -202,7 +202,8 @@ export function drawDashes(ctx) {
   for (let i = 0; i < 8; i++) {
     const r = 42 + i * 14, x = dash.ux * r, y = 20 + dash.uy * r, on = dash.t - 0.25 - i * 0.12;
     if (on <= 0 || x * x + y * y > 150 * 150) continue;
-    if ((Math.abs(x) < 134 && y > -86 && y < -14) || (Math.abs(x) < 128 && y > 64 && y < 94)) continue;      // the name, the roles
+    if (Math.abs(x) < 134 && y > -86 && y < -14) continue;      // the name
+    if (art.hubText.labels.some(b => x > b[0] - 6 && x < b[2] + 6 && y > b[1] - 4 && y < b[3] + 4)) continue;      // a job label (its tape piece)
     if (Math.abs(Math.abs(x) - 126) < 20 && Math.abs(y) < 22 || Math.abs(Math.abs(y) - 126) < 22 && Math.abs(x) < 20) continue;   // an arrow
     if (S5 && Math.abs(x - 79) < 20 && Math.abs(y + 101) < 20) continue;      // the fifth arrow, to the bench
     const k = on < 0.14 ? 1 + (0.14 - on) * 4 : 1;
@@ -247,6 +248,7 @@ export function bakeJobs() {
   jobs.push(...desk.jobs());                                // the far desk
   jobs.push(...belt.jobs());                                // the bench's machines ([] before stage 5)
   jobs.push(...mat.jobs());                                 // the rest of the mat, and the woods
+  jobs.push(buildEarlier);                                  // the earlier jobs on the block: the bakery's timer, the badge, the book (G8)
   jobs.push(...small.jobs());                               // the notes, the small things, the fan and the arm (one small sprite, the bay's lettering: [] with ?small=0)
   jobs.push(() => {                                         // one-word tabs that stay on found things
     S.live.forEach(fd => { fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
@@ -293,7 +295,7 @@ export function bump(c, impact) {
   squash(p);
   const nx = van.x + Math.cos(van.a) * 20, ny = van.y + Math.sin(van.a) * 20, f = p.find;
   // (inside: a thing that is found only from one side, the weekly recap from inside its room; met from anywhere else it is a wall)
-  if (f && f.live) { if (!f.found) { if (f.inside && !f.inside(van)) { /* not from here */ } else if (f.noBump) desk.nudge(f); else wake(f); } else if (f.id === 'home' && S.says.back && (van.y < 292 || S.rt - (S.says.back.readFrom || -9) < 3)) { const b = S.says.back; if (S.rt - (b.saidAt || -9) > 1.5) b.readFrom = S.rt; hello(b); } else again(f); }
+  if (f && f.live) { if (!f.found) { if (f.inside && !f.inside(van)) { /* not from here */ } else if (f.noBump) desk.nudge(f); else wake(f); } else if (f.id === 'home' && S.says.back && (van.y < 292 || S.rt - (S.says.back.readFrom || -9) < 3)) { const b = S.says.back; if (S.rt - (b.saidAt || -9) > 1.5) b.readFrom = S.rt; hello(b); } else { if (p.again) p.again(p); again(f); } }
   else if (p.say) hello(p.say);
   else if (impact > 120 && p.x < -110 && p.y > -110) burst(0, nx, ny, 4, 150, 0.45, 3.4);   // on the block a bump shakes flour loose
 }
@@ -303,7 +305,7 @@ export function arrived(p) {
   if (p.coll && collDist(p.coll, van.x, van.y) > R + 6) return;
   const f = p.find;
   if (f && f.live && !f.found) { if (f.inside && !f.inside(van)) return; squash(p); if (f.noBump) desk.nudge(f); else wake(f); }
-  else if (f && f.live && f.found) again(f);                // a found video: its Play pill comes up
+  else if (f && f.live && f.found) { if (p.again) p.again(p); again(f); }      // a found video: its Play pill comes up (and a thing with a move of its own makes it: the camera)
   else if (p.say && S.rt - (p.say.saidAt || -9) > 1) { squash(p); hello(p.say); }
 }
 // Drive to a thing and bump it. A bedsheet is bumped from its front, where its picture is seen: the van lines up
@@ -314,7 +316,7 @@ export function goBump(p) {
   else goTo(p.cx, p.cy, { prop: p, done });
 }
 // Bumped again. If the van has been away since (the second look), its tape opens with the line it gains.
-function again(f) { if (f.left) { f.left = false; f.again = true; } ui.pill(f); ui.addLabel(f, van); if (f.scr && (f.video || f.yt)) { framing.f = f; framing.at = S.rt; } }
+function again(f) { if (f.left) { f.left = false; f.again = true; belt.onAgain(f); } ui.pill(f); ui.addLabel(f, van); if (f.scr && (f.video || f.yt)) { framing.f = f; framing.at = S.rt; } }
 // a small thing that is never counted (the power strip, the slate, the back of the garage): its tape, and what it does
 function hello(f) {
   if (S.rt - (f.saidAt || -9) > 1.5) { audio.slap(); if (f.act) f.act(); }
@@ -329,7 +331,7 @@ function tickSecond() {
     if (!f.found || !f.prop || !f.prop.coll) continue;
     const d = collDist(f.prop.coll, van.x, van.y);
     if (d > 220) f.left = true;
-    else if (f.left && d < 64 && !holdOn() && !ui.playerOpen()) { f.left = false; f.again = true; audio.slap(); ui.pill(f); ui.addLabel(f, van); }
+    else if (f.left && d < 64 && !holdOn() && !ui.playerOpen()) { f.left = false; f.again = true; belt.onAgain(f); audio.slap(); ui.pill(f); ui.addLabel(f, van); }
   }
 }
 
@@ -359,7 +361,7 @@ export function wake(f) {
     f.saidAt = S.rt; burst(3, p.x, p.y + 40, 10, 120, 0.7, 4);
   } else if (f.id === 'skit1') {
     vanState.cam = true; loops.skit1.on = true; startLoop(loops.skit1); lit.push([p.x, p.y, 110]);
-  } else if (!desk.onWake(f, show) && !mat.onWake(f)) belt.onWake(f);
+  } else if (!desk.onWake(f, show) && !mat.onWake(f) && !belt.onWake(f)) earlierWake(f);
   if (show) startCine(f);
   if (MAJOR[f.track] === f.id) pointOn();
   if (f.track === 'v' && rollPink) rollPink.sp = spr.rollP;
@@ -367,6 +369,44 @@ export function wake(f) {
   // the player: a find the idle tour makes counts on the counter but never starts it. It waits for a find the player makes.
   const tr = ui.threeTracks();
   if (!tour.on && !S.threeDone && !three.on && !three.hold && tr.filter(t => S.tracks[t]).length >= Math.min(3, tr.length)) three.hold = 0.9;
+}
+
+// ---------- the earlier jobs, on free spots of the block (G8, 2026-11-19; CONTENT-v2 I7) ----------
+// The bakery's timer sits in the deep drift (its line ran on the clock); the group home's badge and the yeshiva's book
+// lie side by side on the block's south edge, clear of its cut tape and of every drift. Masking tape, like everything of
+// the earlier jobs (TRACK.e). Each is found by a bump, as everything is. When the plank is laid (stage 6) the badge and
+// the book move to their places on it (CONTENT-v2 A) and this corner is cleared.
+function buildEarlier() {
+  const f = S.byId, m = f.matzah, b = f.before, st = f.study, HKT = art.TIMER.h * art.HK;
+  if (m && m.live) {
+    m.ring = 0; m.lab = { up: [m.x, m.y - 60], down: [m.x, m.y + 30] }; m.tabAt = [m.x + 30, m.y + 13, 0.06];      // (its tab well in from the timer: the block's west end is the screen's edge when the van is in this row)
+    m.prop = prop({
+      x: m.x, y: m.y, sp: art.keep(() => art.timerSprite(), m.x, m.y), sortY: m.y + 9, find: m, coll: ccirc(m.x, m.y, 14),
+      draw(ctx, p) {
+        // rung, it shakes for a second and its pointer runs down to the mark
+        const r = m.ring, k = r > 0 && r < 1 ? Math.sin(r * 62) * 1.6 * (1 - r) : 0, cx = p.x + k, cy = p.y - HKT, a = 2.3 * (1 - (m.found ? ease(r) : 0));
+        art.drawSpr(ctx, p.sp, cx, p.y);
+        ctx.strokeStyle = PAL.ink; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(a) * 8, cy - Math.cos(a) * 8); ctx.stroke();
+        ctx.fillStyle = '#B9483A'; ctx.beginPath(); ctx.arc(cx, cy - 1, 2.4, 0, 6.2832); ctx.fill();
+      }
+    });
+  }
+  if (b && b.live) {
+    // (flip: its tape always goes above it: below it lies the hazard stripe, where the pills stand, and they would cover its date)
+    b.lab = { up: [b.x, b.y - 74], down: [b.x, b.y + 36], flip: true }; b.tabAt = [b.x + 20, b.y + 18, 0.06];
+    b.prop = prop({ x: b.x, y: b.y, sp: art.keep(() => art.badgeSprite(), b.x, b.y), sortY: b.y + 22, find: b, coll: ccirc(b.x, b.y - 5, 21) });
+  }
+  if (st && st.live) {
+    st.lab = { up: [st.x, st.y - 64], down: [st.x, st.y + 34], flip: true }; st.tabAt = [st.x + 14, st.y + 18, -0.06];
+    st.prop = prop({ x: st.x, y: st.y, sp: art.keep(() => art.bookSprite(), st.x, st.y), sortY: st.y + 22, find: st, coll: cbox(st.x - 19, st.y - 23, st.x + 19, st.y + 23) });
+  }
+}
+// found: the timer rings; the badge and the book shake loose a puff of the block's flour
+function earlierWake(f) {
+  const p = f.prop; if (!p || f.track !== 'e') return false;
+  if (f.id === 'matzah') { f.ring = 0.0001; audio.small('ring'); }
+  burst(0, p.x, p.y, 10, 140, 0.5, 3.4);
+  return true;
 }
 
 // ---------- per-frame updates (dt = game time, rdt = real time) ----------
@@ -380,6 +420,7 @@ export function update(dt, rdt) {
     if (Math.random() < dt * 22) emit(1, b.x + (Math.random() - 0.5) * 70, b.y - 30, (Math.random() - 0.5) * 16, -40 - Math.random() * 30, 1.3, 9 + Math.random() * 5);
   } else if (b.bake >= 1 && S.t - b.foundAt < 9 && Math.random() < dt * 5) emit(1, b.x + (Math.random() - 0.5) * 60, b.y - 34, (Math.random() - 0.5) * 10, -30, 1.5, 8);
   desk.update(dt, rdt); mat.update(dt, rdt); belt.update(dt, rdt); tickSecond();
+  const mz = S.byId.matzah; if (mz && mz.ring > 0 && mz.ring < 1) mz.ring = Math.min(1, mz.ring + dt);
   small.update(dt, rdt);
   // The moment starts 0.9 s after the find that completes it, so that find is seen first. If the van is
   // being driven on meanwhile it starts within 0.35 s instead: the van is then held close to the thing it has just found.
@@ -396,6 +437,21 @@ export function update(dt, rdt) {
   if (three.on) tickThree(rdt);
   if (back.f && S.rt >= back.at && !cine.on && !three.on && !(three.hold > 0)) tapeBack();
   tourTick();
+  tickCleared();
+}
+
+// DESK CLEARED (CONTENT-v2, B, Not counted; G10): once, on the desk, when the last of its finds is found. It waits for
+// that find's own tape to have had its read (4 s), for no moment to be on and nothing open over the game, and for the
+// van to be on the desk; then it lands at the van, with the chime. It follows that find's tape and never sits over it.
+let clearedAt = 0;
+const deskLeft = f => f.track === 'w' && !f.found;      // module scope: the frame loop allocates nothing
+function tickCleared() {
+  const q = S.says.cleared; if (!q || q.done) return;
+  if (!clearedAt) { if (S.live.some(deskLeft)) return; clearedAt = S.rt; }
+  if (S.rt - clearedAt < 0.6 || ui.labelAge() < 4 || cine.on || three.on || three.hold > 0 || ui.busy() || holdOn() || tour.on) return;
+  if (surfaceAt(van.x, van.y) !== 'desk') return;
+  q.done = true; q.x = van.x; q.y = van.y; q.lab = { up: [van.x, van.y - 64], down: [van.x, van.y + 44], min: 4 };
+  audio.chime(); burst(2, van.x, van.y - 10, 14, 200, 0.8, 5); hello(q);
 }
 
 // ---------- the moment (CONTENT-v2, A): once ----------

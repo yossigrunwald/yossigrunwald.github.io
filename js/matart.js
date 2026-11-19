@@ -282,6 +282,27 @@ export function caseSprite(open) {
   ], NS);
 }
 
+// ---------- the camera's instant print (G5): the van, as the camera saw it a moment ago ----------
+// A white instant print, 40 x 48 with the deeper border at the foot, nothing written on it. In it: the dark mat, the
+// stand's light in three hard steps, and the van (van: its sprite at the heading it had, drawn small). Baked once per
+// picture and let go when the print has faded (mat.js). Origin = its middle.
+export const PRINT = { w: 40, h: 48 };
+export function instantPrint(van, draw) {
+  const W = PRINT.w, H = PRINT.h;
+  return flat(W + 4, H + 4, (W + 4) / 2, (H + 4) / 2, g => {
+    g.fillStyle = 'rgba(20,17,15,.3)'; g.fillRect(3, 3.4, W, H);                                    // its hard shadow
+    g.fillStyle = '#FBF9F3'; g.fillRect(1, 1, W, H); g.strokeStyle = 'rgba(20,17,15,.35)'; g.lineWidth = 0.8; g.strokeRect(1.4, 1.4, W - 0.8, H - 0.8);
+    const px = 4, py = 4, pw = W - 6, ph = W - 6;                                                  // the picture: square, the border deeper below it
+    g.save(); g.beginPath(); g.rect(px, py, pw, ph); g.clip();
+    g.fillStyle = PAL.mat; g.fillRect(px, py, pw, ph);
+    g.fillStyle = '#FFF1CF'; for (const q of [1, 0.66, 0.34]) { g.globalAlpha = 0.12; g.beginPath(); g.ellipse(px + pw / 2, py + ph * 0.58, pw * 0.48 * q, ph * 0.34 * q, 0, 0, 6.2832); g.fill(); }
+    g.globalAlpha = 1;
+    if (van && draw) { g.save(); g.translate(px + pw / 2, py + ph * 0.62); g.scale(0.42, 0.42); draw(g, van, 0, 0); g.restore(); }
+    g.fillStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.moveTo(px, py); g.lineTo(px + pw * 0.55, py); g.lineTo(px, py + ph * 0.5); g.fill();      // the gloss
+    g.restore();
+  }, 0.5);
+}
+
 // ---------- the camera on its tripod. LENS: where the glass is, from the anchor (its iris is drawn per frame) ----------
 export const LENS = { x: 0, y: 13 - 103.5 * HK, r: 4.2 };
 export function tripodSprite() {
