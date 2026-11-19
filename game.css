@@ -171,6 +171,8 @@
 #reel .rg.r2{grid-template-columns:repeat(2,minmax(0,1fr))}
 #reel .rg.r3{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 10px}
 #reel .rg.ry{margin-top:22px}
+/* an odd last tile in a two-across block (five films from YouTube since the short promo joined, 2026-11-18): centred, the same size, never a ragged end */
+#reel .rg.r2>.rt:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 6px)}
 #reel .r3 .rt p{font-size:13px;margin-top:7px;min-height:2.5em}
 #reel .r3 .rt .ra{flex-direction:column;gap:6px}
 #reel .r3 .rt .ra button>span{min-height:32px;justify-content:flex-start;padding-left:9px}
@@ -361,6 +363,8 @@ html.can #plain .play{display:block}
 #plain .reel{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
 #plain .reel li{min-width:0;grid-column:span 2}
 #plain .reel li:nth-child(2),#plain .reel li:nth-child(3),#plain .reel .yt{grid-column:span 3}
+/* five films from YouTube (they are the strip's last tiles): two across, then three across, so no row is left ragged */
+#plain .reel .yt:nth-last-child(5)~.yt:nth-last-child(-n+3){grid-column:span 2}
 #plain .reel .big{grid-column:1/7;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center}
 #plain .reel video,#plain .reel .vt{display:block;width:100%;aspect-ratio:9/16;background:#14110F;border-radius:10px;box-shadow:0 0 0 1.5px var(--ink)}
 #plain .reel video{object-fit:contain}
@@ -435,6 +439,11 @@ html.can #plain .play{display:block}
 #plain .reel li:nth-child(n+4) .vt .pb{width:38px;height:38px;margin:-19px 0 0 -19px}
 #plain .reel .yt a{font-size:13.5px;line-height:1.26}
 #plain .reel .yt b{text-wrap:balance}
+}
+/* on screen the strip is twelve across at every width: five films from YouTube go two across, then three across */
+@media screen{
+#plain .reel .yt:nth-last-child(5),#plain .reel .yt:nth-last-child(5)+.yt{grid-column:span 6}
+#plain .reel .yt:nth-last-child(5)~.yt:nth-last-child(-n+3){grid-column:span 4}
 }
 
 @media (prefers-reduced-motion:reduce){.tape .tw,#tm.tick .blade,#tm .lamps i.on{animation:none}#pill,#startb,#links,#snd .tp,#three p.in{transition:none}}

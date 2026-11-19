@@ -28,7 +28,7 @@ svg.tri{width:.72em;height:.8em;vertical-align:-.04em;fill:currentColor}
 /* a group: stencil heading on a tilted tape, as the plain resume's sections */
 h2{margin:34px 0 14px;font:900 30px/1 var(--stencil);text-transform:uppercase;letter-spacing:.04em}
 h2 span{display:inline-block;padding:7px 18px 4px;background:var(--t,var(--bone));transform:rotate(-1.2deg);box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.28)}
-.g-ads{--t:var(--gold)} .g-shorts{--t:var(--pinktape)} .g-camp{--t:var(--masking)}
+.g-ads{--t:var(--gold)} .g-shorts{--t:var(--pinktape)} .g-camp{--t:var(--masking)} .g-more{--t:var(--pinktape)}
 .grid{list-style:none;margin:0;padding:0;display:grid;gap:22px 12px}
 .grid>li{min-width:0}
 
@@ -62,7 +62,7 @@ h2 span{display:inline-block;padding:7px 18px 4px;background:var(--t,var(--bone)
 .yt .wk~.pb svg{width:13px;height:15px;margin-left:3px}
 .wide iframe{display:block;width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:8px;background:var(--ink);box-shadow:0 0 0 1.5px var(--ink)}
 .src{font-style:normal;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);white-space:nowrap}
-/* the weekly recap's picture: a drawn title card, never a frame of the video (as in the game) */
+/* a drawn title card in place of a picture (the weekly recap, Pelah 2024, the cantata): never a frame of the video (as in the game) */
 .wk{container-type:inline-size;position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding-left:9%;background:var(--ink);color:var(--bone);font-family:var(--stencil);font-weight:900;text-transform:uppercase;text-align:left;letter-spacing:.02em;overflow:hidden}
 .wk::after{content:"";position:absolute;inset:5px;border:1px solid rgba(244,241,232,.28);pointer-events:none}
 .wk em{font-style:normal;display:block;font-size:36px;font-size:24cqw;line-height:.8;padding-bottom:.1em;border-bottom:.1em solid var(--pinktape)}
@@ -78,5 +78,6 @@ h2 span{display:inline-block;padding:7px 18px 4px;background:var(--t,var(--bone)
   .tall .big{grid-column:auto;width:auto;justify-self:stretch}
   .big .cap{font-size:14.5px}
   .wide{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wide>li:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 6px)}      /* an odd last tile: centred, the same size */
   .tall .more{grid-column:1/-1;justify-content:flex-start}
 }
