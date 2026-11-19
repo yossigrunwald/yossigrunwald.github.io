@@ -20,6 +20,9 @@ export function initUI(h) {
     yt: $('yt'), ytf: $('ytf'), ytcap: $('ytcap'), ytopen: $('ytopen'), reel: $('reel'), reell: $('reell'), reeln: $('reeln'), reelb: $('reelb'), rx: $('rx'),
     how: $('how'), howh: $('howh').querySelector('b'), howd: $('howd'), howp: $('howp'), howc: $('howc'), hdots: $('how').querySelector('.hdots'), howcap: $('howcap'), howl: $('howl'), howcard: $('howcard'), howfoot: $('howfoot'), hx: $('hx')
   };
+  el.smalls = $('smalls'); el.note = $('note');
+  // the note card is one real button: a tap, Enter or Space puts it down (not the touch that has just ended the moment)
+  if (el.note) el.note.addEventListener('click', () => { if (!(hooks.ended && hooks.ended())) dropSmall('tap'); });
   el.tot.textContent = '/' + S.live.length;
   el.tm.querySelectorAll('.lamps i').forEach(i => { i.hidden = !on(i); });      // a lamp whose table is not built yet is not shown
   setCount(0, true);
@@ -57,13 +60,14 @@ export function initUI(h) {
     if (how) { howKey(e); return; }                         // the explainer's own keys; nothing else is reached while it is open
     if (e.key === 'Escape' && (playing || poster)) closePlayer();
     else if (e.key === 'Escape' && reelOn) closeReel();
+    else if (e.key === 'Escape' && sm && !sm.out) dropSmall('esc');      // a note card (or a small tape) is put down
     else if (e.key === 'Enter' && !playing && !reelOn && pillFind && (el.pill.classList.contains('up') || el.links.classList.contains('up')) && (hooks.live() || poster)) {
       if (e.target && e.target.closest && e.target.closest('a,button,video,input,select,textarea')) return;   // Enter on a focused control is that control's own
       pillAct();
     }
   });
 }
-export function setViewport(w, h) { vw = w; vh = h; if (el) fitBlade(); }
+export function setViewport(w, h) { vw = w; vh = h; if (el) fitBlade(); if (sm && !sm.out) sm.re = true; }      // (an open card or small tape is measured and placed again on its next frame: the card's width and type change with the screen)
 
 // ---------- counter: a tape measure, one inch per find ----------
 // The blade grows 3.2 px a find until it would reach the first-ad chip (or, once that has gone, the plain-resume tab):
@@ -89,6 +93,7 @@ export function lampOn(track) { const t = TRACK[track], e = t && t.lamp && el.tm
 // A label is slapped on at a find and follows it on screen. There is never more than one full label: it drops to its
 // baked one-word tab when another label opens, or when the van has gone 90 units from its thing.
 export function addLabel(f, van) {
+  if (sm) dropSmall('main');                                       // a main tape always wins: the small tape or the note card goes
   const old = labels.find(l => l.f === f && !l.out);
   if (old) {                                                       // already up: it stays, and is put again where it now belongs (the van has moved since)
     old.t = S.rt; f.labAt = S.rt;
@@ -200,6 +205,7 @@ function place(L, toScreen, v, top, bottom, vanY) {
 // toScreen(wx, wy) -> [cssX, cssY]; no layout is read here
 export function updateLabels(toScreen, van, pillUp) {
   const top = 92, bottom = vh - (pillUp ? (pillTall ? 156 : 100) : 16), v = toScreen(van.x, van.y);
+  toScr = toScreen;
   for (const L of labels) {
     if (!L.placed) { L.placed = true; place(L, toScreen, v, top, bottom, van.y); }
     // A label is held in view only while at least half of its thing is on screen. Less than that and it leaves with the
@@ -210,6 +216,7 @@ export function updateLabels(toScreen, van, pillUp) {
     const hold = !far && age < Math.max(L.read, L.f.lab.min || 1.6);
     const r = thingRect(L.f), loose = !hold && shown(r[0], r[1], r[2], r[3]) < 0.5;
     const [sx, sy] = toScreen(L.at[0], L.at[1]), [x, y] = boxAt(L, L.at, L.up, L.mid, toScreen, top, bottom, loose);
+    L.x = x; L.y = y;                                                // (where it is: a small tape or a note card keeps off it)
     L.d.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
     // the van is never hidden for long: once a label has had a second and a half to be read, it goes nearly clear while the van is under it
     // (its thing, not the spot the label hangs from: a label put beside a wide thing hangs from a spot that may itself be past the screen's edge)
@@ -228,8 +235,161 @@ export function updateLabels(toScreen, van, pillUp) {
     const t = toScreen(0, -546), st = pillFind && pillFind.id === 'ad1' ? 'gone2' : (Math.abs(t[1] - chipY) < 70 && Math.abs(t[0] - chipX) < 150) ? 'faint' : '';      // (only when the tape is right under the chip: beside the counter, on a wide screen, the chip stays)
     if (st !== chipState) { el.chip.classList.remove('gone2', 'faint'); if (st) el.chip.classList.add(st); chipState = st; }
   }
+  if (sm) updateSmall(toScreen, van, top, bottom, v);
 }
 export function markPlayed() { labels.forEach(L => { if (L.st !== stateOf(L.f)) { L.d.classList.add('played'); L.st = stateOf(L.f); fit(L.d); L.w = L.d.offsetWidth; L.h = L.d.offsetHeight; L.read = readOf(L.f, L.st); } }); if (!el.chip.classList.contains('gone')) { el.chip.classList.add('gone'); fitBlade(); } }
+
+// ---------- the small slot: ONE small tape or ONE note card, in #smalls, under the main tapes (never in `labels`) ----------
+// A small thing's tape is a narrow tape in its table's colour: one line, no head, no sticker. A note is the one #note
+// button, a paper card (CONTENT-v2, D; small.js). Neither is a main label: it cannot replace one, and a main label
+// going up puts it down (addLabel). It is put where no main label, no screen and no van is, or it is not shown at all.
+// f (a note or a small thing of small.js): head, line, track, x, y, lab, a, readT, dropped(why, age).
+let sm = null, toScr = null, noteT = 0;                           // toScr: main's toScreen, kept by updateLabels
+export function addSmall(f, van) {
+  if (!toScr || !el.smalls) return false;
+  if (sm && !sm.out) { if (sm.f === f) return true; if (f.note && sm.note) dropSmall('next'); }      // (two notes share the one card)
+  const top = 92, bottom = vh - (pillFind ? (pillTall ? 156 : 100) : 16);
+  let d;
+  if (f.note) {
+    d = el.note; clearTimeout(noteT); d.className = ''; d.hidden = false;
+    // its words, copied from its own <li>: the head on the strip of tape, the sentence on the paper
+    d.innerHTML = '<span class="nw"><span class="nh zig"><b class="zig">' + f.head.innerHTML + '</b></span><span class="nb"><span class="np">' + f.line.innerHTML + '</span></span><i class="nf"></i></span>';
+    d.style.setProperty('--r', Math.max(-2.5, Math.min(2.5, f.a * 57.3)).toFixed(1) + 'deg');
+  } else {
+    d = document.createElement('div'); d.className = 'tape sm nar';
+    d.style.setProperty('--t', TRACK[f.track].tape); d.style.setProperty('--r', (Math.random() * 4 - 2).toFixed(1) + 'deg');
+    d.innerHTML = tapeHTML(f); el.smalls.appendChild(d); fit(d);
+  }
+  const s = { f, d, note: !!f.note, w: d.offsetWidth, h: d.offsetHeight, t: S.rt, at: f.lab.up, up: true, mid: false, out: false, stk: false, read: f.note ? f.readT : readOf(f, ''), x: 0, y: 0, under: 0, seen: S.rt, thru: false };
+  if (!placeSmall(s, van, top, bottom)) { if (s.note) { d.hidden = true; d.textContent = ''; } else d.remove(); return false; }
+  if (sm && !sm.out) dropSmall('next');
+  sm = s;
+  const b = boxAt(s, s.at, s.up, s.mid, toScr, top, bottom); s.x = b[0]; s.y = b[1];
+  d.style.transform = 'translate3d(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px,0)';
+  if (s.note) { fly(s); d.classList.add('in'); }                  // it flies up from where the paper lies
+  return true;
+}
+// from the card's middle to where its paper lies on the table, in px, and how the paper lies: the way it flies up, and back
+function fly(s) {
+  const n = toScr(s.f.x, s.f.y), st = s.d.style;
+  st.setProperty('--fx', (n[0] - s.x - s.w / 2).toFixed(0) + 'px'); st.setProperty('--fy', (n[1] - s.y - s.h / 2).toFixed(0) + 'px'); st.setProperty('--fr', (s.f.a * 57.3).toFixed(1) + 'deg');
+}
+export function dropSmall(why) {
+  const s = sm; if (!s || s.out) return;
+  s.out = true; const d = s.d, age = S.rt - s.t;
+  if (s.note) {
+    const had = document.activeElement === d;
+    if (toScr) fly(s);
+    d.classList.add('out');
+    noteT = setTimeout(() => { d.hidden = true; d.className = ''; d.textContent = ''; if (sm === s) sm = null; }, 230);
+    if (had) $('c').focus({ preventScroll: true });               // the card had the focus: the canvas gets it
+  } else { d.classList.add('out'); setTimeout(() => { d.remove(); if (sm === s) sm = null; }, 230); }
+  if (s.f.dropped) s.f.dropped(why, age);
+}
+export const smallUp = () => sm && !sm.out ? sm.f : null;
+export const smallRead = () => !sm || sm.out || (!sm.note && S.rt - sm.t >= sm.read);      // (a note card is never "read, so replace it")
+export const labelReading = () => labels.some(L => !L.out && S.rt - L.t < L.read);        // a main tape is still inside its read time
+// A COPY of place(), not a change to it: the same seven tries (over the thing, under it, beside it on either side,
+// under the van, then lower twice), but every main label that is up is a no-go box too, a note's first two spots hang
+// from the van and not from the paper, and if nowhere is free it says so (false) instead of settling for the first
+// (a note first tries again against the van and the main labels alone).
+function placeSmall(s, van, top, bottom, again) {
+  // (the van's box grows with the zoom: the van is 46 units long and its roof stands 22 high, so close up its roof
+  // reaches past the 70 px box the main tapes keep off; nothing small may lie on any of it)
+  const f = s.f, v = toScr(van.x, van.y), k = Math.abs(toScr(1, 0)[0] - toScr(0, 0)[0]) || 1, vw2 = Math.max(35, 28 * k);
+  const vbox = p => [p[0] - vw2, p[1] - Math.max(35, 50 * k), p[0] + vw2, p[1] + Math.max(35, 30 * k)];
+  let vb = vbox(v), sy = van.y;
+  // (a small tape is put clear of where the van will stop, not only of where it is: a van bumped into its thing at speed
+  // rolls on while the thumb comes up (a third of a second) and then brakes (900 a second), so it goes on about
+  // speed / 1800 + 0.3 s of its own travel, some 150 units from full speed. The box stretches over that whole way, and a
+  // tape that cannot hang above it hangs below, where the van drives away from it. A note's card is not moved by this:
+  // it is big, and it must open; a van driving on under it already sees through it)
+  if (!s.note && van.speed > 30) { const d = van.speed / 1800 + 0.3, e = vbox(toScr(van.x + van.vx * d, van.y + van.vy * d)); sy = van.y + van.vy * d; vb = [Math.min(vb[0], e[0]), Math.min(vb[1], e[1]), Math.max(vb[2], e[2]), Math.max(vb[3], e[3])]; }
+  const rects = [vb], pics = [], lit = [];
+  const box = (x0, y0, x1, y1) => { const a = toScr(x0, y0), b = toScr(x1, y1); return b[0] > 0 && a[0] < vw && b[1] > 0 && a[1] < vh ? [a[0], a[1], b[0], b[1]] : null; };
+  const add = (x0, y0, x1, y1) => { const r = box(x0, y0, x1, y1); if (r) rects.push(r); };
+  // (a note's card is nearly as wide as a phone: on its first try it keeps off every screen, found or not, with the
+  // lettered sticker over it and 24 to the sides for the card's turn and shadow: a card laid over the first ad's phone
+  // looks dropped there carelessly. A small tape keeps off the screens that show a picture, as before. For a card's
+  // later rounds, bare: pics, the found screens, which play; lit, the ones not found yet that show their poster)
+  for (const q of S.live) if (q.scr && (q.video || q.yt)) {
+    const pic = q.found || (q.video && !(q.near < 0.3));
+    if (s.note) { add(q.scr[0] - 24, q.scr[1] - 34, q.scr[2] + 24, q.scr[3]); const r = pic && box(q.scr[0], q.scr[1], q.scr[2], q.scr[3]); if (r) (q.found ? pics : lit).push(r); }
+    else if (pic) add(q.scr[0], q.scr[1], q.scr[2], q.scr[3]);
+  }
+
+  const ap = S.byId.app; if (ap && ap.found && ap.box) add(ap.box[0], ap.box[1], ap.box[2], ap.box[3]);
+  const ln = S.byId.line; if (ln && ln.found) add(ln.x - 80, ln.y - 112, ln.x + 80, ln.y + 112);
+  const sl = S.says.slate; if (sl && sl.box) add(sl.box[0], sl.box[1], sl.box[2], sl.box[3]);
+  const sg = S.says.post; if (sg && sg.sign && f.track === 'g') add(sg.sign[0], sg.sign[1], sg.sign[2], sg.sign[3]);
+  // (hard: the van and the main labels, which nothing small may ever cover; the screens and boards before them are soft)
+  const hard = [rects[0]]; for (const L of labels) if (!L.out && L.x !== undefined) hard.push([L.x - 6, L.y - 6, L.x + L.w + (L.stk ? 16 : 6), L.y + L.h + (L.stk ? 18 : 6)]);
+  let no = rects.concat(hard);
+  const free = (at, up, mid) => { const [x, y] = boxAt(s, at, up, mid, toScr, top, bottom); for (const r of no) if (x < r[2] && x + s.w > r[0] && y < r[3] && y + s.h > r[1]) return false; return true; };
+  const p = toScr(f.x, f.y), side = p[0] > vw / 2 ? -1 : 1, dx = (s.w / 2 + 70) / k, vy = van.y + 40 / k;
+  // (part B: a small tape hangs from the van too, as a note's card does, and both are tried first on the side the van is
+  // coming FROM: a van heading up the screen drives under a tape hung over the thing, and a tape the van is under goes
+  // nearly clear, so a line of fifteen words could not be read by a visitor who simply drove on)
+  const over = [f.x, Math.min(f.y, van.y, sy) - 54], dn = [f.x, Math.max(f.y, van.y, sy) + 46];      // (sy: where a small tape's van stops)
+  // (a small tape: a van that is south of its thing came from the south, and drives on over it: so it too counts as
+  // heading up the screen, and the tape hangs under it, not where the van is about to be)
+  const north = van.vy < -40 || (!s.note && van.y > f.y + 6), tries =
+ [north ? [dn, false, false] : [over, true, false], north ? [over, true, false] : [dn, false, false], [[f.x + side * dx, f.y - 46], false, true], [[f.x - side * dx, f.y - 46], false, true],
+    [[dn[0], Math.max(dn[1], vy)], false, false], [[dn[0], dn[1] + 120], false, false], [[dn[0], dn[1] + 235], false, false]];
+  // (a note: the same two spots, the card pushed to either side as far as the screen allows, then the card hung a card
+  // higher (up to the top bar), before it is put beside; and each spot under the van and lower, pushed the same way:
+  // between a playing ad on one side of a narrow phone and a lit one on the other, the card may fit only far above the
+  // van, or low down and to one side)
+  if (s.note) {
+    const sh = 120 / k, wide = t => [[[t[0][0] - sh, t[0][1]], t[1], false], [[t[0][0] + sh, t[0][1]], t[1], false]], hi = [[over[0], over[1] - (s.h + 30) / k], true, false];
+    tries.splice(2, 0, ...wide(tries[0]), ...wide(tries[1]), hi, ...wide(hi));
+    for (let i = tries.length - 3; i < tries.length; i += 3) tries.splice(i + 1, 0, ...wide(tries[i]));
+  }
+  // A note's card is nearly as wide as a narrow phone: between two screens there may be no place clear of both. A note
+  // that is driven over must open, so it has more rounds of the same tries: clear of the van, the main labels and the
+  // screens that show a picture (bare, without the sticker and the side room); then clear of the van and the main labels
+  // only, taking of those spots the one that lies least on the found screens, which play: a card is never laid on a
+  // playing ad while a spot off it is free, and where both ads of a narrow phone are playing it takes the least of one
+  // (a small tape just waits).
+  // Placed again after a resize or a turn (again), it keeps its spot if that is still clear by the round that chose it.
+  const rounds = s.note ? [no, hard.concat(pics, lit), hard] : [no];
+  if (again && s.pass !== undefined) { no = rounds[s.pass]; if (free(s.at, s.up, s.mid)) { s.k = k; return true; } }
+  for (let i = 0; i < rounds.length; i++) {
+    no = rounds[i]; let best = null, least = Infinity;
+    for (const t of tries) if (free(t[0], t[1], t[2])) {
+      if (i < 2 || !pics.length) { best = t; break; }
+      const [x, y] = boxAt(s, t[0], t[1], t[2], toScr, top, bottom); let a = 0;
+      for (const r of pics) a += Math.max(0, Math.min(x + s.w, r[2]) - Math.max(x, r[0])) * Math.max(0, Math.min(y + s.h, r[3]) - Math.max(y, r[1]));
+      if (a < least) { least = a; best = t; if (!a) break; }
+    }
+    if (best) { s.at = best[0]; s.up = best[1]; s.mid = best[2]; s.pass = i; s.k = k; return true; }
+  }
+  return false;
+}
+// Each frame while one is up. It is clamped as a tape is (under the top bar, over the pill, never under the reel chip)
+// and held in view only while its thing is at least half on screen. It goes when: the van is more than 110 units from
+// its thing and it is older than 1.6 s; half of it is past the screen's edge; and (a tape only) 2.5 s after its read
+// time, even with the van parked at it. It was put clear of the van; if the van then drives under it and stays there
+// 0.4 s, it goes nearly clear until the van comes out (the van is never hidden for long).
+function updateSmall(toScreen, van, top, bottom, v) {
+  const s = sm; if (s.out) return;
+  if (s.re) { s.re = false; if (!s.note) fit(s.d); s.w = s.d.offsetWidth; s.h = s.d.offsetHeight; placeSmall(s, van, top, bottom, true); }      // (after a resize or a turn of the phone; it keeps its spot while that is still clear, or if no other is free)
+  const f = s.f, now = S.rt, age = now - s.t, far = Math.hypot(van.x - f.x, van.y - f.y) > 110, loose = shown(f.x - 15, f.y - 15, f.x + 15, f.y + 15) < 0.5;
+  const b = boxAt(s, s.at, s.up, s.mid, toScreen, top, bottom, loose), x = s.x = b[0], y = s.y = b[1];
+  s.d.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+  // (a note's card: only the van's middle really under it. A small tape: any of the van's box, as it was put clear of)
+  const k = s.k || 1, on = s.note ? v[0] > x && v[0] < x + s.w && v[1] > y && v[1] < y + s.h
+    : v[0] + Math.max(35, 28 * k) > x && v[0] - Math.max(35, 28 * k) < x + s.w && v[1] + Math.max(35, 30 * k) > y && v[1] - Math.max(35, 50 * k) < y + s.h;
+  s.under = on ? s.under + now - s.seen : 0; s.seen = now;
+  // (part B: a small tape first gets a second and a half to be read, as a main tape does. A note's card goes nearly
+  // clear only while the van drives on under it, or once it has had its read time: a van parked under it is reading it)
+  // (but a small tape the van drives on in under, the thumb still down past where it was put clear, does not wait that
+  // second and a half out: it goes nearly clear at once, and stays so while the van is under it, even once it stops)
+  const thru = s.under > 0.4 && (s.note ? Math.abs(van.speed) >= 30 || age > s.read : s.thru || Math.abs(van.speed) >= 30 || age > Math.min(1.5, s.read));
+  if (thru !== s.thru) { s.thru = thru; s.d.classList.toggle('thru', thru); }
+  const gone = loose && Math.max(0, Math.min(x + s.w, vw) - Math.max(x, 0)) * Math.max(0, Math.min(y + s.h, vh) - Math.max(y, top)) < s.w * s.h * 0.5;
+  if (gone) dropSmall('gone'); else if (far && age > 1.6) dropSmall('far'); else if (!s.note && age > s.read + 2.5) dropSmall('read');
+}
 
 // ---------- the Play pill, and the buttons pill ----------
 // A video and nothing else: one pill that plays it. A thing with buttons of its own in the document (its .links): one
@@ -255,6 +415,7 @@ export function pill(f) {
     links.forEach(a => {
       let b;
       if (a.dataset.yt) { b = document.createElement('button'); b.type = 'button'; b.className = 'pl'; b.dataset.yt = a.dataset.yt; b.innerHTML = PLAY + '<span>' + parts(a.textContent.trim()) + '</span>'; }
+      else if (a.hasAttribute('data-talk')) { b = document.createElement('button'); b.type = 'button'; b.dataset.talk = ''; b.innerHTML = '<span>' + a.textContent + '</span>'; }      // the bay's Talk to me: it brings up the contact buttons
       else if (a.hasAttribute('data-mail')) { b = document.createElement('a'); b.href = '#contact'; b.setAttribute('data-mail', ''); b.textContent = a.textContent; }      // the page's own script shows the address on the first tap
       else { b = document.createElement('a'); b.href = a.href; b.target = '_blank'; b.rel = 'noopener'; b.innerHTML = '<span>' + a.textContent + '</span>' + OUT; }
       el.links.appendChild(b);
@@ -283,6 +444,12 @@ export function pill(f) {
 // a tap on one of the buttons pill's play buttons (a link is its own tap)
 function linkTap(e) {
   const b = e.target.closest ? e.target.closest('button') : null, f = pillFind; if (!b || !f || !el.links.classList.contains('up')) return;
+  if ('talk' in b.dataset) {                    // the garage's contact buttons, here (they stay while the van is near the bay)
+    const h = S.byId.home, had = document.activeElement === b; if (!h) return;
+    pill({ el: h.el, track: h.track, x: f.x, y: f.y });
+    if (had) { const n = el.links.querySelector('a,button'); if (n) n.focus({ preventScroll: true }); }      // (the button that had the focus is gone: the first new one gets it, as Enter on the pill does)
+    return;
+  }
   if (b.dataset.yt) openPlayer({ ...f, video: null, yt: b.dataset.yt, sub: f });      // a YouTube video offered by this find: its tape goes under the player
   else openPlayer(f);
 }
@@ -322,11 +489,16 @@ export function pillTuck(on) { el.pill.classList.toggle('tuck', !!on); el.links.
 export function tickPill(van) {
   if (!pillFind) return;
   if (S.rt - pillAt <= 4) return;
-  // (a machine on the bench: its pill reads the same as its neighbours', so it goes once the van is a van's length
-  // and a half from that machine, and never stays up while the van is at another one)
-  const b = pillFind.how ? pillFind.tapBox : null;                  // (tapBox: the ground the whole machine stands on)
-  if (b ? Math.hypot(Math.max(b[0] - van.x, 0, van.x - b[2]), Math.max(b[1] - van.y, 0, van.y - b[3])) > 96 : Math.hypot(van.x - pillFind.x, van.y - pillFind.y) > 240) hidePill();
+  if (pillFar(van)) hidePill();
 }
+// (a machine on the bench: its pill reads the same as its neighbours', so it goes once the van is a van's length
+// and a half from that machine, and never stays up while the van is at another one)
+function pillFar(van) {
+  const b = pillFind.how ? pillFind.tapBox : null;                  // (tapBox: the ground the whole machine stands on)
+  return b ? Math.hypot(Math.max(b[0] - van.x, 0, van.x - b[2]), Math.max(b[1] - van.y, 0, van.y - b[3])) > 96 : Math.hypot(van.x - pillFind.x, van.y - pillFind.y) > 240;
+}
+// may a small thing (the stopwatch, the bay) put up its pill unasked? Only where no find's pill would still be standing (SPEC 5.7)
+export const pillFree = (van, f) => !pillFind || pillFind === f || pillFar(van);
 export function pillH() { return pillFind ? (pillTall ? 152 : 96) : 28; }      // how much of the foot of the screen a pill takes
 export function hidePill() { pillFind = null; linksFor = null; el.pill.classList.remove('up'); el.links.classList.remove('up'); setTimeout(() => { if (!pillFind) { el.pill.hidden = true; el.links.hidden = true; } }, 320); }
 
@@ -353,6 +525,7 @@ export function startPill(on) {
 // has been asked of YouTube: the sheet in the woods and the tile in the reel show a thumbnail saved with the site.
 export function openPlayer(f) {
   if (!f || !(f.video || f.yt) || playing) return;
+  if (sm) dropSmall('sheet');
   if (poster) endPoster();
   playing = f;
   const v = el.video;
@@ -360,11 +533,11 @@ export function openPlayer(f) {
   if (f.yt) {
     v.hidden = true; el.yt.hidden = false;
     // behind the embed while it loads: the thumbnail saved with the site; none for a video whose picture is a drawn card (the weekly recap)
-    const own = f.sub || f, drawn = !!(own.el && own.el.querySelector(':scope > [data-sheet]'));
+    const own = f.sub || f, drawn = !!own.small || !!(own.el && own.el.querySelector(':scope > [data-sheet]'));      // (a small thing's video: no saved picture either)
     el.ytf.style.backgroundImage = drawn ? '' : 'url(' + MEDIA + 'yt-' + f.yt + '.jpg)';
     const fr = document.createElement('iframe');
     fr.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-    fr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); fr.title = f.title || (f.head ? f.head.textContent.trim() : 'Video');
+    fr.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); fr.title = f.title || (f.head ? f.head.textContent.trim() : f.line ? f.line.textContent.trim() : 'Video');
     fr.src = 'https://www.youtube-nocookie.com/embed/' + f.yt + '?autoplay=1&playsinline=1&rel=0';
     el.ytf.appendChild(fr);
     el.ytcap.innerHTML = '<div class="tape still' + stateOf(f.sub || f) + '" style="--t:' + TRACK[f.track].tape + '">' + (f.title ? '<div class="tw"><div class="tb zig"><div class="ti zig"><span class="h">' + f.title + '</span></div></div></div>' : tapeHTML(f)) + '</div>';
@@ -401,7 +574,7 @@ export function closePlayer() {
 // While it is open the game's loop is stopped (hooks.pause: held keys are dropped and the motor's sound rests),
 // everything behind it is inert, and it closes by its disc, a tap on the dark above it, Escape, or the back gesture.
 let how = null, howMod = null, howApi = null, howAt = 0, howT = 0, howShut = 0, modal = null, popSkip = 0;
-const INERT = ['c', 'hud', 'toplain', 'labels', 'pill', 'links', 'startb', 'three', 'first'];
+const INERT = ['c', 'hud', 'toplain', 'labels', 'smalls', 'pill', 'links', 'startb', 'three', 'first'];
 // A modal's plumbing: one history entry so that back closes it, the rest of the page inert, the focus moved in and,
 // on close, given back to what had it (or to the canvas). Written so the reel and the player could use it too.
 function modalOpen(root, close) {
@@ -488,6 +661,7 @@ export function preloadHow() { if (!howMod) loadHow().catch(() => { /* asked for
 export function openHow(f) {
   if (!f || !f.how || how || playing || poster || reelOn || !booted() || (hooks.held && hooks.held()) || justShut()) return;
   const h = f.how, e = el;
+  if (sm) dropSmall('sheet');
   how = f; howAt = performance.now(); clearTimeout(howT);
   // the words, copied in from the find's own markup (textContent only)
   e.howh.textContent = f.head ? f.head.textContent.trim() : '';
@@ -533,6 +707,7 @@ export function playerOpen() { return busy(); }
 
 // #ad1 (spec 9.8): the first ad's poster, full screen, with its Play pill. The tap on the pill plays it with sound.
 export function openPoster(f) {
+  if (sm) dropSmall('sheet');
   poster = f; const v = el.video;
   el.player.hidden = false; el.stage.classList.add('poster');
   v.hidden = false; el.yt.hidden = true; v.controls = false; v.poster = MEDIA + f.video + '.jpg';
@@ -586,6 +761,7 @@ function reelTap(e) {
 }
 export function openReel() {
   if (reelOn || playing || poster || how) return;
+  if (sm) dropSmall('sheet');
   if (!reelMade) makeReel();
   refreshReel();
   reelOn = true; el.reel.hidden = false; el.reelb.setAttribute('aria-expanded', 'true');

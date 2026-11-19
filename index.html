@@ -123,6 +123,8 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
 <link rel="modulepreload" href="js/belt.js">
 <link rel="modulepreload" href="js/beltart.js">
 <link rel="modulepreload" href="js/matart.js">
+<link rel="modulepreload" href="js/small.js">
+<link rel="modulepreload" href="js/smallart.js">
 <link rel="modulepreload" href="js/ui.js">
 <link rel="modulepreload" href="js/audio.js">
 </head>
@@ -145,6 +147,7 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <button id="snd" type="button" hidden aria-label="Sound off" data-on="Sound on" data-off="Sound off"><span class="tb zz"><b class="zz"><svg viewBox="0 0 24 20" aria-hidden="true"><path class="sp" d="M2.4 7.1h3.2v5.8H2.4zM7.6 6.6l5-4v14.8l-5-4z"/><path class="wv" d="M15.3 6.6a4.8 4.8 0 0 1 0 6.8M18.2 3.9a8.6 8.6 0 0 1 0 12.2"/><path class="sh" d="M3.6 2.4 20.6 17.6"/><path class="sl" d="M3.6 2.4 20.6 17.6"/></svg></b></span><span class="tp zz" aria-hidden="true"><b class="zz">Tap for sound</b></span></button>
     <button id="reelb" type="button" aria-label="The reel: every video" aria-expanded="false"><svg viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg><b>reel</b></button>
   </div>
+  <div id="smalls" aria-live="polite"><button id="note" type="button" hidden></button></div>
   <div id="labels" aria-live="polite"></div>
   <!-- The moment: one dated strip for each main section that is built (data-stage), in this order, then one strip
        across the middle. The number word is picked by how many sections are live. -->
@@ -566,7 +569,8 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
      · 5 the belt · 6 the rest of the kitchen and the back plank.
      In a find: data-head, data-line, data-date (the sticker) · data-gain = a line the tape gains later: "played" once the
      first ad has been played, "full" once the tray is full, "again" when the van comes back (the second look) · .links =
-     its buttons. data-say = a small thing that says its words when bumped and is not counted. -->
+     its buttons. data-say = a small thing that says its words when bumped and is not counted.
+     The last two lists (data-section="notes" and "small") are the notes and the small things: their own comment says how. -->
 <div id="finds" hidden>
   <!-- The words under his name on the hub sign (the game reads them here; the plain resume no longer shows them). -->
   <p data-roles>Founder · AI Automation · Video</p>
@@ -824,6 +828,160 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     </li>
     <li data-say="back" data-track="c" data-x="0" data-y="300">
       <span data-line>Brooklyn, NY. English and Yiddish.</span>
+    </li>
+  </ul>
+
+  <!-- NOTES and SMALL THINGS (CONTENT-v2, D): never counted, never in the reel. Read only when world.SMALL is on.
+       data-note / data-thing = id (a key, never shown) · data-n = its number in CONTENT-v2, D · data-track = its table's
+       track · data-table · data-x / data-y = where it lies · data-r = its own radius · data-kind = flat (driven over) |
+       stand (pushed aside, it steps back) | wall (fixed to a built thing; data-reach) · data-host = an object that
+       already lies there gains this line (no new picture) · data-a = how it lies, radians · data-first = drawn from
+       the first frame · data-stage="6" = waits for the back plank. Written by game/test/small/make_markup.py. -->
+  <ul class="finds" data-section="notes">
+    <li data-note="n1" data-n="1" data-track="c" data-table="strip" data-x="62" data-y="196" data-a="0.14" data-first>
+      <b data-head>FUN FACT</b> <span data-line>I love to experiment. Trying things and learning something new is the part of every job I like most.</span>
+    </li>
+    <li data-note="n2" data-n="2" data-track="v" data-table="mat" data-x="244" data-y="316" data-a="-0.17">
+      <b data-head>FUN FACT</b> <span data-line>Almost perfect bothers me. I keep working until it's right, and I've learned to recognize the moment a thing is finished and ready to go out.</span>
+    </li>
+    <li data-note="n3" data-n="3" data-track="k" data-table="block" data-x="-360" data-y="-12" data-a="0.1">
+      <b data-head>FUN FACT</b> <span data-line>I had never worked in a professional kitchen. I told REN I loved what they do and wanted to learn. They hired me. Now I bake their bread.</span>
+    </li>
+    <li data-note="n4" data-n="4" data-track="g" data-table="belt" data-x="610" data-y="-136" data-a="-0.1">
+      <b data-head>FUN FACT</b> <span data-line>A good problem makes my day. When something breaks I get curious, work out what's really wrong, and find a fix fast.</span>
+    </li>
+    <li data-note="n5" data-n="5" data-track="e" data-table="plank" data-x="-690" data-y="556" data-a="0.24" data-stage="6">
+      <b data-head>FUN FACT</b> <span data-line>I draw and paint. I'm self-taught, and when I work from a reference I can match it very closely.</span>
+    </li>
+    <li data-note="n6" data-n="6" data-track="e" data-table="plank" data-x="-790" data-y="624" data-a="0.21" data-stage="6">
+      <b data-head>FUN FACT</b> <span data-line>I snowboard. I learned it the way I learn most things: try it, fall, work out why, and go again.</span>
+    </li>
+    <li data-note="n7" data-n="7" data-track="e" data-table="plank" data-x="-535" data-y="628" data-a="-0.14" data-stage="6">
+      <b data-head>FUN FACT</b> <span data-line>Off the clock I make things out of wood. I've liked building things for as long as I can remember.</span>
+    </li>
+    <li data-note="n8" data-n="8" data-track="v" data-table="mat" data-x="760" data-y="171" data-a="0.16">
+      <b data-head>FUN FACT</b> <span data-line>I've taught video editing to other people. Explaining a craft out loud is the quickest way to find out how well you know it.</span>
+    </li>
+    <li data-note="n10" data-n="10" data-track="e" data-table="plank" data-x="-410" data-y="632" data-a="0.09" data-stage="6">
+      <b data-head>FUN FACT</b> <span data-line>For eight months I split every day: half caring for residents of a group home, half studying. I showed up for both.</span>
+    </li>
+    <li data-note="n11" data-n="11" data-track="g" data-table="belt" data-x="935" data-y="-858" data-a="0.09">
+      <b data-head>FUN FACT</b> <span data-line>Most days I run a team of AI agents from my phone. Saying exactly what I want is a skill, and I practice it every day.</span>
+    </li>
+    <li data-note="n12" data-n="12" data-track="w" data-table="desk" data-x="-236" data-y="-664" data-a="-0.16">
+      <b data-head>FUN FACT</b> <span data-line>I made Workeey's ads myself. It helps when the founder is also a video editor.</span>
+    </li>
+    <li data-note="n13" data-n="13" data-track="w" data-table="desk" data-x="188" data-y="-1356" data-a="0.12">
+      <b data-head>FUN FACT</b> <span data-line>I learn fast. A few months after I started Workeey, it was a live product.</span>
+    </li>
+  </ul>
+  <ul class="finds" data-section="small">
+    <li data-thing="pencil" data-n="1" data-track="w" data-table="desk" data-kind="flat" data-x="-430" data-y="-496" data-r="8" data-a="0.25">
+      <span data-line>I draw. Give me a reference and I'll match it.</span>
+    </li>
+    <li data-thing="goldroll" data-n="2" data-track="w" data-table="desk" data-kind="stand" data-host data-x="172" data-y="-168" data-r="12">
+      <span data-line>Workeey gold. Built for people who carry a tape measure.</span>
+    </li>
+    <li data-thing="clipchain" data-n="3" data-track="w" data-table="desk" data-kind="flat" data-host data-x="170" data-y="-1180" data-r="24">
+      <span data-line>Less paperwork. That's the whole idea.</span>
+    </li>
+    <li data-thing="globe" data-n="4" data-track="w" data-table="desk" data-kind="stand" data-x="-420" data-y="-988" data-r="10">
+      <span data-line>Workeey's public site is rolling out in 13 languages.</span>
+    </li>
+    <li data-thing="phone" data-n="5" data-track="w" data-table="desk" data-kind="flat" data-x="410" data-y="-400" data-r="9" data-a="-0.2">
+      <span data-line>I built Workeey for the phone first.</span>
+    </li>
+    <li data-thing="laptop" data-n="6" data-track="w" data-table="desk" data-kind="flat" data-x="-120" data-y="-1082" data-r="14">
+      <span data-line>I'm good with computers. The stubborn ones are the fun ones.</span>
+    </li>
+    <li data-thing="shoebox" data-n="7" data-track="w" data-table="desk" data-kind="stand" data-x="-400" data-y="-176" data-r="14">
+      <span data-line>Receipts, expenses and job photos all live in the app.</span>
+    </li>
+    <li data-thing="telephone" data-n="9" data-track="g" data-table="belt" data-kind="stand" data-x="776" data-y="-612" data-r="11">
+      <span data-line>When a decision waits on me, an agent calls my phone, and the work goes on.</span>
+    </li>
+    <li data-thing="beacon" data-n="10" data-track="g" data-table="belt" data-kind="stand" data-x="586" data-y="-514" data-r="8">
+      <span data-line>A monitor I set up checks the live site around the clock and alerts me if it goes down.</span>
+    </li>
+    <li data-thing="chute" data-n="11" data-track="g" data-table="belt" data-kind="stand" data-x="690" data-y="-596" data-r="14">
+      <span data-line>New app versions are packaged and sent to the stores automatically.</span>
+    </li>
+    <li data-thing="printer" data-n="12" data-track="g" data-table="belt" data-kind="stand" data-x="684" data-y="-498" data-r="11">
+      <span data-line>Every evening a report tells me how fast the pages load and what needs attention.</span>
+    </li>
+    <li data-thing="headphones" data-n="13" data-track="g" data-table="belt" data-kind="flat" data-x="858" data-y="-572" data-r="10">
+      <span data-line>My agents send spoken updates, so I can listen instead of reading.</span>
+    </li>
+    <li data-thing="fanbox" data-n="14" data-track="g" data-table="belt" data-kind="stand" data-x="772" data-y="-520" data-r="11">
+      <span data-line>Heavy renders go out to a cloud machine that switches itself off when done.</span>
+    </li>
+    <li data-thing="padlock" data-n="15" data-track="g" data-table="belt" data-kind="flat" data-x="598" data-y="-606" data-r="7">
+      <span data-line>Safety limits belong in plain code, not in an AI's judgment.</span>
+    </li>
+    <li data-thing="sdcard" data-n="16" data-track="v" data-table="mat" data-kind="flat" data-host data-x="174" data-y="238" data-r="7">
+      <span data-line>Premiere Pro is where my edits happen.</span>
+    </li>
+    <li data-thing="interview" data-n="17" data-track="v" data-table="mat" data-kind="stand" data-x="590" data-y="330" data-r="16">
+      <span data-line>Interview videos. I've edited those as well.</span>
+    </li>
+    <li data-thing="speaker" data-n="18" data-track="v" data-table="mat" data-kind="stand" data-x="505" data-y="405" data-r="9">
+      <span data-line>Sound design is half the edit. I do my own.</span>
+    </li>
+    <li data-thing="swatch" data-n="19" data-track="v" data-table="mat" data-kind="flat" data-x="905" data-y="180" data-r="9" data-a="0.3">
+      <span data-line>I grade my own color.</span>
+    </li>
+    <li data-thing="ledpanel" data-n="20" data-track="v" data-table="mat" data-kind="stand" data-x="945" data-y="440" data-r="9">
+      <span data-line>I know my way around lights and a camera.</span>
+    </li>
+    <li data-thing="camera" data-n="21" data-track="v" data-table="mat" data-kind="stand" data-x="600" data-y="216" data-r="9">
+      <span data-line>I take a good photograph.</span>
+    </li>
+    <li data-thing="keyframes" data-n="22" data-track="v" data-table="mat" data-kind="flat" data-x="215" data-y="590" data-r="10">
+      <span data-line>Motion graphics, one keyframe at a time.</span>
+    </li>
+    <li data-thing="squares" data-n="24" data-track="v" data-table="mat" data-kind="flat" data-x="950" data-y="60" data-r="11">
+      <span data-line>Photoshop, for everything that holds still.</span>
+    </li>
+    <li data-thing="stick" data-n="25" data-track="v" data-table="woods" data-kind="flat" data-x="764" data-y="880" data-r="8" data-a="3.46">
+      <span data-line>I shot the photos here too, not only the video.</span>
+    </li>
+    <li data-thing="whisk" data-n="26" data-track="k" data-table="block" data-kind="flat" data-x="-178" data-y="318" data-r="9" data-a="0.6">
+      <span data-line>I like making food. I like experimenting with it even more.</span>
+    </li>
+    <li data-thing="knife" data-n="27" data-track="k" data-table="block" data-kind="flat" data-x="-545" data-y="-38" data-r="13">
+      <span data-line>Knife work is a strength of mine.</span>
+    </li>
+    <li data-thing="rollingpin" data-n="28" data-track="k" data-table="block" data-kind="flat" data-x="-250" data-y="215" data-r="10" data-a="0.3">
+      <span data-line>I rolled a lot of dough before I built Workeey.</span>
+    </li>
+    <li data-thing="scraper" data-n="29" data-track="k" data-table="block" data-kind="flat" data-host data-x="-318" data-y="176" data-r="20">
+      <span data-line>Prep lists, service timing and a stocked line, done properly.</span>
+    </li>
+    <li data-thing="knight" data-n="30" data-track="e" data-table="plank" data-kind="stand" data-x="-784" data-y="548" data-r="7" data-stage="6">
+      <span data-line>I'm good at chess. Fair warning.</span>
+    </li>
+    <li data-thing="sketchbook" data-n="31" data-track="e" data-table="plank" data-kind="flat" data-x="-716" data-y="552" data-r="14" data-stage="6">
+      <span data-line>My sketchbook. Ask, and I'll show you the real pages.</span>
+    </li>
+    <li data-thing="snowboard" data-n="34" data-track="e" data-table="plank" data-kind="flat" data-x="-716" data-y="634" data-r="14" data-stage="6">
+      <span data-line>Winter means snowboarding.</span>
+    </li>
+    <li data-thing="paint" data-n="35" data-track="e" data-table="plank" data-kind="flat" data-x="30" data-y="590" data-r="14" data-stage="6">
+      <span data-line>Borrow a color.</span>
+    </li>
+    <li data-thing="bell" data-n="36" data-track="e" data-table="plank" data-kind="stand" data-x="-156" data-y="585" data-r="7" data-stage="6">
+      <span data-line>I'm good with people: clients, customers, a team.</span>
+    </li>
+    <li data-thing="keyring" data-n="37" data-track="c" data-table="strip" data-kind="wall" data-x="88" data-y="452" data-r="8" data-reach="26">
+      <span data-line>Licensed driver. The van is in good hands.</span>
+    </li>
+    <li data-thing="stopwatch" data-n="0" data-track="v" data-table="mat" data-kind="flat" data-x="880" data-y="40" data-r="12" data-a="-0.2" data-yes="G6" data-yt="A-FZ9WLw7v0" data-pill="YouTube">
+      <span data-line>I once filmed a cantata video in 30 minutes.</span>
+    </li>
+    <li data-thing="bay" data-n="0" data-track="g" data-table="belt" data-kind="flat" data-x="1003" data-y="-862" data-r="14" data-yes="G10">
+      <b data-head>YOUR MACHINE HERE</b>
+      <span data-line>I've built automation for other businesses too.</span>
+      <span class="links"><a href="#contact" data-talk>Talk to me</a></span>
     </li>
   </ul>
 </div>

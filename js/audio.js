@@ -18,7 +18,7 @@ let ctx = null, tag = null, wanted = true, held = false, asleep = !document.docu
 let fails = 0, lastTry = -1e9, stalled = 0, lastT = -1, shown = '', liveAt = 0, inited = false;
 const DEBUG = qs.get('debug') === '1';
 let onChange = () => {};
-const dbg = { knocks: 0, snaps: 0, by: '', ask: '', last: '', act: null, builds: 0, lt: -1, at: -1e9, adv: false, pin: null, mix: { eng: 1, roll: 1, extra: 1 } };
+const dbg = { knocks: 0, snaps: 0, smalls: 0, small: '', by: '', ask: '', last: '', act: null, builds: 0, lt: -1, at: -1e9, adv: false, pin: null, mix: { eng: 1, roll: 1, extra: 1 } };
 try { wanted = localStorage.getItem(KEY) !== '0'; } catch (e) { /* no storage: sound is on until muted */ }
 // the silent switch, layer 1: ask for the "playback" session before any AudioContext exists
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* not there, or not allowed */ }
@@ -393,6 +393,28 @@ const swish = safe((f0, f1, dur, peak, q = 0.9) => {
 export function whip() { swish(900, 3600, 0.32, 0.12, 1.6); }      // a card leaving for the tray
 export function gust() { swish(400, 1500, 1.5, 0.3, 0.7); }        // the gust that clears the desk
 
+// ---------- 5b. the small things: ONE ROW PER SOUND. Each partial: [type, Hz, seconds, peak, delay s, Hz at its end or 0] ----------
+// A small thing names its row (smallart.SND); several share one. A line going up plays its thing's row and nothing
+// else: no tape slap, no find note. Nothing here is louder than a card's ding; nothing is built while driving.
+const SMALLS = {
+  tock:   [['triangle', 880, 0.05, 0.12, 0, 0], ['sine', 1760, 0.03, 0.04, 0, 0]],                      // a knock on something small
+  roll:   [['triangle', 700, 0.04, 0.09, 0, 0], ['triangle', 640, 0.04, 0.08, 0.07, 0], ['triangle', 590, 0.04, 0.06, 0.15, 0]],   // three wood ticks
+  jingle: [['sine', 3136, 0.12, 0.07, 0, 0], ['sine', 3951, 0.12, 0.07, 0.04, 0], ['sine', 4699, 0.14, 0.06, 0.09, 0]],            // keys, paperclips, wire
+  click:  [['square', 1900, 0.018, 0.08, 0, 0], ['square', 620, 0.02, 0.06, 0.012, 0]],                 // a switch, a shutter, a ratchet
+  blip:   [['sine', 988, 0.09, 0.12, 0, 0], ['sine', 1319, 0.12, 0.10, 0.1, 0]],                        // a gadget waking
+  thump:  [['sine', 220, 0.12, 0.2, 0, 110], ['sine', 440, 0.08, 0.06, 0, 220]],                        // a soft low beat (440: a phone speaker plays nothing under 250)
+  whirr:  [['sawtooth', 190, 0.35, 0.05, 0, 320]],                                                      // blades spinning up
+  ring:   [['sine', 2349, 0.05, 0.07, 0, 0], ['sine', 2960, 0.05, 0.06, 0.06, 0], ['sine', 2349, 0.05, 0.07, 0.12, 0], ['sine', 2960, 0.05, 0.06, 0.18, 0]]      // a desk phone's trill (four high partials)
+};
+let smallAt = 0;
+export const small = safe(name => {
+  if (!name) return;                                                        // (a thing that is silent: it listens)
+  const t = ctx.currentTime + 0.005; if (t - smallAt < 0.12) return; smallAt = t; dbg.smalls++; dbg.small = name;
+  if (name === 'paper') { swish(1700, 3400, 0.16, 0.1, 0.9); return; }      // a note lifted, a box of slips
+  if (name === 'paper2') { swish(3000, 1700, 0.1, 0.07, 0.9); return; }     // a note put down, or rustling as it is driven over
+  for (const [type, f, d, pk, at, f1] of SMALLS[name] || SMALLS.tock) { const o = osc(type, f, t + at, d, pk, out, 0.002); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + at + d); }
+});
+
 // ---------- 6. for a tester who cannot hear (?debug=1): window.__g.audio ----------
 // rms(), centroid() and bands() read an analyser on the master output, after the duck: what they say is what would
 // reach the speaker. (A context that is not running sends nothing, so they answer 0 then.)
@@ -405,7 +427,7 @@ export function debug() {
     get surface() { return D.key; }, get speed() { return Math.round(D.sp); }, get revs() { return +D.r.toFixed(3); }, get paper() { return +D.paper.toFixed(2); }, get builds() { return dbg.builds; },
     get session() { try { return navigator.audioSession ? navigator.audioSession.type : 'none'; } catch (e) { return 'none'; } },
     get tag() { return USE_TAG ? (tag && !tag.paused ? 'playing' : 'paused') : 'off'; }, get time() { return ctx ? ctx.currentTime : 0; },
-    surfaces: Object.keys(SURF), mix: dbg.mix, get knocks() { return dbg.knocks; }, get snaps() { return dbg.snaps; },
+    surfaces: Object.keys(SURF), mix: dbg.mix, get knocks() { return dbg.knocks; }, get snaps() { return dbg.snaps; }, get smalls() { return dbg.smalls; }, get small() { return dbg.small; },      // (smalls: how many small-thing sounds have played, and the last one's row)
     set pin(v) { dbg.pin = v || null; }, get pin() { return dbg.pin; },      // { surface, speed, thr, ... } overrides what the loop sends: a test can hold one surface at one speed
     // the largest sample in the last 43 ms (1 is full scale: above it the output would clip)
     peak() {

@@ -21,6 +21,29 @@
 .tape q{quotes:"\201C" "\201D"}
 .tape .d{position:absolute;right:-7px;bottom:-12px;background:#FBFCFD;color:var(--ink);font:700 11px/1 var(--road);letter-spacing:.02em;padding:5px 8px 3px;border-radius:9px;box-shadow:0 0 0 1.2px var(--ink);transform:rotate(-2.5deg);white-space:nowrap}
 .tape.out .tw{animation:none;transition:transform .22s ease-in,opacity .22s ease-in;transform:rotate(var(--r,0deg)) scale(.2);opacity:0}
+
+/* ---------- notes and small things (js/small.js): ONE small tape or ONE note card, in #smalls, under the main tapes ---------- */
+#smalls{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.tape.sm{max-width:min(250px,calc(100vw - 28px))}
+.tape.sm .l{margin-top:0}
+/* the note card: a real button. Cut paper (straight edges) under a strip of masking tape; the strip carries its head */
+#note{position:absolute;left:0;top:0;width:min(318px,calc(100vw - 24px));margin:0;padding:0;border:0;background:none;color:var(--ink);text-align:left;pointer-events:auto;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;will-change:transform;transition:opacity .15s linear}
+#note[hidden]{display:none}
+#note.thru{opacity:.25}
+#note .nw{display:block;position:relative;padding-top:12px;transform:rotate(var(--r,0deg));transform-origin:50% 60%;filter:drop-shadow(3px 4px 0 rgba(20,17,15,.38))}
+#note.in .nw{animation:noteup .28s cubic-bezier(.2,.9,.3,1.1) both}
+#note .nb{display:block;background:var(--ink);padding:1.5px;clip-path:polygon(0 0,100% 0,100% calc(100% - 17px),calc(100% - 17px) 100%,0 100%)}
+#note .np{display:block;background:#FFE9BC;padding:24px 18px 18px;clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);font:700 18px/1.34 var(--hand);text-wrap:pretty}
+#note .nf{position:absolute;right:1.5px;bottom:1.5px;width:16px;height:16px;background:linear-gradient(135deg,var(--ink) 0 1.5px,#FFF6DF 1.5px);clip-path:polygon(0 0,100% 0,0 100%)}
+#note .nh{position:absolute;z-index:1;left:50%;top:0;transform:translateX(-50%) rotate(-3deg);background:var(--ink);padding:1.5px}
+#note .nh b{display:block;background:var(--masking);padding:6px 18px 4px;font:700 13px/1 var(--hand);letter-spacing:.06em;white-space:nowrap}
+#note:focus{outline:0}
+#note:focus-visible{outline:2.5px solid var(--ink);outline-offset:4px;border-radius:2px}
+#note.out .nw{animation:none;transition:transform .22s ease-in,opacity .22s ease-in;transform:translate(var(--fx,0px),var(--fy,0px)) scale(.12) rotate(var(--fr,0deg));opacity:0}
+@keyframes noteup{from{transform:translate(var(--fx,0px),var(--fy,0px)) scale(.12) rotate(var(--fr,0deg));opacity:.5}}
+@media (max-width:379px){#note{width:min(290px,calc(100vw - 24px))}#note .np{font-size:17px}}
+@media (min-width:700px){#note{width:340px}#note .np{font-size:19px}}
+@media (prefers-reduced-motion:reduce){#note.in .nw{animation:none}#note.out .nw,.tape.sm.out .tw{transition:none}}
 @keyframes slap{0%{transform:rotate(calc(var(--r,0deg) - 13deg)) scale(1.55);opacity:0}55%{transform:rotate(calc(var(--r,0deg) + 3.5deg)) scale(.96);opacity:1}100%{transform:rotate(var(--r,0deg)) scale(1);opacity:1}}
 
 /* ---------- counter states ---------- */

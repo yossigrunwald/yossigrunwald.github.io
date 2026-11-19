@@ -11,6 +11,8 @@ export const MEDIA = 'resume/media/';    // the game lives at the site root; its
 export const STAGE = (() => { const s = +new URLSearchParams(location.search).get('stage'); return s >= 1 && s <= 5 ? s : 5; })();
 export const S5 = STAGE >= 5;                                   // everything the bench adds is behind this, or behind a data-stage="5"
 export const on = el => (+el.dataset.stage || 0) <= STAGE;      // is this element (a find, or a part of one) switched on yet
+// Notes, small things and ambient life (CONTENT-v2, D and G2): small.js. ?small=0 gives back the page branch main serves (the live home page).
+export const SMALL = S5 && new URLSearchParams(location.search).get('small') !== '0';
 
 export const PAL = {
   floor: '#23282B', floorSeam: '#1B1F22',
@@ -185,6 +187,20 @@ export function readSays(doc = document) {
   doc.querySelectorAll('[data-say]').forEach(el => { const d = el.dataset; if (on(el)) out[d.say] = { ...words(el, d), id: d.say, say: true, tab: '', live: false }; });
   return out;
 }
+// the notes and the small things (never counted): one object each, in the shape a tape needs (head, line, track, x, y).
+// kind: flat (driven over) · stand (the van pushes it aside) · wall (fixed to a built thing). r: its own radius.
+// reach: how near the van's centre must come. host: an object that already lies there gains the line.
+export function readSmall(doc = document) {
+  const out = []; if (!SMALL) return out;
+  doc.querySelectorAll('[data-note],[data-thing]').forEach(el => {
+    const d = el.dataset; if (!on(el)) return;
+    const kind = d.kind || 'flat', r = +d.r || 13;
+    out.push({ ...words(el, d), id: d.note || d.thing, n: +d.n, note: 'note' in d, kind, table: d.table, r, a: +d.a || 0,
+      reach: +d.reach || (kind === 'stand' ? 18 + r + 2 : r + 12), host: 'host' in d, first: 'first' in d, small: true, tab: '', live: false,
+      yt: d.yt || '', pill: d.pill || '', talk: !!el.querySelector(':scope > .links > [data-talk]') });      // (yt: a tap plays it · talk: its pill holds Talk to me)
+  });
+  return out;
+}
 // the nine feature cards: a stencilled word and its short gloss
 export function readCards(doc = document) {
   return [...doc.querySelectorAll('[data-card]')].map(el => ({
@@ -285,5 +301,6 @@ export const S = {
   vr: [0, 0, 0, 0],     // the world rect on screen this frame [x0, y0, x1, y1]
   inkUntil: 0,          // game time until which the tyre line is drawn in black ink (the ad 2 toy)
   slow: 0,              // seconds of slow motion left (real time)
-  reduced: false
+  reduced: false,
+  life: false           // ambient life is on (small.js sets it once a frame: after the first touch, never under reduced motion, never with ?small=0)
 };

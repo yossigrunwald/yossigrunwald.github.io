@@ -9,6 +9,7 @@ import { spr, flats, lit, loops, prop, cbox, ccirc, squash, tickSquash, makeLoop
 import * as desk from './desk.js';
 import * as mat from './mat.js';
 import * as belt from './belt.js';
+import * as small from './small.js';
 import * as ui from './ui.js';
 import * as audio from './audio.js';
 
@@ -47,6 +48,7 @@ export function readWorld() {
   const ps = makeSheets(S.cards); S.sheets = ps.sheets; S.piles = ps.piles;
   desk.init(wake, () => three.on || three.hold > 0); mat.init();
   belt.init(hello, () => three.on || three.hold > 0 || cine.on);      // the bench (stage 5): hello says a small thing's tape, the second is "a moment is on"
+  small.init(() => three.on || three.hold > 0 || cine.on);            // the notes and the small things (nothing at all with ?small=0)
   const ad = S.byId.ad1; ad.scr = [-67.5, -545, 67.5, -305];
   const L = addScreen('ad1', makeLoop(ad.video), ad, ad.scr); L.on = true; startLoop(L);      // moving at first paint
 }
@@ -56,7 +58,7 @@ export function rebakeLettering() {
   const name = document.querySelector('[data-name]').textContent.trim(), roles = document.querySelector('[data-roles]').textContent.trim(), ad = S.byId.ad1;
   art.retire(spr.hub); spr.hub = art.keep(() => art.hubSprite(name, roles, S5), 0, 0);
   art.retire(spr.adTape); spr.adTape = art.keep(() => art.phoneTape({ text: ad.lure, len: ad.len }), 1, -546);
-  desk.rebakeLettering(); mat.rebakeLettering(); belt.rebakeLettering();
+  desk.rebakeLettering(); mat.rebakeLettering(); belt.rebakeLettering(); small.rebakeLettering();
   S.live.forEach(fd => { if (fd.tabSp) fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
 }
 
@@ -101,7 +103,10 @@ export function bakeFirst() {
       if (b < 1) art.drawSpr(ctx, spr.loafPale, p.x, p.y);
       if (b > 0 && spr.loafGold) { const a = ctx.globalAlpha; ctx.globalAlpha = a * ease(b * 1.15); art.drawSpr(ctx, spr.loafGold, p.x, p.y); ctx.globalAlpha = a; }
       if (pop) ctx.restore();
-      art.drawSpr(ctx, spr.lamp, p.x, p.y);                              // the lamp does not swell with the bread
+      // the lamp does not swell with the bread. (Ambient life: it sways half a degree about its post's foot; sw is 0 otherwise.)
+      const sw = small.lampSway();
+      if (sw) { ctx.save(); ctx.translate(p.x - 65.3, p.y - 42.3); ctx.rotate(sw * 0.0087); ctx.translate(65.3 - p.x, 42.3 - p.y); art.drawSpr(ctx, spr.lamp, p.x, p.y); ctx.restore(); }
+      else art.drawSpr(ctx, spr.lamp, p.x, p.y);
     }
   });
   f.bread.lab = { up: [-228, -130], down: [-228, 88] }; f.bread.tabAt = [-262, 79, 0.07];      // up = clear above the lamp, never across its shade
@@ -137,27 +142,31 @@ export function bakeFirst() {
     x: 0, y: 400, sp: spr.garage, sortY: 446, find: hm, coll: cbox(-60, 282, 60, 445),
     draw(ctx, p) {
       art.drawSpr(ctx, p.sp, p.x, p.y);
+      small.drawHome(ctx, p);                                                                        // (ambient life: the bulb sways; nothing is drawn otherwise)
       const a = ctx.globalAlpha, warm = Math.max(0, 1 - (S.rt - (hm.saidAt || -9)) / 1.2);          // the bulb warms when the van comes home
-      ctx.globalAlpha = a * Math.min(1, (hm.found ? 0.82 : 0.7) + 0.2 * Math.sin(S.rt * 1.7) + warm * 0.6); art.drawSpr(ctx, spr.bulb, p.x, p.y + 9); ctx.globalAlpha = a;
+      ctx.globalAlpha = a * Math.min(1, (hm.found ? 0.82 : 0.7) + 0.2 * Math.sin(S.rt * 1.7) + warm * 0.6); art.drawSpr(ctx, spr.bulb, p.x + 2 * small.bulbSway(), p.y + 9); ctx.globalAlpha = a;      // (its pool slides with it)
+      small.drawMoth(ctx, p);
     }
   });
   const bk = S.says.back; if (bk) { bk.prop = hm.prop; bk.lab = { up: [0, 226], down: [0, 464], flip: true }; }
   // Its tape never lies across the garage: met from the mouth it goes over the roof; met from the strip (the van at the
   // roof's back edge) it goes over the van, on the bare strip, as the back's own line does.
   // Met from a side wall (the van beside the box, short of its mouth) it also goes up, clear above the van.
+  small.first();                                             // the one note that is part of the opening picture
   hm.lab = { up: [0, 288], down: [0, 464], pick(v) { const north = v.y < 292, side = !north && Math.abs(v.x) > 62 && v.y < 452; this.flip = north || side; this.up = north ? [0, 222] : side ? [0, Math.min(288, v.y - 52)] : [0, 288]; } }; hm.tabAt = [-34, 387, -0.05];
 }
 
 // light lying on the ground, drawn under every prop: the lamp pool over the flour, the skit phone's pink on the mat
 export function drawGround(ctx) {
   belt.drawGround(ctx);                                     // the bench's belt and its floor tape: the hub and every prop draw over them
-  if (inView(-330, -30, -90, 140)) steps(ctx, -228, 35, PAL.lamp, [20, 20, 115, 75, 0.22], [12, 16, 55, 35, 0.18]);      // the loaf's lamp: two hard-edged steps
+  if (inView(-330, -30, -90, 140)) steps(ctx, -228 + 3 * small.lampSway(), 35, PAL.lamp, [20, 20, 115, 75, 0.22], [12, 16, 55, 35, 0.18]);      // the loaf's lamp: two hard-edged steps (they slide as the lamp sways: ambient life)
   const s = S.byId.skit1;
   if (inView(s.x - 82, s.y - 54, s.x + 82, s.y + 54)) {
     if (!s.found) ctx.globalAlpha = 0.72 + 0.28 * Math.sin(S.rt * 2.4);
     art.drawSpr(ctx, spr.pinkSteps, s.x, s.y); ctx.globalAlpha = 1;
   }
   mat.drawGround(ctx);
+  small.drawGround(ctx);                                    // flour motes in the lamp light
 }
 
 // Tape dashes on the hub (spec 7.2): after a major find, eight light up one after another toward the nearest major of
@@ -238,6 +247,7 @@ export function bakeJobs() {
   jobs.push(...desk.jobs());                                // the far desk
   jobs.push(...belt.jobs());                                // the bench's machines ([] before stage 5)
   jobs.push(...mat.jobs());                                 // the rest of the mat, and the woods
+  jobs.push(...small.jobs());                               // the notes, the small things, the fan and the arm (one small sprite, the bay's lettering: [] with ?small=0)
   jobs.push(() => {                                         // one-word tabs that stay on found things
     S.live.forEach(fd => { fd.tabSp = art.tabSprite(fd.tab, TRACK[fd.track].tape); });
   });
@@ -370,6 +380,7 @@ export function update(dt, rdt) {
     if (Math.random() < dt * 22) emit(1, b.x + (Math.random() - 0.5) * 70, b.y - 30, (Math.random() - 0.5) * 16, -40 - Math.random() * 30, 1.3, 9 + Math.random() * 5);
   } else if (b.bake >= 1 && S.t - b.foundAt < 9 && Math.random() < dt * 5) emit(1, b.x + (Math.random() - 0.5) * 60, b.y - 34, (Math.random() - 0.5) * 10, -30, 1.5, 8);
   desk.update(dt, rdt); mat.update(dt, rdt); belt.update(dt, rdt); tickSecond();
+  small.update(dt, rdt);
   // The moment starts 0.9 s after the find that completes it, so that find is seen first. If the van is
   // being driven on meanwhile it starts within 0.35 s instead: the van is then held close to the thing it has just found.
   if (dash.tr) dash.t += rdt;

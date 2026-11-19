@@ -1,5 +1,5 @@
 // main.js — boot, the loop, the camera, the frame (layers of spec 9.5), quality tiers, debug flags.
-import { S, G, BOX, HUB_R, PAL, TRACK, GHOST, CUTS, WOODS, S5, surfaceAt, gridCells, shown } from './world.js';
+import { S, G, BOX, HUB_R, PAL, TRACK, GHOST, CUTS, WOODS, S5, SMALL, surfaceAt, gridCells, shown } from './world.js';
 import * as art from './art.js';
 import { van, input, auto, step, bindInput, goTo, onBump, onEdge, readStick } from './van.js';
 import * as sf from './surfaces.js';
@@ -7,6 +7,7 @@ import * as F from './finds.js';
 import * as desk from './desk.js';
 import * as mat from './mat.js';
 import * as belt from './belt.js';
+import * as small from './small.js';
 import { pgrid, fgrid, MARGIN } from './kit.js';
 import * as ui from './ui.js';
 import * as audio from './audio.js';
@@ -90,12 +91,14 @@ async function boot() {
   bindInput(cv, hnd);
   // a drag that starts on the Play pill (it lies where the thumb rests) drives like any other, and the pill tucks away meanwhile
   for (const id of ['pill', 'links']) hnd.adopt(document.getElementById(id), { drive: () => ui.pillTuck(true), end: () => { if (!F.holdOn()) ui.pillTuck(false); } });
+  // ... and so does one that starts on an open note's card: it steers at once and the card goes (a tap on it is the card's own click)
+  const nt = document.getElementById('note'); if (SMALL && nt) hnd.adopt(nt, { drive: () => ui.dropSmall('drive') });
   // A tap on a woken screen plays it (spec 6.3). The player must open inside a real gesture so sound is allowed:
   // touchend for a finger (it counts on iOS, and does not depend on a click following), click for a mouse.
   const playTapped = e => {
     if (performance.now() - lastTapAt > 500 || !tapScreen) return;
     const f = tapScreen; tapScreen = null;
-    if (!f.found) return;
+    if (!f.found && !f.small) return;                       // (f.small: the stopwatch, its YouTube pill up: small.js)
     if (f.how) ui.openHow(f); else ui.openPlayer(f);      // (a machine on the bench: its explainer)
     if (e.type === 'touchend' && e.cancelable) e.preventDefault();    // no second, synthetic click landing on the player
   };
@@ -176,14 +179,27 @@ function toScreen(wx, wy) { return [(wx * view.s + view.tx) / view.dpr, (wy * vi
 function tap(wx, wy) {
   if (F.holdOn() || ui.justShut()) return;      // (justShut: the second tap of a double tap that closed a sheet)
   lastTapAt = performance.now();
+  const was = SMALL ? small.tapped() : null;      // a tap anywhere puts an open note down (and then does what it does)
   // A tap on a found screen plays it only while its Play pill is up, which is while the van is at it. From further off
   // the same tap drives the van there and raises the pill: nothing with sound starts from across the table.
   const sc = F.screenAt(wx, wy);
   tapScreen = sc && ui.pillIs(sc) ? sc : null;
   if (tapScreen) { tapRing = { x: wx, y: wy, t: 0 }; return; }      // the touchend / click handler opens the player
   const p = (sc && sc.prop) || F.propAt(wx, wy) || F.nearFind(wx, wy, 40);            // a tap beside an unfound thing is meant for it
-  if (p) F.goBump(p); else goTo(wx, wy);
-  tapRing = { x: p ? wx : auto.x, y: p ? wy : auto.y, t: 0 };       // every registered tap shows a ring
+  // A note or a small thing under the finger (a finger is 44 px): it answers at once, and says its line when the van is
+  // at it. It gets only the taps that used to mean "drive to this spot"; what a found screen, a standing thing or an
+  // unfound find claims is theirs, as before. (The tap that put a note's card down does not open it again.)
+  let t = SMALL ? small.at(wx, wy, 22 / (view.k * cam.zoom)) : null;
+  if (t === was) t = null;
+  const mine = t && (!p || small.owns(t, wx, wy) || p === t.hostProp);      // the tap is the small thing's (else it is the find's alone: one tap, one answer)
+  // the stopwatch with its YouTube pill up (the van is at it): a tap on it plays the cantata as a found screen does,
+  // from the touchend or click handler above, so sound is allowed and no synthetic click lands on the player
+  if (mine && t.yt && ui.pillIs(t)) { tapScreen = t; tapRing = { x: wx, y: wy, t: 0 }; return; }
+  if (mine) small.want(t);
+
+  // (a tap right ON a small thing's picture is the thing's even where a find also claims the spot: small.owns)
+  if (p && !(t && small.owns(t, wx, wy))) F.goBump(p); else if (t) small.go(t); else goTo(wx, wy);
+  tapRing = { x: p || t ? wx : auto.x, y: p || t ? wy : auto.y, t: 0 };       // every registered tap shows a ring
 }
 
 // ---------- the loop: fixed 120 Hz step, dt clamped to 33 ms ----------
@@ -467,6 +483,7 @@ function render(al) {
     ctx.restore();
   }
   sf.drawPaper(ctx, spr.sheets, view, x0, y0, x1, y1);
+  if (SMALL) small.drawPaper(ctx);                                    // the top sheet of a pile, lifted as the desk fan passes
 
   // 6b. hard shadows and the warm wedge, only on the lit tables (none on the mat, none on the floor)
   ctx.save(); ctx.beginPath(); rect(D); rect(B); rect(T); if (Bt) rect(Bt); ctx.moveTo(HUB_R, 0); ctx.arc(0, 0, HUB_R, 0, 6.2832); ctx.clip();      // (the bench is a lit table too)
@@ -734,6 +751,7 @@ function debugHooks(fontsOk) {
     }, get bootMs() { return bootMs; }, get tier() { return tier; }, get running() { return running; },
     tp(x, y) { van.x = van.px = x; van.y = van.py = y; van.vx = van.vy = 0; cam.x = x; cam.y = y; cam.vx = cam.vy = 0; if (!S.firstInput) first(); },
     find(id) { F.wake(S.byId[id]); return S.found.slice(); }, where(id) { F.showWhere(id); },      // (where: the autopilot drives to a find and bumps it, as the reel's "show me where" does)
+    small: small.debug,      // the notes and the small things: what is on, heard, read, up; fire(id), tap(id)
     look(x, y, z) { S.look = x === undefined ? null : [x, y, z || 1]; }, lightAll(on) { if (on === false) F.lit.pop(); else F.lit.push([460, 500, 1500]); }, ui,
     toScreen, toWorld
   };

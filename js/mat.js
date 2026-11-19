@@ -14,7 +14,7 @@
 //   color war, south-east: behind the densest pines (a thicket stands in front of it, solid to the table's edges). It
 //     is met from behind, down the lane between the wall and the thicket; its flag's reflective stripe is its tell.
 // Every block of pines that closes a gap is one collider; every way left open is a lane of 44 units or more.
-import { S, PAL, WOODS, SEED, MEDIA, mulberry32, addNode, addCollider, standable, collidersNear, collDist, surfaceAt } from './world.js';
+import { S, PAL, WOODS, SEED, MEDIA, SMALL, mulberry32, addNode, addCollider, standable, collidersNear, collDist, surfaceAt } from './world.js';
 import * as art from './art.js';
 import * as ma from './matart.js';
 import { spr, lit, loops, prop, cbox, ccirc, squash, makeLoop, startLoop, addScreen, grab, drawScreen, nearView, skitRim, playSmall, glass, NOSPR } from './kit.js';
@@ -174,7 +174,9 @@ function buildFreelance() {
     draw(ctx) {
       art.drawSpr(ctx, spr.tripod, tx, ty);
       const L = ma.LENS, cx = tx + L.x, cy = ty + L.y, o = f.iris, r = f.found ? 1.2 + 2.6 * (o < 0.6 ? ease(o / 0.6) * 1.12 : 1.12 - 0.12 * ease((o - 0.6) / 0.4)) : 1.2;   // the iris opens wide, then settles
-      ctx.fillStyle = '#2A4656'; disc(ctx, cx, cy, r); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(cx - r * 0.55, cy - r * 0.6, 1.2, 1.2);
+      // (ambient life: once found, the glint on its lens leans up to 1.4 units toward the van, so the lens seems to follow it; the disc does not move)
+      let gx = 0, gy = 0; if (S.life && f.found) { const dx = van.x - cx, dy = van.y - cy, k = 1.4 / Math.max(140, Math.hypot(dx, dy)); gx = dx * k; gy = dy * k; }
+      ctx.fillStyle = '#2A4656'; disc(ctx, cx, cy, r); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(cx - r * 0.55 + gx, cy - r * 0.6 + gy, 1.2, 1.2);
       if (f.found && (S.rt * 1.3) % 1 < 0.55) { ctx.fillStyle = '#FF3B30'; disc(ctx, tx + 10, ty - 57, 1.5); }      // recording
     }
   });
@@ -225,6 +227,22 @@ function buildGate() {
   spr.gateOff = art.keep(() => ma.gateSprite(false), x, y); spr.gateOn = art.keep(() => ma.gateSprite(true), x, y);
   gate = M({ x, y, sp: S.byId.camp.found ? spr.gateOn : spr.gateOff, dark: art.darkTwin(spr.gateOff), sortY: y + 1, tall: [x - w - 6, x + w + 6, y - 96], glints: [[-w, -20.5], [w, -20.5], [1, -30]] });
   addCollider(ccirc(x - w, y, 6)); addCollider(ccirc(x + w, y, 6));
+  if (SMALL) gate.draw = stir;
+}
+// (ambient life, CONTENT-v2 G2) The bunting stirs, once the camp is found. The gate's own sprite, in twelve pieces: the
+// ground part whole, the two posts' tops still, and one upright strip a flag (nine), each raised and lowered a little,
+// pinned at both posts. When ambient life is off this is the one image it always was.
+function stir(ctx, p) {
+  if (!S.life || !S.byId.camp.found || !p.sp.c) { art.drawSpr(ctx, p.sp, p.x, p.y); return; }      // (a sprite that has been let go is shown as drawSpr shows it: never baked again for this)
+  const sp = p.sp, c = art.cv(sp), q = sp.res || art.SS, W = c.width, H = c.height, X = p.x - sp.ox / q, Y = p.y - sp.oy / q;
+  const cut = Math.round(sp.oy - 28 * q), x0 = Math.round(sp.ox - 46 * q), fw = 92 * q / 9;      // cut: the row under the bunting · x0: its west end
+  ctx.drawImage(c, 0, cut, W, H - cut, X, Y + cut / q, W / q, (H - cut) / q);
+  ctx.drawImage(c, 0, 0, x0, cut, X, Y, x0 / q, cut / q);
+  const x9 = Math.round(x0 + 9 * fw); ctx.drawImage(c, x9, 0, W - x9, cut, X + x9 / q, Y, (W - x9) / q, cut / q);
+  for (let i = 0; i < 9; i++) {
+    const a = Math.round(x0 + i * fw), b = Math.round(x0 + (i + 1) * fw), up = 1.2 * Math.sin(Math.PI * (i + 0.5) / 9) * Math.sin(S.rt * 2.1 + i * 0.5);
+    ctx.drawImage(c, a, 0, b - a, cut, X + a / q, Y - up, (b - a) / q, cut / q);
+  }
 }
 
 // ---------- a bedsheet screen showing a saved thumbnail. Nothing is asked of YouTube until Play (ui.js) ----------

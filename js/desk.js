@@ -217,6 +217,14 @@ function buildLine() {
 }
 
 // ---------- the bench: one laptop, one clamp lamp, exactly one stool ----------
+// (ambient life, CONTENT-v2 G2) The laptop types on: once its three gold lines stand, the third is wiped and typed again
+// every 6 s, at one of four lengths. Starts at a whole turn, so the line never jumps. -1: draw it as it was built.
+const RETYPE = [26, 18, 30, 22];
+function retype(f) {
+  if (!f.typeFrom) f.typeFrom = Math.ceil(S.rt / 6) * 6;
+  const c = S.rt - f.typeFrom; if (c < 0) return -1;
+  const u = c % 6; return u < 0.5 ? 0 : RETYPE[(c / 6 | 0) % 4] * Math.min(1, (u - 0.5) / 0.9);
+}
 function buildSolo() {
   const f = S.byId.solo, x = f.x, y = f.y, L = da.LAMP;
   spr.bench = art.keep(() => da.benchSprite(), x, y); spr.stool = da.stoolSprite();
@@ -229,9 +237,10 @@ function buildSolo() {
       if (t < 0) { if ((S.rt * 1.7 | 0) % 2 === 0) { ctx.fillStyle = '#5B666D'; ctx.fillRect(gx, gy, 3, 2.6); } }
       else {
         ctx.fillStyle = PAL.gold;
-        for (let i = 0; i < 3; i++) { const k = Math.max(0, Math.min(1, t - i)); if (k > 0) ctx.fillRect(gx, gy + i * 6, W[i] * k, 2.6); }
+        const w3 = S.life && t >= 3.2 ? retype(f) : -1;                    // (S.life: ambient life is on; never with ?small=0)
+        for (let i = 0; i < 3; i++) { const k = Math.max(0, Math.min(1, t - i)); if (k > 0) ctx.fillRect(gx, gy + i * 6, i === 2 && w3 >= 0 ? w3 : W[i] * k, 2.6); }
         const i = Math.min(2, t | 0), k = Math.min(1, t - i);
-        if (t < 3 || (S.rt * 1.7 | 0) % 2 === 0) { ctx.fillStyle = '#FFE1A6'; ctx.fillRect(gx + W[i] * k + 1.2, gy + i * 6 - 0.6, 2.4, 3.8); }
+        if (t < 3 || (S.rt * 1.7 | 0) % 2 === 0) { ctx.fillStyle = '#FFE1A6'; ctx.fillRect(gx + (w3 >= 0 ? w3 : W[i] * k) + 1.2, gy + i * 6 - 0.6, 2.4, 3.8); }
       }
       // the lamp: an arm from the post's top, and the shade seen from above, tipped toward where it points
       const px = x + L.px, py = y + L.py, a = f.lampA, ca = Math.cos(a), sa = Math.sin(a), hx = px + ca * 25, hy = py + sa * 25;
@@ -400,6 +409,9 @@ function buildQuality() {
 // and stops on the figure, each figure that changes rolling up into its window.
 // f.clicks: clicks still to come · f.ct: time to the next · f.roll: 1..0 through the roll of the last click
 // (No text is drawn per frame: the ten figures are baked once, spr.tally, and drawn as sprites.)
+// (ambient life, CONTENT-v2 G2) How far the counter's figure may climb past the find's own while it idles. 0: only its
+// thumb lever clicks, every 11.5 s: a figure nobody gave is never shown. (An open question for the lead.)
+const TALLY_UP = 0;
 function buildScale() {
   const f = S.byId.scale; if (!f || !f.live) return;
   const x = f.x, y = f.y, T = da.TALLY, wy = y + T.y + 1 - T.z * HK, lx = x + T.x - 8, ly = y + T.y - T.h / 2 - T.z * HK;
@@ -410,10 +422,10 @@ function buildScale() {
     x, y, sp: spr.spike, sortY: y + 12, find: f, coll: cbox(x - 20, y - 18, x + 92, y + 30),
     draw(ctx, p) {
       // the thumb lever at the counter's top edge, under the body: pressed in for a moment at each click
-      const down = f.clicks > 0 && f.ct > 0.07, lh = down ? 2.2 : 5;
+      const idle = S.life && f.found && f.clicks === 0, down = (f.clicks > 0 && f.ct > 0.07) || (idle && S.rt % 11.5 < 0.12), lh = down ? 2.2 : 5;
       ctx.fillStyle = PAL.ink; ctx.fillRect(lx - 1, ly - lh - 1, 18, lh + 3); ctx.fillStyle = '#DDE1E3'; ctx.fillRect(lx, ly - lh, 16, lh + 2); ctx.fillStyle = '#8C9598'; ctx.fillRect(lx, ly - 0.2, 16, 2.2);
       art.drawSpr(ctx, p.sp, x, y);
-      const v = f.found ? f.total - f.clicks : f.total - 5, now = String(v).padStart(4, '0'), was = String(v - 1).padStart(4, '0'), r = f.found ? f.roll : 0;
+      const v = (f.found ? f.total - f.clicks : f.total - 5) + (idle && TALLY_UP ? Math.min(TALLY_UP, Math.floor(S.rt / 11.5) - Math.floor(f.foundAt / 11.5)) : 0), now = String(v).padStart(4, '0'), was = String(v - 1).padStart(4, '0'), r = f.found ? f.roll : 0;
       for (let i = 0; i < 4; i++) {
         const cx = x + T.x + (i - 1.5) * T.pitch;
         if (r > 0 && now[i] !== was[i]) {                       // this figure is rolling: the old one leaves upward, the new one comes up from below, inside its window

@@ -364,6 +364,15 @@ export function drawPaper(ctx, spr, v, x0, y0, x1, y1) {
   ctx.setTransform(K, 0, 0, K, v.tx, v.ty);
 }
 
+// (small.js, ambient life) The top sheet of a pile nothing has touched, drawn AGAIN a little raised and turned, with
+// its shadow thrown further: the desk fan passing over it. k: 0..1. Two images over the pile's own picture, which is
+// not touched; at k = 0 nothing is drawn. The context is on the world transform (as drawPaper leaves it).
+export function liftTop(ctx, spr, p, k) {
+  const s = p.sheets[p.sheets.length - 1], q = spr.v[s.v], a = s.a + 0.07 * k, off = 1.4 + 4 * k;
+  ctx.save(); ctx.translate(s.x + off * 0.83, s.y + off * 0.55); ctx.rotate(a); ctx.drawImage(q.sh, -q.w / 2, -q.h / 2, q.w, q.h); ctx.restore();
+  ctx.save(); ctx.translate(s.x, s.y - 2.4 * k); ctx.rotate(a); ctx.drawImage(q.c, -q.w / 2, -q.h / 2, q.w, q.h); ctx.restore();
+}
+
 // ---------------- particles: at most 120 ----------------
 // kinds: 0 flour puff · 1 steam · 2 paper bit · 3 gold spark
 const P = [];
