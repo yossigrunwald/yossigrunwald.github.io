@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- draft: kept out of search engines until it is approved -->
 <meta name="robots" content="noindex">
-<title>How I built Workeey | Yossi Grunwald</title>
-<meta name="description" content="I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business. This is how I built it with a team of AI agents.">
+<title>Workeey, the app I founded | Yossi Grunwald</title>
+<meta name="description" content="I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business in one place. What it is, who it is for and why I built it.">
 <link rel="canonical" href="https://yossigrunwald.com/workeey/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="How I built Workeey | Yossi Grunwald">
-<meta property="og:description" content="I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business. This is how I built it with a team of AI agents.">
+<meta property="og:title" content="Workeey, the app I founded | Yossi Grunwald">
+<meta property="og:description" content="I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business in one place. What it is, who it is for and why I built it.">
 <meta property="og:url" content="https://yossigrunwald.com/workeey/">
 <meta name="theme-color" content="#EDF1F4">
 <meta name="color-scheme" content="light">
@@ -26,8 +26,8 @@
       "@id": "https://yossigrunwald.com/workeey/#article",
       "url": "https://yossigrunwald.com/workeey/",
       "mainEntityOfPage": "https://yossigrunwald.com/workeey/",
-      "headline": "How I built Workeey",
-      "description": "I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business. This is how I built it with a team of AI agents.",
+      "headline": "This is Workeey",
+      "description": "I'm Yossi Grunwald, the founder of Workeey (workeey.com), an app that runs a small trade business in one place. What it is, who it is for and why I built it.",
       "inLanguage": "en",
       "author": { "@id": "https://yossigrunwald.com/#yossi-grunwald" },
       "about": { "@id": "https://yossigrunwald.com/workeey/#workeey" }
@@ -136,47 +136,34 @@ a.wk:hover{background-size:100% 100%}
 
 <main>
 <article>
-  <h1><span class="l1">How I built</span> <span class="tp">Workeey</span></h1>
+  <h1><span class="l1">This is</span> <span class="tp">Workeey</span></h1>
 
-  <p class="lead">I'm Yossi Grunwald, the founder of <a class="wk" href="https://www.workeey.com/">Workeey</a>, an app that runs a small trade business in one place. I built Workeey myself, directing a team of AI agents that write and test the code. I started in June 2026, and a few months later it was a live product.</p>
+  <p class="lead">I'm Yossi Grunwald, the founder of <a class="wk" href="https://www.workeey.com/">Workeey</a>, an app that runs a small trade business in one place. I started it in June 2026, and a few months later it was a live product. It is free to start, and it follows a job from quote to payment.</p>
 
-  <section aria-labelledby="h-what">
-    <h2 id="h-what"><span class="t">What Workeey is</span></h2>
-    <p>Workeey is made for plumbers, electricians, HVAC techs, handymen and freelancers. It is free to start, and it follows a job from quote to payment.</p>
-    <p>A job starts with a price. Workeey builds an estimate from the tradesperson's own rates right on the job, ready to send as a quote PDF. A separate free tool from Workeey, Quote Links, turns a quote into <a class="wk" href="https://www.workeey.com/quote-links/">a link the customer can approve online</a>, with no app and no account.</p>
-    <p>Then the job goes on the calendar. When the work is done, the invoice goes out with a way to pay online, and reminder texts can follow if it is not paid.</p>
-    <p>Workeey also keeps client records, photos, notes, receipts and expenses, and on its paid plans it links to QuickBooks and Google Calendar. An AI assistant on every screen takes a request in plain words and prepares the job, the client or the invoice. One tap confirms it.</p>
+  <section aria-labelledby="h-who">
+    <h2 id="h-who"><span class="t">Who it is for</span></h2>
+    <p>Workeey is made for plumbers, electricians, HVAC techs, handymen and freelancers: people who work for themselves. The person who does the job is also the one who quotes it, schedules it and collects the payment.</p>
   </section>
 
   <section aria-labelledby="h-why">
     <h2 id="h-why"><span class="t">Why I built it</span></h2>
     <p class="why">People in the trades should be able to finish the job and go home, not start a second shift of paperwork. That is why I built Workeey.</p>
     <p>That second shift is quotes, invoices and chasing payment. The work happens on site, so the paperwork should be finished there too.</p>
-    <p>I built Workeey as one app for the phone. Anything added with no signal is saved and syncs when the phone is back in range.</p>
+    <p>I built Workeey as one app for the phone. Every design decision in it is measured against one rule: fewer taps, less clutter, less mental load.</p>
   </section>
 
-  <section aria-labelledby="h-how">
-    <h2 id="h-how"><span class="t"><span class="ln">How I run a team</span> <span class="ln">of AI agents</span></span></h2>
-    <p>I decide what Workeey does, and I run about ten agents at once. Each one owns one area, such as invoices, the phone app or the public pages.</p>
-    <p>Every decision I make is written down as I make it, and every past conversation can be searched, so an agent looks things up before it asks me twice.</p>
-    <p>No change goes live without being checked. Every change of any substance is read by one review agent for bugs and by another against the written design rules. Anything risky is also clicked through in a real browser.</p>
-    <p>Then a single manager agent, the only one allowed to put work live, runs the tests. A small change runs only the test suites it can affect. A change that touches shared parts runs all of them, more than 600. When a test fails, the result is compared with the live version, so an old problem is not mistaken for a new one. Once the change is live, the agent that built it checks it on the real site the way a user would.</p>
-    <p>By November 2026, about 2,650 changes had gone into the live product.</p>
-  </section>
-
-  <section aria-labelledby="h-learned">
-    <h2 id="h-learned"><span class="t"><span class="ln">What I learned</span> <span class="ln">building Workeey</span></span></h2>
-    <p>I built that process one problem at a time. It did not start out orderly.</p>
-    <p>Before there was a manager agent, each agent put its own changes live, and they broke each other's work. Now work reaches the live product one way only: through the manager agent, after the tests.</p>
-    <p>Some test suites reported success even when something inside them had failed. A cleanup pass found those suites, and now they fail when they should.</p>
-    <p>In the first months, the same kind of mistake kept coming back on different screens. I saw that correcting each screen was not enough, because the reasoning behind the mistake had not changed. Since then, when I correct an agent, it writes down the fix and where its reasoning went wrong, so the same kind of error does not come back somewhere else.</p>
-    <p>Each time, I fixed it with structure: one way to go live, tests that fail when they should, and corrections that are written down. I decide what gets built, the agents write the code, and the system I built around them keeps it right.</p>
+  <section aria-labelledby="h-does">
+    <h2 id="h-does"><span class="t">What it does today</span></h2>
+    <p>A job starts with a price. Workeey builds an estimate from the tradesperson's own rates right on the job, ready to send as a quote PDF. A separate free tool from Workeey, Quote Links, turns a quote into <a class="wk" href="https://www.workeey.com/quote-links/">a link the customer can approve online</a>, with no app and no account.</p>
+    <p>Then the job goes on the calendar. When the work is done, the invoice goes out with a way to pay online, and reminder texts can follow if it is not paid.</p>
+    <p>Workeey also keeps client records, photos, notes, receipts and expenses, and on its paid plans it links to QuickBooks and Google Calendar. Anything added with no signal is saved and syncs when the phone is back in range.</p>
+    <p>An assistant on every screen takes a request in plain words and prepares the job, the client or the invoice. One tap confirms it.</p>
   </section>
 
   <section aria-labelledby="h-now">
     <h2 id="h-now"><span class="t">Where it is now</span></h2>
     <p>Workeey is live on the web, and the Android app is on Google Play. As I write this, in November 2026, the iPhone app is in review at Apple and the public site is rolling out in 13 languages.</p>
-    <p>I run Workeey from Brooklyn, New York, and I am still building it. If you want to hear more, <a href="/resume/#contact">tell me a good time to talk</a>.</p>
+    <p>I run Workeey from Brooklyn, New York. Every product decision is mine, and I am still building it. If you want to hear more, <a href="/resume/#contact">tell me a good time to talk</a>.</p>
     <p class="sig"><span>Yossi Grunwald,</span> <span>founder of Workeey</span></p>
   </section>
 </article>
