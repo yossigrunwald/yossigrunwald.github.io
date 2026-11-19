@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Yossi Grunwald</title>
-<meta name="description" content="Founder of Workeey, a free app that runs a small trade business, built from idea to a live product. Also a builder of AI automation systems that do real work on their own, and a videographer and editor since 2021.">
+<meta name="description" content="I started Workeey to give people in the trades a simpler way to run their business from a phone. Alongside it I build automation systems, shoot and edit video, and bake the bread at REN, a restaurant in Brooklyn.">
 <link rel="canonical" href="https://yossigrunwald.com/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://yossigrunwald.com/">
 <meta property="og:title" content="Yossi Grunwald">
-<meta property="og:description" content="Founder of Workeey, a free app that runs a small trade business, built from idea to a live product. Also a builder of AI automation systems that do real work on their own, and a videographer and editor since 2021.">
+<meta property="og:description" content="I started Workeey to give people in the trades a simpler way to run their business from a phone. Alongside it I build automation systems, shoot and edit video, and bake the bread at REN, a restaurant in Brooklyn.">
 <meta name="theme-color" content="#23282B">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2323282B'/%3E%3Crect x='10' y='22' width='44' height='22' rx='6' fill='%23F4F1E8'/%3E%3Crect x='10' y='32' width='44' height='5' fill='%23F2B411'/%3E%3Crect x='16' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3Crect x='39' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3C/svg%3E">
 <link rel="preload" href="fonts/big-shoulders-stencil-900.woff2" as="font" type="font/woff2" crossorigin>
@@ -84,17 +84,23 @@ function pics(){var m=d.querySelectorAll('#plain img[data-src]'),i;for(i=0;i<m.l
 d.addEventListener('DOMContentLoaded',function(){if(!h.classList.contains('g'))pics()});
 /* Email: the address is put together here, never in the source as one string. A printed or saved page shows it too. */
 function mail(a){var m=['grunwaldyossi2','gmail.com'].join('@');a.textContent=m;a.removeAttribute('data-mail');a.classList.add('addr');a.href='mailto:'+m}
-w.addEventListener('beforeprint',function(){var a=d.querySelector('#plain [data-mail]');if(a)mail(a)});
+/* One tap, or printing, shows it everywhere the document offers it (the header and Contact). */
+function mails(){var m=d.querySelectorAll('#plain [data-mail]'),i;for(i=0;i<m.length;i++)mail(m[i])}
+w.addEventListener('beforeprint',mails);
 /* The document's own buttons work whether or not the game can run. */
 d.addEventListener('click',function(e){var t=e.target,a=t&&t.closest?t.closest('[data-view],[data-mail],[data-play]'):null;if(!a)return;e.preventDefault();
 if(a.hasAttribute('data-view')){if(w.ygView)w.ygView(a.getAttribute('data-view')==='play');return}
 /* Email: the first tap shows the address; the next tap is an ordinary mail link. */
-if(a.hasAttribute('data-mail')){mail(a);return}
+if(a.hasAttribute('data-mail')){mail(a);mails();return}
 /* A video tile: inside this tap the poster becomes the player, so it plays with sound. */
 var v=d.createElement('video'),im=a.querySelector('img'),li=a.closest('[data-for]');v.controls=true;v.playsInline=true;v.setAttribute('playsinline','');v.preload='none';if(im)v.poster=im.currentSrc||im.src;v.src=a.href;
 /* The first ad watched here counts as watched in the game too (its chip goes, its tape gains a line). */
 if(li&&li.getAttribute('data-for')==='ad1')v.addEventListener('playing',function(){w.ygAd1=1;d.dispatchEvent(new Event('ygad1'))});
 hush();a.parentNode.replaceChild(v,a);try{var p=v.play();if(p&&p.catch)p.catch(function(){})}catch(x){}});
+/* "Hide details" at the foot of a panel closes it and puts focus back on its "See more details" pill, in view. */
+d.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#plain .less'):null;if(!b)return;
+var x=b.closest('details');if(!x)return;x.open=false;var s=x.querySelector('summary');if(!s)return;
+try{s.focus({preventScroll:true})}catch(f){s.focus()}s.scrollIntoView({block:'center'})});
 try{ok=!!d.createElement('canvas').getContext('2d')&&'noModule' in w.HTMLScriptElement.prototype}catch(e){}
 if(!ok)return;h.classList.add('can');
 var q=location.search+location.hash,rm=false,sd=false;
@@ -198,182 +204,358 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
 <!-- THE DOCUMENT: the plain resume. It is the page whenever the game cannot run (scripts off, an error at boot,
      reduced motion, save-data, #plain) and one tap away at any time. -->
 <main id="plain">
-  <header class="top">
+  <header class="hd">
     <a class="play" href="./" data-view="play"><span class="zz"><b class="zz"><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> play it instead</b></span></a>
     <h1 data-name>Yossi Grunwald</h1>
-    <p class="roles" data-roles>Founder · AI Automation · Video</p>
     <p class="loc">Brooklyn, NY <span class="md">·</span> English and Yiddish</p>
-    <p class="sum">Founder of Workeey, a free app that runs a small trade business, built from idea to a live product. Also a builder of AI automation systems that do real work on their own, and a videographer and editor since 2021. A fast learner who likes hard problems and does not settle for almost right.</p>
+    <p class="hc"><a href="#contact" data-mail>Email</a> <a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" rel="noopener" data-print="linkedin.com/in/yossigrunwald">LinkedIn</a> <a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a></p>
   </header>
 
-  <section id="watch" aria-labelledby="h-watch">
-    <h2 id="h-watch"><span>Watch: videos I've made</span></h2>
-    <!-- Each tile is a poster and a real link to the file. With scripts on, one tap turns the poster into the player and plays it with sound. -->
-    <ol class="reel">
-      <li class="big" data-for="ad1">
-        <a class="vt" href="resume/media/ad1-workeey.mp4" data-play aria-label="Play the Workeey ad, 0:30">
-          <img data-src="resume/media/ad1-workeey.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad1-workeey.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:30</em>
-        </a>
-        <p><b>The Workeey ad.</b> <span class="cap">Thirty seconds on what the app does.</span></p>
-      </li>
-      <li data-for="ad2">
-        <a class="vt" href="resume/media/ad2-one-line.mp4" data-play aria-label="Play the line-art ad, 1:30">
-          <img data-src="resume/media/ad2-one-line.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad2-one-line.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">1:30</em>
-        </a>
-        <p><span class="cap">A Workeey ad in line-drawing animation.</span></p>
-      </li>
-      <li data-for="ad3">
-        <a class="vt" href="resume/media/ad3-blender-v7.mp4" data-play aria-label="Play the 3D ad, 0:40">
-          <img data-src="resume/media/ad3-blender-v7.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad3-blender-v7.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:40</em>
-        </a>
-        <p><span class="cap">A 3D character ad, made in Blender.</span></p>
-      </li>
-      <li data-for="skit1">
-        <a class="vt" href="resume/media/skit-20.mp4" data-play aria-label="Play Her Wi-Fi, 0:20">
-          <img data-src="resume/media/skit-20.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-20.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:20</em>
-        </a>
-        <p><b>Her Wi-Fi</b> <span class="cap">3D comedy short for Workeey.</span></p>
-      </li>
-      <li data-for="skit2">
-        <a class="vt" href="resume/media/skit-21b.mp4" data-play aria-label="Play Fixed Itself, 0:13">
-          <img data-src="resume/media/skit-21b.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-21b.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:13</em>
-        </a>
-        <p><b>Fixed Itself</b> <span class="cap">3D comedy short for Workeey.</span></p>
-      </li>
-      <li data-for="skit3">
-        <a class="vt" href="resume/media/skit-23.mp4" data-play aria-label="Play The Burgers, 0:17">
-          <img data-src="resume/media/skit-23.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-23.jpg" width="540" height="960" alt=""></noscript>
-          <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:17</em>
-        </a>
-        <p><b>The Burgers</b> <span class="cap">3D comedy short for Workeey.</span></p>
-      </li>
-      <li class="yt" data-yt="5Luf1v-RXb8">
-        <a href="https://www.youtube.com/watch?v=5Luf1v-RXb8" target="_blank" rel="noopener"><img data-src="resume/media/yt-5Luf1v-RXb8.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-5Luf1v-RXb8.jpg" width="320" height="180" alt=""></noscript><span><b>A short promo</b> <span class="cap">Smooth transitions, moving text and sound effects.</span> <i class="src">YouTube</i></span></a>
-      </li>
-      <li class="yt" data-for="camp">
-        <a href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener"><img data-src="resume/media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""></noscript><span><b>Camp Chaburah summer 2023</b> <span class="cap">The full summer film, 40 minutes.</span> <i class="src">YouTube</i></span></a>
-      </li>
-      <li class="yt" data-for="promo">
-        <a href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener"><img data-src="resume/media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""></noscript><span><b>Camp promo, 2023</b> <span class="cap">Camp Chaburah's promotional film.</span> <i class="src">YouTube</i></span></a>
-      </li>
-      <li class="yt" data-for="colorwar">
-        <a href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener"><img data-src="resume/media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""></noscript><span><b>Color war entrance</b> <span class="cap">An event highlight.</span> <i class="src">YouTube</i></span></a>
-      </li>
-      <li class="yt" data-for="recap">
-        <!-- No picture from this video is shown anywhere: the tile, the reel and the sheet in the woods carry a drawn title card. -->
-        <a href="https://www.youtube.com/watch?v=9_UsrZwbCWQ" target="_blank" rel="noopener"><span class="wk" aria-hidden="true"><em>Week 3</em><i>Summer 2024</i></span><span><b>A week at camp, 2024</b> <span class="cap">A weekly recap video.</span> <i class="src">YouTube</i></span></a>
-      </li>
-    </ol>
+  <section class="sec te" aria-labelledby="h-about">
+    <h2 id="h-about">About</h2>
+    <div class="sb">
+      <p class="lead">I started Workeey to give people in the trades a simpler way to run their business from a phone. Alongside it I build automation systems, shoot and edit video, and bake the bread at REN, a restaurant in Brooklyn.</p>
+      <p class="lead">I love to experiment: I learn something from every attempt, even the ones that fail, and that is how I get good at new things fast. I like hard problems, and I'm rarely happy with almost perfect. I keep at it until it's right, and I know when it's done. Off the clock, I draw and paint, play chess, snowboard and make things out of wood.</p>
+    </div>
   </section>
 
-  <section class="tw" aria-labelledby="h-w">
-    <h2 id="h-w"><span>Workeey</span></h2>
-    <p class="job"><span class="c"><b>Founder</b></span> <span class="c"><i>|</i> Workeey (<a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a>)</span> <span class="c"><i>|</i> <span class="when">Jun 2026 to present</span></span></p>
-    <ul class="pts">
-      <li>Built and launched a free app that runs a small trade business in one place: jobs and scheduling, clients, quotes approved online, invoices with card payment and reminders, expenses, bank matching, QuickBooks and Google Calendar.</li>
-      <li>Own every product decision. About 2,650 changes shipped, backed by 600+ automated test suites.</li>
-      <li>Live on the web and on Google Play, with the iPhone app in Apple review and the public site rolling out in 13 languages.</li>
-    </ul>
-    <blockquote class="why">"People in the trades should be able to finish the job and go home, not start a second shift of paperwork."</blockquote>
+  <section class="sec tw" aria-labelledby="h-w">
+    <h2 id="h-w">Workeey</h2>
+    <div class="sb">
+      <div class="role">
+        <div class="rh">
+          <h3>Founder</h3>
+          <div class="meta"><span class="org"><a href="https://workeey.com" target="_blank" rel="noopener">Workeey</a></span> <span class="sep" aria-hidden="true">·</span> <span class="when">Jun 2026 to present</span></div>
+        </div>
+        <p class="intro">A mobile-first app that runs a small trade business in one place, made for plumbers, electricians, HVAC techs, handymen and freelancers.</p>
+        <ul class="pts">
+          <li>Built Workeey myself, from the first idea to a live product, and own every product decision.</li>
+          <li>Shipped a web app, an Android app and a public website covering scheduling, clients, estimates, quotes, invoices with a pay link, automatic payment reminders by text, job photos, notes and expenses.</li>
+          <li>Integrated Stripe card and bank payments, bank matching of incoming payments, QuickBooks and Google Calendar.</li>
+          <li>Solved the hard engineering problems: work entered with no signal is saved and syncs when the phone is back in range, and every quote link records exactly which version the customer approved, and when.</li>
+          <li>Released about 2,650 changes to the live product, each tested first and backed by more than 600 automated test suites.</li>
+          <li>Live on the web and on the Google Play Store. Coming soon to iPhone.</li>
+        </ul>
+        <p class="took"><b>Skills it took:</b> product design, full-stack development, databases, payment integrations, offline sync, automated testing, Android publishing and SEO.</p>
+        <details class="more">
+          <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about Workeey</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+          <div class="mb">
+            <h5>A day with Workeey</h5>
+            <p>It opens on today's jobs, money owed and overdue invoices. A finished job becomes an invoice in one tap. The customer pays from a link by card, Apple Pay, Google Pay or US bank transfer, and reminder texts go out until it's paid. Before-and-after photos are backed up and can go onto the invoice as proof of work. A customer can approve a quote, decline it or ask for changes from a link, with no app and no account.</p>
+            <h5>Details that matter</h5>
+            <p>Anyone can try it as a guest, with no account. On every plan, owners can export their data whenever they like. On the road, it routes to the next client through Google Maps, Waze or Apple Maps.</p>
+            <p><b>The rule behind every screen:</b> fewer taps, less clutter, less mental load.</p>
+            <button class="less" type="button">Hide details</button>
+          </div>
+        </details>
+      </div>
+      <blockquote class="why"><p>"People in the trades should be able to finish the job and go home, not start a second shift of paperwork."</p></blockquote>
+      <p class="go"><a href="/workeey/">More about Workeey <svg class="ar" viewBox="0 0 20 12" aria-hidden="true"><path d="M1 6h17M13 1l5 5-5 5"/></svg></a></p>
+    </div>
   </section>
 
-  <section class="tg" aria-labelledby="h-g">
-    <h2 id="h-g"><span>AI Automation</span></h2>
-    <p class="kinds">I built these systems with AI. I can build one for your business.</p>
-    <p class="job"><span class="c"><b>AI Automation Builder</b></span> <span class="c"><i>|</i> Independent</span> <span class="c"><i>|</i> <span class="when">2026 to present</span></span></p>
-    <ul class="pts">
-      <li>Run about ten AI agents at once, each owning one area. Review agents check the work, and a single manager agent tests it and puts it live.</li>
-      <li>Automated daily social video on three platforms: speech and frame checks catch anything below standard, and it is rebuilt before it can post.</li>
-      <li>Built a shared memory so the agents keep every decision and correction, and search past conversations before asking again.</li>
-      <li>Built a job-application system that drafted tailored, fact-checked applications and sent them on my go-ahead.</li>
-      <li>Built a fully automated trading system as a personal engineering project, with safety limits enforced in plain code the AI could not override.</li>
-      <li>Built an AI automation for an outside business.</li>
-    </ul>
+  <section class="sec tg" aria-labelledby="h-g">
+    <h2 id="h-g">AI Automation</h2>
+    <div class="sb">
+      <div class="rh">
+        <h3>AI Automation Builder</h3>
+        <div class="meta"><span class="org">Independent</span> <span class="sep" aria-hidden="true">·</span> <span class="when">2026 to present</span></div>
+      </div>
+      <p class="intro">Most AI tools answer questions. Mine do the work: they plan it, check their own output and come to me only when a decision is mine.</p>
+      <p class="pitch">I built these systems with AI. I can build one for your business.</p>
+      <ol class="sys">
+        <li>
+          <h4>One agent that runs a whole team</h4>
+          <p class="sd">I talk to a single agent in plain words. It brings in other agents as the job needs them, collects their reports and gets it done without stopping for my approval at every step.</p>
+          <details class="more">
+            <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about the agent team</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+            <div class="mb">
+              <p>I talk to one agent, in plain words, from my phone. When a job needs more hands, it brings in other agents and gives each one a part. They report back to it, and it reports to me. I never have to open a browser myself or sign off on every step.</p>
+              <h5>What it handles, for example</h5>
+              <ul class="parts">
+                <li><b>Browser work.</b> Clicks through a website in a real browser, the way a visitor would, and reports what broke.</li>
+                <li><b>Posting.</b> Posts to social media on a schedule.</li>
+                <li><b>Reviews.</b> Separate agents check every significant change for bugs and against written design rules.</li>
+                <li><b>Testing and release.</b> Runs the tests, and only one agent is allowed to put finished work live.</li>
+                <li><b>Reports.</b> An evening report on page speed and what needs attention, plus spoken updates I can listen to.</li>
+                <li><b>Site watch.</b> Watches a live website around the clock and alerts me if it goes down.</li>
+                <li><b>Reaching me.</b> A phone line that calls me when a question waits on me.</li>
+              </ul>
+              <p>What I ask for gets done without the agent asking me again. Only a risky idea the agent came up with itself gets one plain question first.</p>
+              <h5>How it got there</h5>
+              <p>Early on, agents put work live on their own and broke each other's work, fought over one browser, and some test runs reported success even when tests had failed. The fix was structure: one agent allowed to put work live, a browser for each agent, one queue for heavy test runs, and tests that fail when they should.</p>
+              <button class="less" type="button">Hide details</button>
+            </div>
+          </details>
+        </li>
+        <li>
+          <h4>Social posting that checks its own work</h4>
+          <p class="sd">Automated daily social video on three platforms. Before anything can post, automatic checks confirm each voice says its script, inspect the key frames and enforce each platform's rules; anything below standard is rebuilt, not published.</p>
+          <details class="more">
+            <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about social posting</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+            <div class="mb">
+              <p>Every afternoon an agent reads the previous day's results and the standing rules, plans the next day's posts from a fixed mix of formats and writes the scripts. The videos are then built, voiced and rendered; heavy renders go to a cloud machine that switches itself off when the job is done.</p>
+              <h5>Quality control</h5>
+              <p>Nothing is queued until it passes:</p>
+              <ul class="parts">
+                <li><b>Voice.</b> Every voiced video is transcribed and compared with its script, so each line is said as written.</li>
+                <li><b>Picture.</b> The first frame, every cut, the last frame and the loop point are pulled as stills and inspected.</li>
+                <li><b>Platform rules, written into code.</b> Captions stay clear of the on-screen buttons, no two slides look alike, and no sales lines go into captions.</li>
+                <li><b>Privacy.</b> In screen recordings, real personal details are replaced with made-up ones, and a text-reading pass over every frame confirms nothing real is visible.</li>
+              </ul>
+              <p>Anything that fails is rebuilt, not posted.</p>
+              <h5>I stay in charge</h5>
+              <p>Each night I get a one-page plan of the next day's posts and can change or stop anything. Anything new, like a format or a style, waits for my pick. Posts go out hours apart under a firm daily cap, after the data showed that posting more reached fewer people. A nightly analysis feeds what worked into the next plan.</p>
+              <button class="less" type="button">Hide details</button>
+            </div>
+          </details>
+        </li>
+        <li>
+          <h4>Fully automated trading</h4>
+          <p class="sd">AI made the judgment calls, and plain code enforced safety limits the AI could not override.</p>
+          <details class="more">
+            <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about trading</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+            <div class="mb">
+              <p>I wanted a system that would trade the way I would and watch the market far more closely than I can. I explained to the AI how I trade, built the program around it, and kept reworking it.</p>
+              <h5>The system in simple terms</h5>
+              <ul class="parts">
+                <li><b>The program.</b> A Python program connected to a broker through its API. That's where it got live prices and news, and where it placed its orders.</li>
+                <li><b>The scanner.</b> All day, a scanner ranked the biggest moves and freshest news across the market. It never traded itself.</li>
+                <li><b>Two AI brains.</b> The fast one looked over the top picks when speed mattered. The main one dug in with helper AIs, scored every idea, and decided how much to buy and at what price. Only the strongest went ahead; the rest were set aside with a note on why.</li>
+                <li><b>The watcher.</b> Plain code, no AI. It bought once the price reached the level the main brain set, and handled the stop losses and profit targets.</li>
+                <li><b>The log.</b> Each trade was logged with its reason, and I got a voice note on my phone.</li>
+              </ul>
+              <h5>How it protected itself</h5>
+              <p>Every order had to pass fixed rules and went in with its exit planned. Where possible, the protective stop sat with the broker, so it held with the computer off. A loss limit for each stock, a cap on how often one stock could be traded in a day, and a daily halt were enforced in plain code the AI could not override. After a reboot, a watchdog restarted everything and re-ran any check it had missed.</p>
+              <button class="less" type="button">Hide details</button>
+            </div>
+          </details>
+          <p class="note">A personal engineering project. Not financial advice.</p>
+        </li>
+        <li>
+          <h4>Memory organized by topic</h4>
+          <p class="sd">Built a shared memory so the agents keep every decision and correction, and search past conversations before asking again.</p>
+          <details class="more">
+            <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about the memory</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+            <div class="mb">
+              <p>A normal AI chat keeps one memory about you, and everything goes into the same place. This one is organized in categories: a separate memory for each topic and each project, so it never mixes up what belongs where.</p>
+              <p>Every decision is written down the moment it's made, one fact per note, and each agent loads the memory that belongs to its work before it starts. When I correct an agent, it records the mistake in its reasoning, not just the fix, so the same kind of error doesn't come back somewhere else. Every past conversation is kept and searchable, so an agent looks things up before it asks me again.</p>
+              <h5>How it was built</h5>
+              <p>One real problem at a time. The same kind of mistake kept coming back in new places, which led to a lessons file. An agent kept re-reading its whole history on every reply, which led to a small working memory plus a searchable archive. The result is a team I can hand almost anything to.</p>
+              <button class="less" type="button">Hide details</button>
+            </div>
+          </details>
+        </li>
+        <li>
+          <h4>The job-application machine</h4>
+          <p class="sd">It read job postings, wrote a tailored application for each one that fit, fact-checked it against my real work history and sent it on my go-ahead.</p>
+          <details class="more">
+            <summary><span class="so">See more details</span><span class="sc">Hide details</span><span class="vh"> about the job-application machine</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg></summary>
+            <div class="mb">
+              <p>It read new job postings as they came in, kept only the ones that fit my rules, picked the right resume for the kind of work and wrote a short application for that one job. Every draft passed two checks: a wording check, and a fact check of each sentence against my real work history. I reviewed the first batch myself. After that it sent what passed both checks, held anything doubtful for me, and sent every reply straight back to me.</p>
+              <h5>The hard part</h5>
+              <p>Quality. The first rulebook produced letters that passed every check and still weren't worth sending, so I cut it to one page built around how I actually speak.</p>
+              <button class="less" type="button">Hide details</button>
+            </div>
+          </details>
+        </li>
+        <li><p class="sd">Also built AI automation for other businesses.</p></li>
+      </ol>
+      <p class="po">Full write-up of each system: yossigrunwald.com</p>
+    </div>
   </section>
 
-  <section class="tv" aria-labelledby="h-v">
-    <h2 id="h-v"><span>Video</span></h2>
-    <p class="kinds">Recaps, promos, event highlights, interviews, personal videos, ads and 3D animation.</p>
-    <p class="job"><span class="c"><b>Videographer and Video Editor</b></span> <span class="c"><i>|</i> Camp Chaburah</span> <span class="c"><i>|</i> <span class="when">Summers 2021 to 2024</span></span></p>
-    <ul class="pts">
-      <li>Shot video and stills, then edited and delivered weekly recap videos and promos: color grading, motion graphics and sound.</li>
-      <li>Coordinated a videographer and a photographer in the final summer and ran the weekly shoot schedule.</li>
-    </ul>
-    <p class="job"><span class="c"><b>Freelance Video Editor</b></span> <span class="c"><i>|</i> Private clients</span></p>
-    <ul class="pts">
-      <li>Promotional videos, event highlights and personal videos.</li>
-    </ul>
-    <p class="job"><span class="c"><b>Ads and Social Video</b></span> <span class="c"><i>|</i> Workeey</span> <span class="c"><i>|</i> <span class="when">2026 to present</span></span></p>
-    <ul class="pts">
-      <li>Made the company's ads: a 30-second ad, a 90-second line-drawing animation and a 3D character ad in Blender.</li>
-      <li>Direct a series of short 3D comedy skits for its social channels.</li>
-    </ul>
-    <p class="more"><a href="/video/">All my videos</a></p>
+  <section class="sec tv" aria-labelledby="h-v">
+    <h2 id="h-v">Video</h2>
+    <div class="sb">
+      <p class="intro">Recaps, promos, event highlights, interviews, personal videos, ads and 3D animation.</p>
+      <div class="role">
+        <div class="rh">
+          <h3>Videographer and Video Editor</h3>
+          <div class="meta"><span class="org">Camp Chaburah</span> <span class="sep" aria-hidden="true">·</span> <span class="when">Summers 2021 to 2024</span></div>
+        </div>
+        <ul class="pts">
+          <li>Shot video and stills, then edited and delivered weekly recap videos and promos: color grading, motion graphics and sound.</li>
+          <li>Coordinated a videographer and a photographer in the final summer and ran the weekly shoot schedule.</li>
+        </ul>
+      </div>
+      <div class="role">
+        <div class="rh">
+          <h3>Freelance Video Editor</h3>
+          <div class="meta"><span class="org">Private clients</span></div>
+        </div>
+        <ul class="pts">
+          <li>Promotional videos, event highlights and personal videos.</li>
+        </ul>
+      </div>
+      <div class="role">
+        <div class="rh">
+          <h3>Ads and Social Video</h3>
+          <div class="meta"><span class="org">Workeey</span> <span class="sep" aria-hidden="true">·</span> <span class="when">2026 to present</span></div>
+        </div>
+        <ul class="pts">
+          <li>Made the company's ads: a 30-second ad, a 90-second line-drawing animation and a 3D character ad in Blender.</li>
+          <li>Direct a series of short 3D comedy skits for its social channels.</li>
+        </ul>
+      </div>
+      <!-- The game builds its own reel from "#watch .reel li", in this order (tile 0, the Workeey ad, is its big tile).
+           Each tile is a poster and a real link to the file; with scripts on, one tap turns the poster into the player. -->
+      <div class="watch" id="watch">
+        <h3 class="kick">Watch: videos I've made</h3>
+        <ol class="reel">
+          <li class="big" data-for="ad1">
+            <a class="vt" href="resume/media/ad1-workeey.mp4" data-play aria-label="Play the Workeey ad, 0:30">
+              <img data-src="resume/media/ad1-workeey.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad1-workeey.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:30</em>
+            </a>
+            <p><b>The Workeey ad.</b> <span class="cap">Thirty seconds on what the app does.</span></p>
+          </li>
+          <li data-for="ad2">
+            <a class="vt" href="resume/media/ad2-one-line.mp4" data-play aria-label="Play the line-art ad, 1:30">
+              <img data-src="resume/media/ad2-one-line.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad2-one-line.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">1:30</em>
+            </a>
+            <p><span class="cap">A Workeey ad in line-drawing animation.</span></p>
+          </li>
+          <li data-for="ad3">
+            <a class="vt" href="resume/media/ad3-blender-v7.mp4" data-play aria-label="Play the 3D ad, 0:40">
+              <img data-src="resume/media/ad3-blender-v7.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/ad3-blender-v7.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:40</em>
+            </a>
+            <p><span class="cap">A 3D character ad, made in Blender.</span></p>
+          </li>
+          <li data-for="skit1">
+            <a class="vt" href="resume/media/skit-20.mp4" data-play aria-label="Play Her Wi-Fi, 0:20">
+              <img data-src="resume/media/skit-20.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-20.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:20</em>
+            </a>
+            <p><b>Her Wi-Fi</b> <span class="cap">3D comedy short for Workeey.</span></p>
+          </li>
+          <li data-for="skit2">
+            <a class="vt" href="resume/media/skit-21b.mp4" data-play aria-label="Play Fixed Itself, 0:13">
+              <img data-src="resume/media/skit-21b.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-21b.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:13</em>
+            </a>
+            <p><b>Fixed Itself</b> <span class="cap">3D comedy short for Workeey.</span></p>
+          </li>
+          <li data-for="skit3">
+            <a class="vt" href="resume/media/skit-23.mp4" data-play aria-label="Play The Burgers, 0:17">
+              <img data-src="resume/media/skit-23.jpg" width="540" height="960" alt=""><noscript><img src="resume/media/skit-23.jpg" width="540" height="960" alt=""></noscript>
+              <i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i><em class="len" aria-hidden="true">0:17</em>
+            </a>
+            <p><b>The Burgers</b> <span class="cap">3D comedy short for Workeey.</span></p>
+          </li>
+          <li class="yt" data-yt="5Luf1v-RXb8">
+            <a href="https://www.youtube.com/watch?v=5Luf1v-RXb8" target="_blank" rel="noopener"><img data-src="resume/media/yt-5Luf1v-RXb8.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-5Luf1v-RXb8.jpg" width="320" height="180" alt=""></noscript><span><b>A short promo</b> <span class="cap">Smooth transitions, moving text and sound effects.</span> <i class="src">YouTube</i></span></a>
+          </li>
+          <li class="yt" data-for="camp">
+            <a href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener"><img data-src="resume/media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt=""></noscript><span><b>Camp Chaburah summer 2023</b> <span class="cap">The full summer film, 40 minutes.</span> <i class="src">YouTube</i></span></a>
+          </li>
+          <li class="yt" data-for="promo">
+            <a href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener"><img data-src="resume/media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt=""></noscript><span><b>Camp promo, 2023</b> <span class="cap">Camp Chaburah's promotional film.</span> <i class="src">YouTube</i></span></a>
+          </li>
+          <li class="yt" data-for="colorwar">
+            <a href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener"><img data-src="resume/media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""><noscript><img src="resume/media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt=""></noscript><span><b>Color war entrance</b> <span class="cap">An event highlight.</span> <i class="src">YouTube</i></span></a>
+          </li>
+          <li class="yt" data-for="recap">
+            <!-- No picture from this video is shown anywhere: the tile, the reel and the sheet in the woods carry a drawn title card. -->
+            <a href="https://www.youtube.com/watch?v=9_UsrZwbCWQ" target="_blank" rel="noopener"><span class="wk" aria-hidden="true"><em>Week 3</em><i>Summer 2024</i></span><span><b>A week at camp, 2024</b> <span class="cap">A weekly recap video.</span> <i class="src">YouTube</i></span></a>
+          </li>
+        </ol>
+      </div>
+      <p class="go"><a href="/video/">All my videos <svg class="ar" viewBox="0 0 20 12" aria-hidden="true"><path d="M1 6h17M13 1l5 5-5 5"/></svg></a></p>
+      <p class="po">Videos: yossigrunwald.com/video</p>
+    </div>
   </section>
 
-  <section class="tk" aria-labelledby="h-k">
-    <h2 id="h-k"><span>Kitchen</span></h2>
-    <p class="job"><span class="c"><b>REN, Brooklyn, NY</b></span> <span class="c"><i>|</i> <span class="when">2026 to present</span></span></p>
-    <ul class="pts">
-      <li>Bake the restaurant's bread and handle daily prep.</li>
-      <li>Work the cold line during service, with experience on the hot and dessert lines.</li>
-      <li>Moving from prep to full service on the line, and training the newest hire.</li>
-    </ul>
+  <section class="sec tk" aria-labelledby="h-k">
+    <h2 id="h-k">Kitchen</h2>
+    <div class="sb">
+      <div class="role">
+        <div class="rh">
+          <h3>REN</h3>
+          <div class="meta"><span class="org">Brooklyn, NY</span> <span class="sep" aria-hidden="true">·</span> <span class="when">2026 to present</span></div>
+        </div>
+        <ul class="pts">
+          <li>Bake the restaurant's bread and handle daily prep.</li>
+          <li>Work the cold line during service, with experience on the hot and dessert lines.</li>
+          <li>Keep the line stocked and support the other stations at the pace of service.</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
-  <section class="te" aria-labelledby="h-e">
-    <h2 id="h-e"><span>Earlier Experience</span></h2>
-    <p class="job"><span class="c"><b>Direct Support Professional</b></span> <span class="c"><i>|</i> Yedei Chesed, Inc.</span> <span class="c"><i>|</i> <span class="when">Oct 2024 to Jun 2025</span></span></p>
-    <ul class="pts">
-      <li>Supported residents of a group home for people with special needs: daily living, personal care and safety.</li>
-      <li>Administered and documented medication daily, and kept routines, schedules and activities running.</li>
-      <li>Balanced the role with daily study at Yeshiva Gadlus Hatorah.</li>
-    </ul>
-    <p class="job"><span class="c"><b>Production Worker</b></span> <span class="c"><i>|</i> Bubbiv Matzah Bakery</span> <span class="c"><i>|</i> <span class="when">2022 to 2023, seasonal</span></span></p>
-    <ul class="pts">
-      <li>Rolled dough on the production line.</li>
-    </ul>
+  <section class="sec te" aria-labelledby="h-e">
+    <h2 id="h-e">Earlier Experience</h2>
+    <div class="sb">
+      <div class="role">
+        <div class="rh">
+          <h3>Direct Support Professional</h3>
+          <div class="meta"><span class="org">Yedei Chesed, Inc.</span> <span class="sep" aria-hidden="true">·</span> <span class="when">Oct 2024 to Jun 2025</span></div>
+        </div>
+        <ul class="pts">
+          <li>Supported residents of a group home for people with special needs: daily living, personal care and safety.</li>
+          <li>Administered and documented medication daily, and kept routines, schedules and activities running.</li>
+          <li>Balanced the role with daily study at Yeshiva Gadlus Hatorah.</li>
+        </ul>
+      </div>
+      <div class="role">
+        <div class="rh">
+          <h3>Production Worker</h3>
+          <div class="meta"><span class="org">Bubbiv Matzah Bakery</span> <span class="sep" aria-hidden="true">·</span> <span class="when">2022 to 2023, seasonal</span></div>
+        </div>
+        <ul class="pts">
+          <li>Rolled dough on the production line.</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
-  <section class="te" aria-labelledby="h-ed">
-    <h2 id="h-ed"><span>Education</span></h2>
-    <p class="job"><span class="c"><b>Yeshiva Gadlus Hatorah</b></span> <span class="c"><i>|</i> Monsey, NY</span> <span class="c"><i>|</i> <span class="when">2023 to 2025</span></span></p>
-    <ul class="pts">
-      <li>Two years of post-high-school study.</li>
-    </ul>
+  <section class="sec te" aria-labelledby="h-ed">
+    <h2 id="h-ed">Education</h2>
+    <div class="sb">
+      <div class="role">
+        <div class="rh">
+          <h3>Yeshiva Gadlus Hatorah</h3>
+          <div class="meta"><span class="org">Monsey, NY</span> <span class="sep" aria-hidden="true">·</span> <span class="when">2023 to 2025</span></div>
+        </div>
+        <ul class="pts">
+          <li>Two years of post-high-school study.</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
-  <section class="te" aria-labelledby="h-s">
-    <h2 id="h-s"><span>Skills</span></h2>
-    <ul class="pts skills">
-      <li><b>Software:</b> full-stack web app development, databases, API integrations, AI automation, Git and GitHub.</li>
-      <li><b>Video:</b> Premiere Pro, Photoshop, Blender, color grading, motion graphics, sound design, camera, lighting, drone, photography.</li>
-      <li><b>People and organization:</b> client communication, training and coordinating a small team, scheduling, record keeping, follow-up.</li>
-      <li><b>Kitchen:</b> line service, prep, knife work, bread.</li>
-      <li><b>Languages:</b> English, Yiddish.</li>
-    </ul>
+  <section class="sec te" aria-labelledby="h-s">
+    <h2 id="h-s">Skills</h2>
+    <div class="sb">
+      <dl class="skills">
+        <div><dt>Software</dt><dd>full-stack web app development, databases, API and payment integrations, offline sync, automated testing, Android publishing on Google Play, SEO, Git and GitHub.</dd></div>
+        <div><dt>Product</dt><dd>taking a product from idea to launch, product ownership, mobile-first design.</dd></div>
+        <div><dt>IT and troubleshooting</dt><dd>devices and IT, diagnosing and fixing problems fast, learning new software quickly.</dd></div>
+        <div><dt>Video</dt><dd>Premiere Pro, Photoshop, Blender, 3D animation, color grading, motion graphics and keyframing, sound design, camera, lighting, drone, photography.</dd></div>
+        <div><dt>People and organization</dt><dd>client communication, customer service, training and coordinating a small team, teaching video editing, scheduling, record keeping and documentation, follow-up and deadlines.</dd></div>
+        <div><dt>Kitchen</dt><dd>line service, prep and knife work, bread baking.</dd></div>
+        <div><dt>Languages</dt><dd>English, Yiddish.</dd></div>
+      </dl>
+    </div>
   </section>
 
-  <section class="te" aria-labelledby="h-a">
-    <h2 id="h-a"><span>About</span></h2>
-    <p class="about">Drawing and painting, chess, snowboarding. Woodworking: made cutting boards, pens and turned bowls as a kid. Happiest with room to experiment and a problem to solve.</p>
-  </section>
-
-  <section id="contact" class="tc" aria-labelledby="h-c">
-    <h2 id="h-c"><span>Contact</span></h2>
-    <p class="links">
-      <a href="#contact" data-mail>Email</a>
-      <a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" rel="noopener">LinkedIn</a>
-      <a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a>
-      <a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Workeey on Google Play</a>
-      <a href="https://www.youtube.com/@Workeey-app" target="_blank" rel="noopener">Workeey YouTube</a>
-      <a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">Workeey TikTok</a>
-    </p>
+  <!-- #contact is the target of every Email link: here, in the header and in the game's own buttons -->
+  <section class="sec te" id="contact" aria-labelledby="h-c">
+    <h2 id="h-c">Contact</h2>
+    <div class="sb">
+      <p class="intro">Tell me a good time to talk.</p>
+      <ul class="links">
+        <li><a href="#contact" data-mail>Email</a></li>
+        <li><a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a></li>
+        <li><a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Workeey on Google Play</a></li>
+        <li><a href="https://www.youtube.com/@Workeey-app" target="_blank" rel="noopener">Workeey YouTube</a></li>
+        <li><a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">Workeey TikTok</a></li>
+      </ul>
+      <p class="foot">Prefer the game? <a href="./" data-view="play">play it instead</a></p>
+    </div>
   </section>
 </main>
 
@@ -386,6 +568,8 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
      first ad has been played, "full" once the tray is full, "again" when the van comes back (the second look) · .links =
      its buttons. data-say = a small thing that says its words when bumped and is not counted. -->
 <div id="finds" hidden>
+  <!-- The words under his name on the hub sign (the game reads them here; the plain resume no longer shows them). -->
+  <p data-roles>Founder · AI Automation · Video</p>
   <ul class="finds" data-section="workeey">
     <li data-find="ad1" data-track="w" data-x="0" data-y="-300" data-tab="FOUNDER" data-stage="1"
         data-video="ad1-workeey" data-len="0:30" data-pill="Play the Workeey ad · 0:30 · sound on" data-lure="Workeey ad">
@@ -429,9 +613,9 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
       <small data-date>As of Nov 2026</small>
     </li>
     <li data-find="live" data-track="w" data-x="150" data-y="-1060" data-tab="LIVE" data-stage="4">
-      <b data-head>WHERE IT'S LIVE</b> <span data-line>Live on the web and Google Play. The iPhone app is in Apple review.</span>
+      <b data-head>WHERE IT'S LIVE</b> <span data-line>It's live on the web and on the Google Play Store. Coming soon to iPhone.</span>
       <small data-date>Nov 2026</small>
-      <span data-tag>in review</span>
+      <span data-tag>coming soon</span>
       <span class="links"><a href="https://workeey.com" target="_blank" rel="noopener">workeey.com</a> <a href="https://play.google.com/store/apps/details?id=com.workeey.app" target="_blank" rel="noopener">Google Play</a></span>
     </li>
     <li data-find="ad2" data-track="w" data-x="-380" data-y="-620" data-tab="DRAWN" data-stage="2"
@@ -453,8 +637,8 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <li data-find="team" data-track="g" data-x="690" data-y="-160" data-tab="TEAM" data-stage="5" data-pill="See how it works">
       <b data-head>AGENTS OVERSEEING AGENTS</b> <span data-line>AI agents build. Review agents check. Only the manager agent puts work live.</span>
       <small data-date>2026 to now</small>
-      <span data-gain="again">About ten agents at once, each owning one area.</span>
-      <p data-how>I run about ten AI agents at once, each owning one area. Review agents read the changes for bugs, check them against the design rules and, where it matters, click through them in a real browser; then one manager agent runs the tests and is the only one allowed to put work live. It did not start that orderly: agents released on their own and broke each other's work, fought over one browser, and some tests reported success while failing. The fix was structure: one door to live, one lock on heavy test runs, a browser for each agent, and tests that fail when they should.</p>
+      <span data-gain="again">One agent I talk to, and a team behind it.</span>
+      <p data-how>I talk to one agent in plain words, and it brings in other agents as the job needs them. Review agents read the changes for bugs, check them against the design rules and, where it matters, click through them in a real browser; then one manager agent runs the tests and is the only one allowed to put work live. It did not start that orderly: agents released on their own and broke each other's work, fought over one browser, and some tests reported success while failing. The fix was structure: one door to live, one lock on heavy test runs, a browser for each agent, and tests that fail when they should.</p>
       <ol data-steps>
         <li>Each agent owns one area.</li>
         <li>Review agents check the work.</li>
@@ -600,8 +784,8 @@ w.ygView=function(game){if(w.ygOff)game=false;h.classList.toggle('g',!!game);if(
     <li data-find="service" data-track="k" data-x="-600" data-y="200" data-tab="SERVICE" data-stage="6">
       <b data-head>ON THE LINE</b> <span data-line>I work the cold line during service, with experience on hot and dessert.</span>
     </li>
-    <li data-find="next" data-track="k" data-x="-330" data-y="330" data-tab="TRAINING" data-stage="6">
-      <b data-head>STEPPING UP AT REN</b> <span data-line>Moving from prep to full service on the line, and training the newest hire.</span>
+    <li data-find="next" data-track="k" data-x="-330" data-y="330" data-tab="STATIONS" data-stage="6">
+      <b data-head>KEEPING PACE AT REN</b> <span data-line>Keep the line stocked and support the other stations at the pace of service.</span>
       <small data-date>Now</small>
     </li>
   </ul>

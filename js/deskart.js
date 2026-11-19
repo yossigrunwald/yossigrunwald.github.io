@@ -625,7 +625,14 @@ export function liveScreens(lit, tag) {
     g.strokeStyle = PAL.ink; g.lineWidth = 1; g.lineJoin = 'round'; g.stroke();
     g.fillStyle = '#9AA3A6'; g.beginPath(); g.arc(5, 0, 2.2, 0, 6.2832); g.fill(); g.fillStyle = '#34302C'; g.beginPath(); g.arc(5, 0, 1, 0, 6.2832); g.fill();
     let fs = 10.5; g.font = `700 ${fs}px ${HAND}`; const w = g.measureText(tag).width; if (w > 33) { fs *= 33 / w; g.font = `700 ${fs}px ${HAND}`; }
-    g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tag, 26, 0.8);
+    g.fillStyle = PAL.ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+    // two words that would shrink too small on one line ("coming soon") go on two lines, each as large as the tag allows
+    const sp = tag.indexOf(' ');
+    if (fs < 7.5 && sp > 0) {
+      const two = [tag.slice(0, sp), tag.slice(sp + 1)]; let f2 = 8.6; g.font = `700 ${f2}px ${HAND}`;
+      const w2 = Math.max(...two.map(t => g.measureText(t).width)); if (w2 > 33) { f2 *= 33 / w2; g.font = `700 ${f2}px ${HAND}`; }
+      g.fillText(two[0], 26, 0.8 - f2 * 0.48); g.fillText(two[1], 26, 0.8 + f2 * 0.48);
+    } else g.fillText(tag, 26, 0.8);
     g.restore();
   };
   return bake([

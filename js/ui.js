@@ -553,10 +553,11 @@ function makeReel() {
   document.querySelectorAll('#watch .reel li').forEach((li, i) => {
     const f = li.dataset.for ? S.byId[li.dataset.for] : null, id = li.dataset.yt || ''; if (!f && !id) return;
     if (f && !f.live) return;
-    const img = li.querySelector('img'), card = li.querySelector('.wk'), b = li.querySelector('b'), cap = li.querySelector('.cap'), len = li.querySelector('.len'), yt = f ? !!f.yt : true, t = document.createElement('div');
+    // (a tile played in the plain page has swapped its <a> and <img> for a <video>; its poster stands in for the picture)
+    const img = li.querySelector('img'), vid = li.querySelector('video'), pic = img ? (img.getAttribute('data-src') || img.getAttribute('src') || '') : vid ? (vid.getAttribute('poster') || '') : '', card = li.querySelector('.wk'), b = li.querySelector('b'), cap = li.querySelector('.cap'), len = li.querySelector('.len'), yt = f ? !!f.yt : true, t = document.createElement('div');
     const title = b ? b.textContent.trim() : '', sub = cap ? cap.textContent.trim() : '';
     t.className = 'rt' + (i === 0 ? ' big' : '') + (yt ? ' yt' : ''); t.dataset.id = f ? f.id : ''; t.dataset.yt = id; t.dataset.title = title; t.style.setProperty('--t', TRACK[f ? f.track : 'v'].tape);
-    t.innerHTML = '<button class="ri" type="button" data-act="play" aria-label="Play ' + (title || sub).replace(/"/g, '') + '">' + (card ? card.outerHTML : '<img alt="" decoding="async" src="' + (img.getAttribute('data-src') || img.getAttribute('src')) + '">') + '<i class="pb" aria-hidden="true">' + PLAY + '</i>' +
+    t.innerHTML = '<button class="ri" type="button" data-act="play" aria-label="Play ' + (title || sub).replace(/"/g, '') + '">' + (card ? card.outerHTML : pic ? '<img alt="" decoding="async" src="' + pic + '">' : '') + '<i class="pb" aria-hidden="true">' + PLAY + '</i>' +
       (len ? '<em class="len" aria-hidden="true">' + len.textContent + '</em>' : '') + (f ? '<span class="tab zz" aria-hidden="true"><b class="zz">' + f.tab + '</b></span>' : '') + '</button>' +
       '<p>' + (title ? '<b>' + title + '</b> ' : '') + (sub ? '<span>' + sub + '</span>' : '') + (yt ? ' <i>YouTube</i>' : '') + '</p>' +
       (f ? '<div class="ra"><button class="zz" type="button" data-act="play"><span class="zz">' + PLAY + '<i>play anyway</i></span></button><button class="zz" type="button" data-act="where"><span class="zz">' + GO + '<i>show me where</i></span></button></div>' : '');

@@ -1,155 +1,372 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Yossi Grunwald, videos</title>
-<meta name="description" content="Videos by Yossi Grunwald: Workeey ads, 3D comedy shorts, camp films and more.">
-<link rel="canonical" href="https://yossigrunwald.com/video/">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://yossigrunwald.com/video/">
-<meta property="og:title" content="Yossi Grunwald, videos">
-<meta property="og:description" content="Videos by Yossi Grunwald: Workeey ads, 3D comedy shorts, camp films and more.">
-<meta name="theme-color" content="#EDF1F4">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2323282B'/%3E%3Crect x='10' y='22' width='44' height='22' rx='6' fill='%23F4F1E8'/%3E%3Crect x='10' y='32' width='44' height='5' fill='%23F2B411'/%3E%3Crect x='16' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3Crect x='39' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3C/svg%3E">
-<link rel="preload" href="../fonts/big-shoulders-stencil-900.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="../fonts/overpass-var.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="video.css">
+  <!-- Force HTTPS redirect -->
+  <script>
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      location.replace('https:' + window.location.href.substring(window.location.protocol.length));
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yossi Grunwald | Video Editor</title>
+  <meta name="description" content="Videos by Yossi Grunwald, video editor: promos, camp films, Workeey ads and 3D comedy shorts.">
+  <link rel="canonical" href="https://yossigrunwald.com/video/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2323282B'/%3E%3Crect x='10' y='22' width='44' height='22' rx='6' fill='%23F4F1E8'/%3E%3Crect x='10' y='32' width='44' height='5' fill='%23F2B411'/%3E%3Crect x='16' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3Crect x='39' y='41' width='9' height='7' rx='2' fill='%2314110F'/%3E%3C/svg%3E">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Yossi Grunwald | Video Editor">
+  <meta property="og:description" content="Videos by Yossi Grunwald, video editor: promos, camp films, Workeey ads and 3D comedy shorts.">
+  <meta property="og:url" content="https://yossigrunwald.com/video/">
+  <!-- 2026-11-19: this is the old home page of yossigrunwald.com, moved here when the resume game became the home page.
+       Its videos and pictures stay at the site root, so every file is linked from the root. -->
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Preload critical hero section resources only (the hero video itself loads with preload=auto) -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" as="style">
 </head>
 <body>
-<div class="page">
-  <header class="top">
-    <a class="play" href="/"><span><b><svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg> Play the resume</b></span></a>
-    <h1 class="name"><a href="/">Yossi Grunwald</a></h1>
-    <p class="roles">Videos I've made</p>
-    <p class="kinds">Have a look at videos I've shot, edited and directed.</p>
-  </header>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+  </div>
 
-  <main>
-    <section class="g-ads" aria-labelledby="h-ads">
-      <h2 id="h-ads"><span>Workeey ads</span></h2>
-      <ul class="grid tall">
-        <li class="big">
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/ad1-workeey.jpg" src="../resume/media/ad1-workeey.mp4" aria-label="The Workeey ad, 0:30"></video>
-          <p class="cap"><em class="len">0:30</em><b>The Workeey ad.</b> Thirty seconds on what the app does.</p>
-        </li>
-        <li>
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/ad2-one-line.jpg" src="../resume/media/ad2-one-line.mp4" aria-label="The line-art ad, 1:30"></video>
-          <p class="cap"><em class="len">1:30</em>A Workeey ad in line-drawing animation.</p>
-        </li>
-        <li>
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/ad3-blender-v7.jpg" src="../resume/media/ad3-blender-v7.mp4" aria-label="The 3D ad, 0:40"></video>
-          <p class="cap"><em class="len">0:40</em>A 3D character ad, made in Blender.</p>
-        </li>
-      </ul>
-    </section>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#home" class="nav-logo">YOSSI GRUNWALD</a>
+      <div class="nav-menu">
+        <a href="#home" class="nav-link">Home</a>
+        <a href="#about" class="nav-link">About</a>
+        <a href="#work" class="nav-link">Work</a>
+        <a href="#" class="nav-link" id="skills-link">Skills</a>
+        <a href="/?plain" class="nav-link">Resume</a>
+        <a href="#contact" class="nav-link">Contact</a>
+      </div>
+      <div class="nav-toggle" id="mobile-menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </div>
+    </div>
+  </nav>
 
-    <section class="g-shorts" aria-labelledby="h-shorts">
-      <h2 id="h-shorts"><span>3D comedy shorts</span></h2>
-      <ul class="grid tall">
-        <li>
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/skit-20.jpg" src="../resume/media/skit-20.mp4" aria-label="Her Wi-Fi, 0:20"></video>
-          <p class="cap"><em class="len">0:20</em><b>Her Wi-Fi</b> 3D comedy short for Workeey.</p>
-        </li>
-        <li>
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/skit-21b.jpg" src="../resume/media/skit-21b.mp4" aria-label="Fixed Itself, 0:13"></video>
-          <p class="cap"><em class="len">0:13</em><b>Fixed Itself</b> 3D comedy short for Workeey.</p>
-        </li>
-        <li>
-          <video controls playsinline preload="none" width="540" height="960" poster="../resume/media/skit-23.jpg" src="../resume/media/skit-23.mp4" aria-label="The Burgers, 0:17"></video>
-          <p class="cap"><em class="len">0:17</em><b>The Burgers</b> 3D comedy short for Workeey.</p>
-        </li>
-        <li class="more"><a href="https://www.tiktok.com/@workeey.com" target="_blank" rel="noopener">More on TikTok</a></li>
-      </ul>
-    </section>
 
-    <section class="g-camp" aria-labelledby="h-camp">
-      <h2 id="h-camp"><span>Camp films</span></h2>
-      <!-- Each YouTube tile is a plain link to YouTube; the script below turns it into a button that loads the
-           youtube-nocookie player in its place on tap. Nothing is fetched from YouTube before the tap. -->
-      <ul class="grid wide">
-        <li>
-          <a class="yt" href="https://www.youtube.com/watch?v=8qOgSQZAnRg" target="_blank" rel="noopener" data-yt="8qOgSQZAnRg" data-title="Camp Chaburah summer 2023" aria-label="Watch Camp Chaburah summer 2023 on YouTube"><img src="../resume/media/yt-8qOgSQZAnRg.jpg" width="320" height="180" alt="" loading="lazy" decoding="async"><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>Camp Chaburah summer 2023</b> The full summer film, 40 minutes. <i class="src">YouTube</i></p>
-        </li>
-        <li>
-          <a class="yt" href="https://www.youtube.com/watch?v=wlfIZ-MSCxU" target="_blank" rel="noopener" data-yt="wlfIZ-MSCxU" data-title="Camp promo, 2023" aria-label="Watch Camp promo, 2023 on YouTube"><img src="../resume/media/yt-wlfIZ-MSCxU.jpg" width="320" height="180" alt="" loading="lazy" decoding="async"><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>Camp promo, 2023</b> Camp Chaburah's promotional film. <i class="src">YouTube</i></p>
-        </li>
-        <li>
-          <a class="yt" href="https://www.youtube.com/watch?v=cq0rZWnLQL8" target="_blank" rel="noopener" data-yt="cq0rZWnLQL8" data-title="Color war entrance" aria-label="Watch Color war entrance on YouTube"><img src="../resume/media/yt-cq0rZWnLQL8.jpg" width="320" height="180" alt="" loading="lazy" decoding="async"><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>Color war entrance</b> An event highlight. <i class="src">YouTube</i></p>
-        </li>
-        <li>
-          <!-- No picture from this video is shown anywhere: a drawn title card, as in the game. -->
-          <a class="yt" href="https://www.youtube.com/watch?v=9_UsrZwbCWQ" target="_blank" rel="noopener" data-yt="9_UsrZwbCWQ" data-title="A week at camp, 2024" aria-label="Watch A week at camp, 2024 on YouTube"><span class="wk" aria-hidden="true"><em>Week 3</em><i>Summer 2024</i></span><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>A week at camp, 2024</b> A weekly recap video. <i class="src">YouTube</i></p>
-        </li>
-        <li>
-          <!-- A drawn title card, never a frame of the video (camp films may show children close up). -->
-          <a class="yt" href="https://www.youtube.com/watch?v=qayMS0lT6Kg" target="_blank" rel="noopener" data-yt="qayMS0lT6Kg" data-title="Pelah, summer 2024" aria-label="Watch Pelah, summer 2024 on YouTube"><span class="wk" aria-hidden="true"><em>Pelah</em><i>Summer 2024</i></span><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>Pelah, summer 2024</b> A Camp Chaburah film, 20 minutes. <i class="src">YouTube</i></p>
-        </li>
-      </ul>
-    </section>
 
-    <section class="g-more" aria-labelledby="h-more">
-      <h2 id="h-more"><span>More videos</span></h2>
-      <ul class="grid wide">
-        <li>
-          <a class="yt" href="https://www.youtube.com/watch?v=5Luf1v-RXb8" target="_blank" rel="noopener" data-yt="5Luf1v-RXb8" data-title="A short promo" aria-label="Watch A short promo on YouTube"><img src="../resume/media/yt-5Luf1v-RXb8.jpg" width="320" height="180" alt="" loading="lazy" decoding="async"><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>A short promo</b> Smooth transitions, moving text and sound effects. <i class="src">YouTube</i></p>
-        </li>
-        <li>
-          <!-- A drawn title card: the video's own thumbnail is a child's face close up. -->
-          <a class="yt" href="https://www.youtube.com/watch?v=A-FZ9WLw7v0" target="_blank" rel="noopener" data-yt="A-FZ9WLw7v0" data-title="Cantata" aria-label="Watch Cantata on YouTube"><span class="wk" aria-hidden="true"><em>Cantata</em><i>In 30 minutes</i></span><i class="pb" aria-hidden="true"><svg class="tri" viewBox="0 0 10 11"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg></i></a>
-          <p class="cap"><b>Cantata</b> A cantata video, filmed in 30 minutes. <i class="src">YouTube</i></p>
-        </li>
-      </ul>
-    </section>
-  </main>
+  <!-- Hero Section -->
+  <section id="home" class="hero">
+    <div class="hero-background-video">
+      <video id="hero-bg-video" class="hero-bg-video" autoplay muted playsinline preload="auto">
+        <source src="/YouCut_20250826_224149599.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="hero-content">
+      <h1 class="hero-title">VIDEO EDITOR</h1>
+      <p class="hero-subtitle">Creating compelling visual stories through dynamic editing</p>
+      <a href="#work" class="hero-button">View My Work</a>
+    </div>
+    <div class="hero-scroll">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
 
-  <footer class="foot"><b>Yossi Grunwald</b> <a href="/">yossigrunwald.com</a></footer>
-</div>
-<script>
-(function(d){
-/* One video at a time: a video or YouTube player that starts stops all the others. A YouTube player can't be paused
-   from here (it runs in YouTube's own frame), so it is taken off the page and its tile put back. */
-var live=null;
-function hush(keep){
-  var v=d.querySelectorAll('video'),i;for(i=0;i<v.length;i++)if(v[i]!==keep)v[i].pause();
-  if(live&&live.f!==keep){if(live.f.parentNode)live.f.parentNode.replaceChild(live.b,live.f);live=null}
-}
-d.addEventListener('play',function(e){hush(e.target)},true);
-/* Each local video gets the plain resume's round play disc in its middle: one tap plays it with sound. The native
-   controls stay for everything after that. */
-var vs=d.querySelectorAll('video'),k;
-for(k=0;k<vs.length;k++)(function(v){
-  var w=d.createElement('div'),p=d.createElement('button');w.className='vw';v.parentNode.insertBefore(w,v);w.appendChild(v);
-  p.type='button';p.className='pv';p.setAttribute('aria-label','Play '+v.getAttribute('aria-label').replace(/^The /,'the '));
-  p.innerHTML='<svg class="tri" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 .6 9.4 5.5 1 10.4z"/></svg>';
-  p.addEventListener('click',function(){try{var r=v.play();if(r&&r.catch)r.catch(function(){})}catch(x){}});
-  v.addEventListener('play',function(){p.hidden=true});
-  /* The disc comes back whenever the video stops, so a tap in the middle always starts it again. */
-  v.addEventListener('pause',function(){if(!v.seeking)p.hidden=false});
-  v.addEventListener('ended',function(){p.hidden=false});
-  w.appendChild(p);
-})(vs[k]);
-/* A YouTube tile becomes a button; the tap swaps it for the youtube-nocookie player. */
-var t=d.querySelectorAll('a.yt[data-yt]'),i;
-for(i=0;i<t.length;i++)(function(a){
-  var b=d.createElement('button'),name=a.getAttribute('data-title');
-  b.type='button';b.className='yt';b.setAttribute('aria-label','Play '+name);
-  while(a.firstChild)b.appendChild(a.firstChild);
-  b.addEventListener('click',function(){
-    var f=d.createElement('iframe');
-    f.src='https://www.youtube-nocookie.com/embed/'+a.getAttribute('data-yt')+'?autoplay=1&rel=0&playsinline=1';
-    f.title=name;f.width=560;f.height=315;f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
-    hush(null);b.parentNode.replaceChild(f,b);live={f:f,b:b};try{f.focus()}catch(x){}
-  });
-  a.parentNode.replaceChild(b,a);
-})(t[i]);
-})(document);
-</script>
+  <!-- Video Gallery Section -->
+  <!-- Each tile plays in the page's own player when tapped: data-video is a YouTube embed address, or a video file
+       when data-kind="file" (data-shape="vertical" for the upright ones). -->
+  <section id="video-gallery" class="video-gallery">
+    <div class="container">
+      <div class="video-grid">
+        <!-- Video 1 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/wlfIZ-MSCxU" role="button" tabindex="0" aria-label="Play Camp promo, 2023">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/wlfIZ-MSCxU/maxresdefault.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Camp promo, 2023</b> Camp Chaburah's promotional film.</p>
+        </div>
+        <!-- Video 2 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/8qOgSQZAnRg" role="button" tabindex="0" aria-label="Play Camp Chaburah summer 2023">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/8qOgSQZAnRg/maxresdefault.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Camp Chaburah summer 2023</b> The full summer film, 40 minutes.</p>
+        </div>
+        <!-- Video 3 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/cq0rZWnLQL8" role="button" tabindex="0" aria-label="Play Color war entrance">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/cq0rZWnLQL8/maxresdefault.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Color war entrance</b> An event highlight.</p>
+        </div>
+        <!-- Video 4 -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/5Luf1v-RXb8" role="button" tabindex="0" aria-label="Play A short promo">
+          <div class="video-thumbnail">
+            <img src="https://img.youtube.com/vi/5Luf1v-RXb8/maxresdefault.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>A short promo</b> Smooth transitions, moving text and sound effects.</p>
+        </div>
+        <!-- Newer videos (2026): the three Workeey ads and three 3D comedy shorts, played from files on this site -->
+        <div class="video-item" data-video="/resume/media/ad1-workeey.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/ad1-workeey.jpg" role="button" tabindex="0" aria-label="Play The Workeey ad, 0:30">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/ad1-workeey.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/ad1-workeey.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>The Workeey ad</b> Thirty seconds on what the app does.</p>
+        </div>
+        <div class="video-item" data-video="/resume/media/ad2-one-line.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/ad2-one-line.jpg" role="button" tabindex="0" aria-label="Play The line-art ad, 1:30">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/ad2-one-line.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/ad2-one-line.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>The line-art ad</b> A Workeey ad in line-drawing animation.</p>
+        </div>
+        <div class="video-item" data-video="/resume/media/ad3-blender-v7.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/ad3-blender-v7.jpg" role="button" tabindex="0" aria-label="Play The 3D ad, 0:40">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/ad3-blender-v7.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/ad3-blender-v7.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>The 3D ad</b> A 3D character ad, made in Blender.</p>
+        </div>
+        <div class="video-item" data-video="/resume/media/skit-20.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/skit-20.jpg" role="button" tabindex="0" aria-label="Play Her Wi-Fi, 0:20">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/skit-20.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/skit-20.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Her Wi-Fi</b> 3D comedy short for Workeey.</p>
+        </div>
+        <div class="video-item" data-video="/resume/media/skit-21b.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/skit-21b.jpg" role="button" tabindex="0" aria-label="Play Fixed Itself, 0:13">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/skit-21b.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/skit-21b.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Fixed Itself</b> 3D comedy short for Workeey.</p>
+        </div>
+        <div class="video-item" data-video="/resume/media/skit-23.mp4" data-kind="file" data-shape="vertical" data-poster="/resume/media/skit-23.jpg" role="button" tabindex="0" aria-label="Play The Burgers, 0:17">
+          <div class="video-thumbnail vertical">
+            <img class="backdrop" src="/resume/media/skit-23.jpg" alt="" loading="lazy">
+            <img class="poster" src="/resume/media/skit-23.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>The Burgers</b> 3D comedy short for Workeey.</p>
+        </div>
+        <!-- These two show a lettered card, never the YouTube picture (it can show children close up) -->
+        <div class="video-item" data-video="https://www.youtube.com/embed/qayMS0lT6Kg" role="button" tabindex="0" aria-label="Play Pelah, summer 2024">
+          <div class="video-thumbnail">
+            <div class="lettered" aria-hidden="true"><span class="lettered-big">PELAH</span><span class="lettered-small">Summer 2024</span></div>
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Pelah, summer 2024</b> A Camp Chaburah film, 20 minutes.</p>
+        </div>
+        <div class="video-item" data-video="https://www.youtube.com/embed/A-FZ9WLw7v0" role="button" tabindex="0" aria-label="Play Cantata">
+          <div class="video-thumbnail">
+            <div class="lettered" aria-hidden="true"><span class="lettered-big">CANTATA</span><span class="lettered-small">In 30 minutes</span></div>
+            <div class="play-overlay">
+              <i class="fas fa-play"></i>
+            </div>
+          </div>
+          <p class="video-caption"><b>Cantata</b> A cantata video, filmed in 30 minutes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="about">
+    <div class="container">
+      <div class="about-content">
+        <div class="about-image">
+          <img src="/image%202.png" alt="Yossi Grunwald" loading="lazy" />
+        </div>
+        <div class="about-text">
+          <h2>About Me</h2>
+          <p>
+            I'm a passionate and highly skilled video editor with years of hands-on experience using Adobe Premiere Pro. I bring stories to life with dynamic cuts, smooth transitions, color grading, keyframe animation, and audio sync. I'm also proficient in Photoshop and can create polished visuals that elevate video content.
+          </p>
+          <p>
+            I've spent several summers working as the lead video editor for Camp Chaburah. I'm currently available for freelance, contract, or full-time projects.
+          </p>
+          <div class="about-skills">
+            <div class="skill-item">
+              <i class="fab fa-adobe"></i>
+              <span>Premiere Pro</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-palette"></i>
+              <span>Color Grading</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-film"></i>
+              <span>Motion Graphics</span>
+            </div>
+            <div class="skill-item">
+              <i class="fas fa-music"></i>
+              <span>Audio Sync</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Work Section -->
+  <section id="work" class="work">
+    <div class="work-background-video">
+      <video id="work-bg-video" class="work-bg-video" autoplay muted playsinline loop preload="none">
+        <source src="/Ok_this_very_202507111938.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="container">
+      <h2>Featured Work</h2>
+      <div class="work-grid">
+        <div class="work-item">
+          <div class="work-video">
+            <iframe src="https://www.youtube.com/embed/5Luf1v-RXb8" title="Featured Video 1" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="work-info">
+            <h3>PROMOTIONAL VIDEO</h3>
+            <p>A promo with seamless transitions, dynamic text, and immersive sound effects — a quick demo of what I can produce for you.</p>
+          </div>
+        </div>
+        <div class="work-item">
+          <div class="work-video">
+            <iframe src="https://www.youtube.com/embed/8qOgSQZAnRg" title="Featured Video 2" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="work-info">
+            <h3>Camp Chaburah Highlights 2023</h3>
+            <p>A high-energy 40-minute video capturing the spirit and excitement of Camp Chaburah, featuring real moments and strong videography. Seamless transitions, pacing, and editing bring the summer's best memories to life.</p>
+          </div>
+        </div>
+      </div>
+      <div class="work-cta">
+        <p>More videos on my YouTube channel</p>
+        <a href="https://www.youtube.com/@coolboredom" target="_blank" class="youtube-link">
+          <i class="fab fa-youtube"></i> @coolboredom
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="contact">
+    <div class="contact-background-video">
+      <video id="contact-bg-video" class="contact-bg-video" autoplay muted playsinline preload="none">
+        <source src="/vecteezy_3d-animation-white-geometric-background-with-cubes_46549143.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="container">
+      <h2>Let's Work Together</h2>
+      <p class="contact-subtitle">I'm currently available for freelance projects and collaborations</p>
+      <div class="contact-info">
+        <!-- The address is put together in script.js on the first tap, never written here as one string -->
+        <a href="#contact" class="contact-button" data-mail>
+          <i class="fas fa-envelope"></i> <span class="mail-text">Email me</span>
+        </a>
+      </div>
+      <div class="social-links">
+        <a href="https://www.youtube.com/@coolboredom" target="_blank" aria-label="YouTube">
+          <i class="fab fa-youtube"></i>
+        </a>
+        <a href="https://www.instagram.com/cool__boredom?igsh=ZHdkODFzc2U2Mnl0" target="_blank" aria-label="Instagram">
+          <i class="fab fa-instagram"></i>
+        </a>
+        <a href="https://www.linkedin.com/in/yossigrunwald/" target="_blank" aria-label="LinkedIn">
+          <i class="fab fa-linkedin"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2024 Yossi Grunwald. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Video Modal -->
+  <div id="video-modal" class="video-modal">
+    <div class="modal-content">
+      <span class="close-modal" role="button" tabindex="0" aria-label="Close">&times;</span>
+      <div class="modal-video-container">
+        <iframe id="modal-video" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>
+        <video id="modal-file-video" controls playsinline preload="none"></video>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skills Modal -->
+  <div id="skills-modal" class="modal">
+    <div class="modal-content skills-content">
+      <span class="close-modal">&times;</span>
+      <h2>My Skills</h2>
+      <div class="skills-grid">
+        <div class="skill-category">
+          <h3><i class="fas fa-video"></i> Adobe Creative Suite</h3>
+          <ul>
+            <li>Adobe Premiere Pro (Proficient)</li>
+            <li>Adobe Photoshop (Proficient)</li>
+          </ul>
+        </div>
+        <div class="skill-category">
+          <h3><i class="fas fa-palette"></i> Post-Production</h3>
+          <ul>
+            <li>Color grading and correction</li>
+            <li>Motion graphics and visual effects</li>
+            <li>Keyframing for dynamic movement and transitions</li>
+            <li>Sound design and audio synchronization</li>
+          </ul>
+        </div>
+        <div class="skill-category">
+          <h3><i class="fas fa-mobile-alt"></i> Social Media & Content</h3>
+          <ul>
+            <li>Social media formatting (Reels, Shorts, TikTok, etc.)</li>
+            <li>Editing workflow optimization</li>
+          </ul>
+        </div>
+        <div class="skill-category">
+          <h3><i class="fas fa-camera"></i> Video Production</h3>
+          <ul>
+            <li>Camera operation and shot composition</li>
+            <li>Lighting setup for video production</li>
+            <li>Drone videography</li>
+            <li>Directing and coordinating video shoots</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>

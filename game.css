@@ -319,161 +319,227 @@
 }
 @media (prefers-reduced-motion:reduce){#how,#how .hsh,#how .hft,#hx,#howfoot{transition:none}#howcap.sl>span,#how .hdots i.cur::after,#how.wait #howp{animation:none}}
 
-/* ---------- the plain resume: one column, road-sign body, stencil headings ---------- */
-#plain{max-width:680px;margin:0 auto;padding:20px 20px 72px}
-#plain .top{position:relative;padding-top:4px;margin-bottom:26px;border-bottom:3px solid var(--ink);padding-bottom:18px}
+/* ---------- the plain resume (v3): a sheet of paper on the desk. Stencil name and headings, Overpass body ---------- */
+#plain{--paper:#FBFCFD;--panel:#F1F4F6;--rule:#D9DFE3;--muted:#4B555C;--muted2:#5E686F;--ul:#9AA3A9;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--gut:20px;--ind:20px;
+  position:relative;min-height:100vh;margin:0;background:var(--paper);color:var(--ink);
+  padding:var(--s4) calc(var(--gut) + env(safe-area-inset-right)) var(--s7) calc(var(--gut) + env(safe-area-inset-left));
+  font:400 16px/1.55 var(--road)}
+@media (max-width:359px){#plain{--gut:16px}}
+#plain p,#plain ul,#plain ol,#plain dl,#plain dd,#plain figure,#plain blockquote{margin:0}
+#plain ul,#plain ol{list-style:none;padding:0}
+#plain a{color:var(--ink);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.2em;text-decoration-color:var(--ul)}
+#plain a:hover{text-decoration-color:var(--ink)}
+#plain :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
+#plain .po{display:none}
+
+/* header */
+#plain .hd{padding-bottom:var(--s5);border-bottom:2px solid var(--ink)}
 /* the way back into the game: a gold tape tab with a play triangle, torn at both ends like the first-ad chip */
-#plain .play{display:none;float:right;margin:0 0 6px 12px;padding:5px 0;color:var(--ink);text-decoration:none;white-space:nowrap;transform:rotate(1.4deg);filter:drop-shadow(2px 2.5px 0 rgba(20,17,15,.4));-webkit-tap-highlight-color:transparent}
+#plain .play{display:none;float:right;margin:0 0 var(--s3) var(--s3);padding:5px 0;color:var(--ink);text-decoration:none;white-space:nowrap;transform:rotate(1.4deg);filter:drop-shadow(2px 2.5px 0 rgba(20,17,15,.4));-webkit-tap-highlight-color:transparent}
 #plain .play>span{display:block;background:var(--ink);padding:1.5px}
 #plain .play b{display:block;background:var(--gold);font:700 12px/1 var(--road);letter-spacing:.1em;text-transform:uppercase;padding:11px 13px 9px 12px}
 #plain .play svg.tri{margin-right:4px}
 #plain .play:active{transform:rotate(1.4deg) translateY(1px)}
 html.can #plain .play{display:block}
-#plain h1{margin:0;font:900 clamp(52px,17vw,104px)/.84 var(--stencil);text-transform:uppercase;letter-spacing:.005em;clear:both}
-#plain .roles{margin:12px 0 0;font:900 clamp(19px,5.6vw,30px)/1 var(--stencil);letter-spacing:.07em;text-transform:uppercase}
-#plain .loc{margin:9px 0 0;font:700 15px/1.3 var(--road);letter-spacing:.02em;color:#4B555C}
-#plain .sum{margin:14px 0 0;font-size:17.5px;line-height:1.5}
-#plain h2{margin:36px 0 14px;font:900 32px/1 var(--stencil);text-transform:uppercase;letter-spacing:.04em}
-#plain h2 span{display:inline-block;padding:7px 18px 4px;background:var(--t,var(--bone));transform:rotate(-1.2deg);box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.28)}
-#plain #watch h2{font-size:clamp(21px,6.9vw,32px)}
-#plain #watch h2 span{white-space:nowrap}
-#plain .tw{--t:var(--gold)} #plain .tg{--t:#43C7A2} #plain .tk{--t:var(--bluetape)} #plain .tv{--t:var(--pinktape)} #plain .te,#plain .tc{--t:var(--masking)} #plain #watch{--t:#FBFCFD}
-#plain ul,#plain ol{list-style:none;margin:0;padding:0}
-#plain a{color:var(--ink)}
-/* a role: what, where, when on one line; then what was done, each point marked with a square of the section's own tape */
-#plain .job{margin:18px 0 7px;font-size:16px;line-height:1.35;color:#333A3F}
-#plain h2+.job{margin-top:0}
-#plain .job b{font-size:18.5px;color:var(--ink)}
-#plain .job{overflow:hidden}
-/* each part of a role line hangs its bar in the gap before it: at the start of a wrapped line the bar falls outside and is not seen */
-#plain .job .c{display:inline-block;position:relative;margin-right:.9em}
-#plain .job .c i{position:absolute;left:-.66em;top:0;font-style:normal;font-weight:400;color:#8E969B}
-#plain .job .when{font-weight:700;white-space:nowrap}
+#plain h1{clear:both;margin:0;font:900 min(12.4vw,62px)/.86 var(--stencil);letter-spacing:.01em;text-transform:uppercase;white-space:nowrap}
+#plain .loc{margin-top:var(--s3);font:600 15px/1.35 var(--road);color:var(--muted)}
 #plain .loc .md{width:.5em;text-align:center}
-#plain .pts li{position:relative;padding:3px 0 4px 20px;line-height:1.45}
-#plain .pts li::before{content:"";position:absolute;left:2px;top:.6em;width:8px;height:8px;background:var(--t,var(--bone));box-shadow:0 0 0 1.5px var(--ink)}
-#plain .kinds{margin:0 0 4px;font-weight:700;line-height:1.4}
-#plain .about{margin:0;line-height:1.5}
-#plain .why{margin:20px 2px 4px;padding:15px 18px 13px;background:#FBFCFD;box-shadow:0 0 0 1.5px var(--ink),3px 4px 0 1.5px rgba(20,17,15,.22);font:700 19px/1.36 var(--hand);transform:rotate(-.7deg)}
-#plain .links{display:flex;flex-wrap:wrap;gap:9px;margin:0}
-#plain .links a,#plain .more a{display:inline-flex;align-items:center;min-height:44px;padding:4px 15px 1px;color:var(--ink);font-weight:700;text-decoration:none;background:#FBFCFD;border-radius:22px;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.25)}
-#plain .links a[data-mail],#plain .links a.addr{background:var(--gold)}
-#plain .more{margin:16px 0 0}
-/* the Watch strip */
-#plain .reel{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
-#plain .reel li{min-width:0;grid-column:span 2}
-#plain .reel li:nth-child(2),#plain .reel li:nth-child(3),#plain .reel .yt{grid-column:span 3}
-/* five films from YouTube (they are the strip's last tiles): two across, then three across, so no row is left ragged */
-#plain .reel .yt:nth-last-child(5)~.yt:nth-last-child(-n+3){grid-column:span 2}
-#plain .reel .big{grid-column:1/7;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center}
-#plain .reel video,#plain .reel .vt{display:block;width:100%;aspect-ratio:9/16;background:#14110F;border-radius:10px;box-shadow:0 0 0 1.5px var(--ink)}
-#plain .reel video{object-fit:contain}
-#plain .reel .big video,#plain .reel .big .vt{width:min(100%,330px)}
-/* the first ad's poster is cropped to its top part (56% of the screen's height at most), so the page's first role is one screen nearer; played, it is whole */
-#plain .reel .big .vt{max-height:56vh}
-#plain .reel .big .vt img{object-position:50% 0}
-#plain .reel .vt{position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent}
-#plain .reel .vt img{display:block;width:100%;height:100%;object-fit:cover}
-#plain .reel .vt .pb{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1.5px var(--bone);display:grid;place-items:center;color:var(--bone)}
-#plain .reel .vt .pb svg{width:14px;height:16px;margin-left:3px}
-#plain .reel .big .vt .pb{width:64px;height:64px;margin:-32px 0 0 -32px}
-#plain .reel .big .vt .pb svg{width:21px;height:24px;margin-left:5px}
-#plain .reel .vt .len{position:absolute;left:0;bottom:9px;background:var(--gold);color:var(--ink);font:900 16px/1 var(--stencil);font-style:normal;letter-spacing:.05em;padding:6px 8px 3px 7px;box-shadow:0 0 0 1.5px var(--ink)}
-#plain .reel .big .vt .len{font-size:22px;padding:7px 11px 3px 10px;bottom:14px}
-#plain .reel .vt:active .pb{transform:scale(.94)}
-#plain .reel p{margin:7px 0 0;font-size:14.5px;line-height:1.28}
-#plain .reel .big p{font-size:18px;text-align:center}
-#plain .reel .cap{color:#4B555C}
+#plain .hc{display:flex;flex-wrap:wrap;column-gap:var(--s5);margin-top:var(--s1)}
+#plain .hc a{display:inline-flex;align-items:center;min-height:44px;font:700 15px/1 var(--road)}
+#plain .hc a.addr{overflow-wrap:anywhere}
+
+/* sections and headings */
+#plain .sec{margin-top:var(--s5);padding-top:var(--s5);border-top:1px solid var(--rule)}
+#plain .hd+.sec{margin-top:0;border-top:0}
+#plain .tw{--t:var(--gold)} #plain .tg{--t:var(--greentape)} #plain .tv{--t:var(--pinktape)} #plain .tk{--t:var(--bluetape)} #plain .te{--t:var(--masking)}
+#plain h2{display:flex;align-items:center;gap:10px;margin:0 0 var(--s4);font:900 22px/1 var(--stencil);letter-spacing:.06em;text-transform:uppercase;text-wrap:balance}
+#plain h2::before{content:"";flex:none;width:20px;height:9px;background:var(--t,var(--masking));box-shadow:0 0 0 1.5px var(--ink);transform:rotate(-4deg)}
+
+/* a job: title, then org · dates; bullets with the section's square */
+#plain .role+.role{margin-top:var(--s5)}
+#plain .rh{margin-bottom:var(--s2)}
+#plain h3{margin:0;font:700 17.5px/1.3 var(--road);text-wrap:balance}
+#plain .meta{margin-top:2px;font:600 14.5px/1.4 var(--road);color:var(--muted)}
+#plain .meta a{color:inherit}
+#plain .when{white-space:nowrap;font-variant-numeric:tabular-nums}
+#plain .sep{color:var(--muted2);display:inline-block;width:.27em} /* the dot has no width of its own in this face, so it gets a box (as in #pill) and the spaces round it show */
+#plain .pts li{position:relative;padding:3px 0 3px var(--ind);max-width:70ch;text-wrap:pretty}
+#plain .pts li::before{content:"";position:absolute;left:2px;top:calc(.78em - .5px);width:7px;height:7px;background:var(--t,var(--masking));box-shadow:0 0 0 1.25px var(--ink)}
+#plain .lead{font-size:16.5px;line-height:1.6;max-width:62ch;text-wrap:pretty}
+#plain .lead+.lead{margin-top:var(--s3)}
+#plain .intro{margin-bottom:var(--s4);font-weight:600;max-width:62ch;text-wrap:pretty}
+#plain .tg .intro,#plain #contact .intro{font-weight:400}      /* the pitch is the one bold line in AI */
+#plain .pitch{margin-top:var(--s3);font:700 18px/1.4 var(--road);max-width:40ch}
+#plain .took{margin-top:var(--s3);max-width:70ch;text-wrap:pretty}
+#plain .why{margin-top:var(--s5);padding:2px 0 2px var(--s4);border-left:4px solid var(--gold);max-width:52ch}
+#plain .why p{font:600 17px/1.45 var(--road)}
+/* a section's own page: All my videos, More about Workeey */
+#plain .go{margin-top:var(--s4)}
+#plain .go a{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-weight:700}
+
+/* video tiles (the Watch strip, inside Video) */
+#plain .vt{display:block;position:relative;overflow:hidden;border-radius:8px;background:#14110F;box-shadow:0 0 0 1.5px var(--ink);text-decoration:none;-webkit-tap-highlight-color:transparent}
+#plain .vt img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 16%}
+#plain .vt .pb{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1.5px var(--bone);display:grid;place-items:center;color:var(--bone)}
+#plain .vt .pb svg{width:13px;height:15px;margin-left:3px}
+#plain .vt .len{position:absolute;left:0;bottom:7px;background:var(--gold);color:var(--ink);font:900 14px/1 var(--stencil);font-style:normal;letter-spacing:.05em;padding:5px 6px 2px;box-shadow:0 0 0 1.5px var(--ink)}
+#plain .vt:active .pb{transform:scale(.94)}
+#plain video{display:block;width:min(100%,320px);aspect-ratio:9/16;object-fit:contain;background:#14110F;border-radius:8px;box-shadow:0 0 0 1.5px var(--ink)}
+#plain .watch{margin-top:var(--s6)}
+#plain .kick{margin:0 0 var(--s3);font:700 12.5px/1.2 var(--road);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+/* six portrait tiles (the three ads, the Workeey ad first, then the three skits) three across, then five films two across and three across */
+#plain .reel{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--s4) 10px}
+#plain .reel>li{min-width:0;grid-column:span 2}
+#plain .reel>.yt{grid-column:span 3}
+#plain .reel>.yt:nth-last-child(-n+3){grid-column:span 2}
+#plain .reel .vt{aspect-ratio:4/5}
+#plain .reel>li[data-for^="ad"] .vt img{object-position:50% 0}
+#plain .reel p{margin-top:6px;font-size:13px;line-height:1.3;color:var(--muted)}
 #plain .reel p b,#plain .reel .yt b{color:var(--ink)}
-#plain .reel .yt a{display:block;color:var(--ink);text-decoration:none;font-size:14.5px;line-height:1.28}
-#plain .reel .yt img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:8px;box-shadow:0 0 0 1.5px var(--ink);margin-bottom:7px;background:#14110F}
-#plain .reel .yt b{display:block}
-#plain .reel .yt .wk{border-radius:8px;box-shadow:0 0 0 1.5px var(--ink);margin-bottom:7px}
-#plain .reel .src{font-style:normal;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#4B555C;white-space:nowrap}
-/* On a phone the strip is a tight contact sheet, so the first role is about a screen and a half from the top: the first ad
-   (largest, its poster cropped to its top part) with the two other ads beside it, the three skits in one row, the four
-   camp videos in one row. Posters are cropped square from near their top; played, a video is whole. */
-@media screen and (max-width:639px){
-#plain .reel{grid-template-columns:repeat(12,minmax(0,1fr));gap:13px 10px}
-#plain .reel li{grid-column:span 4}
-#plain .reel .big{grid-column:1/9;grid-row:1/3;display:block}
-#plain .reel li:nth-child(2){grid-column:9/13;grid-row:1}
-#plain .reel li:nth-child(3){grid-column:9/13;grid-row:2}
-#plain .reel .yt{grid-column:span 3}
-#plain .reel .vt{aspect-ratio:1}
-#plain .reel .vt img{object-position:50% 16%}
-#plain .reel .big .vt{width:100%;aspect-ratio:3/4}
-#plain .reel .big .vt img{object-position:50% 0}
-#plain .reel p{margin-top:6px;font-size:13px;line-height:1.24}
-#plain .reel .big p{font-size:15.5px;line-height:1.28;text-align:left}
-#plain .reel .vt .len{font-size:14px;padding:5px 6px 2px 6px;bottom:7px}
-#plain .reel .big .vt .len{font-size:20px;padding:7px 10px 3px 9px;bottom:12px}
-#plain .reel .vt .pb{width:40px;height:40px;margin:-20px 0 0 -20px}
-#plain .reel .vt .pb svg{width:13px;height:15px}
-#plain .reel .big .vt .pb{width:60px;height:60px;margin:-30px 0 0 -30px}
-#plain .reel .big .vt .pb svg{width:20px;height:23px}
-#plain .reel .yt a{font-size:12.5px;line-height:1.2}
-#plain .reel .yt img,#plain .reel .yt .wk{margin-bottom:6px;border-radius:6px}
-#plain .reel .yt b{text-wrap:balance}
+#plain .reel .yt a{display:block;color:var(--ink);text-decoration:none;font-size:13px;line-height:1.3}
+#plain .reel .yt img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+#plain .reel .yt img,#plain .reel .yt .wk{border-radius:6px;box-shadow:0 0 0 1.5px var(--ink);margin-bottom:6px;background:#14110F}   /* the drawn WEEK 3 card keeps its own flex layout */
+#plain .reel .yt b{display:block;text-wrap:balance}
 #plain .reel .yt .cap{display:none}
-#plain .reel .src{font-size:9.5px;display:block;margin-top:3px}
+#plain .reel .src{display:block;margin-top:2px;font:700 10px/1.2 var(--road);font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* AI systems and "See more details" */
+#plain .sys{margin-top:var(--s4)}
+#plain .sys>li{position:relative;padding:var(--s4) 0 var(--s4) var(--ind);border-top:1px solid var(--rule)}
+#plain .sys>li:last-child{padding-bottom:0}
+#plain .sys>li::before{content:"";position:absolute;left:2px;top:24px;width:8px;height:8px;background:var(--t);box-shadow:0 0 0 1.25px var(--ink)}
+#plain h4{margin:0 0 var(--s1);font:700 16.5px/1.35 var(--road);text-wrap:balance}
+#plain .sd{max-width:68ch;text-wrap:pretty}
+#plain .note{margin-top:var(--s3);font-size:14px;line-height:1.45;color:var(--muted)}
+#plain .more{margin-top:var(--s3)}
+#plain .more>summary{display:inline-flex;align-items:center;gap:var(--s2);min-height:44px;padding:1px 16px 0 15px;border-radius:22px;background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--ink);font:700 14.5px/1 var(--road);letter-spacing:.01em;cursor:pointer;list-style:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+#plain .more>summary::-webkit-details-marker{display:none}
+#plain .more>summary::marker{content:""}
+#plain .more>summary:hover{background:var(--panel)}
+#plain .more>summary:active{transform:translateY(1px)}
+#plain .more>summary svg{flex:none;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s ease}
+#plain .more[open]>summary svg{transform:rotate(180deg)}
+#plain .more .sc,#plain .more[open] .so{display:none}
+#plain .more[open] .sc{display:inline}
+#plain .mb{margin-top:var(--s3);padding:var(--s4) 18px 18px;background:var(--panel);border-left:3px solid var(--t);border-radius:0 6px 6px 0;font-size:15.5px;line-height:1.6}
+#plain .mb>*+*{margin-top:var(--s3)}
+#plain .mb p,#plain .mb li{max-width:66ch;text-wrap:pretty}
+#plain .mb h5{margin:var(--s5) 0 0;font:700 12px/1.2 var(--road);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#plain .mb h5:first-child{margin-top:0}
+#plain .mb h5+*{margin-top:var(--s2)}
+#plain .mb .parts li{position:relative;padding:2px 0 2px 18px}
+#plain .mb .parts li+li{margin-top:var(--s2)}
+#plain .mb .parts li::before{content:"";position:absolute;left:2px;top:calc(.8em - 3px);width:6px;height:6px;background:var(--ink)}
+#plain .mb .less{display:inline-flex;align-items:center;min-height:44px;margin-top:var(--s2);padding:0;border:0;background:none;color:var(--ink);font:700 14.5px/1 var(--road);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.2em;text-decoration-color:var(--ul);cursor:pointer;-webkit-tap-highlight-color:transparent}
+html:not(.js) #plain .mb .less{display:none}
+
+/* skills, contact, footer */
+#plain .skills>div+div{margin-top:var(--s3)}
+#plain .skills dt{font:700 12.5px/1.3 var(--road);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#plain .skills dd{margin-top:2px;max-width:70ch}
+#plain .links{display:flex;flex-wrap:wrap;gap:10px}
+#plain .links a{display:inline-flex;align-items:center;min-height:44px;padding:2px 16px 0;border-radius:22px;background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--ink);font:700 15px/1 var(--road);text-decoration:none}
+#plain .links a:hover{background:var(--panel)}
+#plain .links a[data-mail],#plain .links a.addr{background:var(--gold)}
+#plain .links a.addr{overflow-wrap:anywhere}
+html:not(.js) #plain .links li:has([data-mail]){display:none}
+#plain .foot{display:none;margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--rule);font-size:14.5px;color:var(--muted)}
+html.can #plain .foot{display:block}
+
+@media screen and (max-width:599px){
+  #plain .sys .mb{margin-left:calc(-1 * var(--ind))}          /* an AI system's panel takes the full column on a phone */
 }
-/* On a wide screen the same contact sheet: the first ad on the left half (largest, its poster cropped to its top part), the
-   two other ads and the three skits beside it, the four camp videos in one row under them. */
-@media screen and (min-width:640px){
-#plain .reel{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 12px}
-#plain .reel .big{grid-column:1/7;grid-row:1/3;display:block}
-#plain .reel li:nth-child(2){grid-column:7/10;grid-row:1}
-#plain .reel li:nth-child(3){grid-column:10/13;grid-row:1}
-#plain .reel li:nth-child(4){grid-column:7/9;grid-row:2}
-#plain .reel li:nth-child(5){grid-column:9/11;grid-row:2}
-#plain .reel li:nth-child(6){grid-column:11/13;grid-row:2}
-#plain .reel .yt{grid-column:span 3}
-#plain .reel .vt{aspect-ratio:1}
-#plain .reel .vt img{object-position:50% 16%}
-#plain .reel .big .vt{width:100%;aspect-ratio:3/4;max-height:none}
-#plain .reel .big .vt img{object-position:50% 0}
-#plain .reel .big p{font-size:17px;text-align:left}
-#plain .reel li:nth-child(n+4) p{font-size:13px;line-height:1.24}
-#plain .reel li:nth-child(n+4) .vt .len{font-size:14px;padding:5px 6px 2px 6px;bottom:7px}
-#plain .reel li:nth-child(n+4) .vt .pb{width:38px;height:38px;margin:-19px 0 0 -19px}
-#plain .reel .yt a{font-size:13.5px;line-height:1.26}
-#plain .reel .yt b{text-wrap:balance}
+/* a sheet on the desk */
+@media screen and (min-width:600px){
+  #plain{--ind:22px;max-width:760px;min-height:0;margin:var(--s7) auto var(--s8);padding:var(--s7);border-radius:4px;
+    box-shadow:0 0 0 1.5px var(--ink),3px 4px 0 1.5px rgba(20,17,15,.18);font-size:17px;line-height:1.6}
+  #plain .play{position:absolute;top:-17px;right:36px;float:none;margin:0}   /* taped across the sheet's top edge */
+  #plain .sec{margin-top:var(--s6);padding-top:var(--s6)}
+  #plain h2{font-size:24px}
+  #plain h3{font-size:18px}
+  #plain .rh{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--s4);align-items:baseline}
+  #plain .rh .meta{display:contents}
+  #plain .rh .when{grid-column:2;grid-row:1;text-align:right}
+  #plain .rh .org{grid-column:1/-1;grid-row:2;margin-top:2px}
+  #plain .rh .sep{display:none}
+  #plain .lead{font-size:18.5px}
+  #plain .pitch{font-size:19px}
+  #plain .why p{font-size:18px}
+  #plain h4{font-size:17px}
+  #plain .sys>li::before{top:25px}
+  #plain .mb{font-size:16px;padding:18px 22px 20px}
+  #plain .reel{gap:var(--s4) 12px}
+  #plain .reel>li:not(.yt){grid-column:span 1}                  /* the six portrait tiles in one row */
+  #plain .skills>div{display:grid;grid-template-columns:150px minmax(0,1fr);column-gap:var(--s4);align-items:baseline}
+  #plain .skills dd{margin-top:0}
 }
-/* on screen the strip is twelve across at every width: five films from YouTube go two across, then three across */
-@media screen{
-#plain .reel .yt:nth-last-child(5),#plain .reel .yt:nth-last-child(5)+.yt{grid-column:span 6}
-#plain .reel .yt:nth-last-child(5)~.yt:nth-last-child(-n+3){grid-column:span 4}
+/* a played tile takes the row: the player is whole, up to 320 px */
+@media screen{#plain .reel>li[data-for]:has(video){grid-column:1/-1}}
+/* hanging headings */
+@media screen and (min-width:960px){
+  #plain{max-width:940px;padding:56px var(--s8) var(--s8)}
+  #plain .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--s6);align-items:end}
+  #plain .hd h1,#plain .hd .loc{grid-column:1}
+  #plain .hc{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;margin:0}
+  #plain .hc a{min-height:32px}
+  #plain .sec{display:grid;grid-template-columns:168px minmax(0,1fr);column-gap:40px}
+  #plain .sec>h2{flex-direction:column;align-items:flex-start;gap:var(--s2);margin:0;padding-top:2px}
 }
+@media (prefers-reduced-motion:reduce){#plain .more>summary svg{transition:none}}
 
 @media (prefers-reduced-motion:reduce){.tape .tw,#tm.tick .blade,#tm .lamps i.on{animation:none}#pill,#startb,#links,#snd .tp,#three p.in{transition:none}}
 
-/* ---------- print: only the document ---------- */
+/* ---------- print: only the document, two pages at most, no panels, no video ---------- */
 @media print{
-  @page{margin:11mm}
+  @page{size:auto;margin:12mm 13mm}
   html,html.g,html.g body{height:auto!important;overflow:visible!important}
-  body,html.g body{background:#fff!important;position:static!important;font-size:10pt;line-height:1.3}
+  body,html.g body{background:#fff!important;position:static!important}
   #stage,html.g #stage,#reel{display:none!important}
-  #plain,html.g #plain{display:block!important;max-width:none;padding:0}
-  #plain .play,#plain .reel video,#plain .reel img,#plain .reel .vt,#plain .reel .wk{display:none!important}
-  #plain .top{margin-bottom:8pt;padding-bottom:6pt;border-bottom-width:1.5pt}
-  #plain h1{font-size:34pt}
-  #plain .roles{font-size:12pt;margin-top:4pt}
-  #plain .loc{font-size:9.5pt;margin-top:3pt}
-  #plain .sum{font-size:10pt;margin-top:4pt;line-height:1.35}
-  #plain h2{font-size:13pt;margin:9pt 0 3pt}
-  #plain h2 span{box-shadow:none;transform:none;padding:0;background:none;border-bottom:3pt solid var(--t,#14110F)}
-  #plain .reel{display:block;columns:2;column-gap:14pt}
-  #plain .reel li,#plain .reel .big{display:block;break-inside:avoid}
-  #plain .reel p,#plain .reel .big p,#plain .reel .yt a{font-size:9pt;margin:0 0 1pt;text-align:left}
-  #plain .reel .yt b{display:inline}
-  #plain .job{font-size:9.5pt;margin:5pt 0 1pt}
-  #plain .job b{font-size:10.5pt}
-  #plain .pts li{padding:.5pt 0 .5pt 10pt;line-height:1.3;break-inside:avoid}
-  #plain .pts li::before{width:3.5pt;height:3.5pt;top:.5em;left:1pt;box-shadow:none;background:#14110F}
-  #plain .why{box-shadow:none;transform:none;border:.75pt solid #14110F;padding:4pt 7pt;margin:5pt 0 2pt;font-size:10.5pt}
-  #plain .links{gap:3pt 10pt}
-  #plain .links a{min-height:0;padding:0;box-shadow:none;background:none!important;font-size:9.5pt}
-  #plain .links a[href^="http"]::after{content:" (" attr(href) ")";font-weight:400;font-size:8pt}
-  #plain .more{display:none}
+  #plain,html.g #plain{display:block!important;--ind:9pt;max-width:none;min-height:0;margin:0;padding:0;border-radius:0;box-shadow:none;background:#fff;
+    font-size:9.5pt;line-height:1.32;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #plain .play,#plain .foot,#plain .watch,#plain .go,#plain details.more,#plain #contact{display:none!important}
+  #plain .po{display:block;margin-top:3pt;font-size:8.5pt;color:#4B555C}
+  #plain a{text-decoration:none}
+  #plain .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8mm;align-items:end;padding-bottom:5pt;border-bottom-width:1.25pt}
+  #plain .hd h1,#plain .hd .loc{grid-column:1}
+  #plain h1{font-size:28pt}
+  #plain .loc{margin-top:3pt;font-size:9pt}
+  #plain .hc{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;margin:0}
+  #plain .hc a{min-height:0;font-size:9pt;font-weight:600}
+  #plain .hc a[data-print]{font-size:0}
+  #plain .hc a[data-print]::after{content:attr(data-print);font-size:9pt}
+  #plain .sec{display:grid;grid-template-columns:27mm minmax(0,1fr);column-gap:5mm;margin-top:6pt;padding-top:6pt}
+  #plain .hd+.sec{padding-top:7pt}
+  #plain h2{flex-direction:column;align-items:flex-start;gap:3pt;margin:0;font-size:10.5pt;break-after:avoid}
+  #plain h2::before{width:12pt;height:5pt;box-shadow:0 0 0 .75pt #14110F}
+  #plain .role+.role{margin-top:5pt}
+  #plain .rh{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8pt;align-items:baseline;margin-bottom:1.5pt}
+  #plain .rh .meta{display:contents}
+  #plain .rh .when{grid-column:2;grid-row:1;text-align:right}
+  #plain .rh .org{grid-column:1/-1;grid-row:2}
+  #plain .rh .sep{display:none}
+  #plain h3{font-size:10.2pt}
+  #plain .meta{font-size:8.8pt}
+  #plain .role,#plain .rh,#plain .sys>li{break-inside:avoid}
+  #plain .pts li{padding:.5pt 0 .5pt var(--ind);max-width:none}
+  #plain .pts li::before{width:3.5pt;height:3.5pt;left:1pt;top:.52em;box-shadow:none;background:#14110F}
+  #plain .lead{font-size:10pt;line-height:1.35;max-width:none}
+  #plain .lead+.lead{margin-top:3pt}
+  #plain .intro{margin:0 0 3pt;font-size:9.5pt;max-width:none}
+  #plain .pitch{margin:2pt 0 0;font-size:9.5pt;max-width:none}
+  #plain .took{margin-top:2pt;font-size:9.5pt;max-width:none}
+  #plain .why{margin-top:4pt;padding-left:6pt;border-left-width:2pt;max-width:none}
+  #plain .why p{font-size:9.8pt}
+  #plain .sys{margin-top:2pt}
+  #plain .sys>li{padding:1.5pt 0 1.5pt var(--ind);border-top:0}
+  #plain .sys>li::before{width:3.5pt;height:3.5pt;left:1pt;top:.62em;box-shadow:none;background:#14110F}
+  #plain .sys h4{display:inline;margin:0;font-size:9.5pt}
+  #plain .sys h4::after{content:"."}
+  #plain .sys .sd{display:inline;max-width:none}
+  #plain .note{margin-top:1pt;font-size:8.5pt}
+  #plain .skills>div{display:grid;grid-template-columns:24mm minmax(0,1fr);column-gap:3mm;align-items:baseline}
+  #plain .skills>div+div{margin-top:1.5pt}
+  #plain .skills dt{font-size:7.8pt}
+  #plain .skills dd{margin:0;max-width:none}
 }
