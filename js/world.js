@@ -1,7 +1,7 @@
 // world.js — table rects, palette, shared state, waypoint graph, seeded scatter, and the finds read from the DOM.
 // Everything here is data: no drawing. Units are world units (spec 4.1): +x east, +y south, origin = hub centre.
 
-export const MEDIA = '../media/';          // launch: move the tree up one level and set './media/'
+export const MEDIA = 'resume/media/';    // the game lives at the site root; its media stays in resume/media/, which the first resume page (/resume/) uses too
 // Finds (and the parts of a find) with data-stage <= STAGE are live.
 // 1 the hub slice · 2 the whole desk · 3 the whole mat and the woods · 4 the new words: the desk's three new finds
 // (quality, scale, live), the weekly recap in the woods, and the garage as a counted find · 5 the belt (the steel bench

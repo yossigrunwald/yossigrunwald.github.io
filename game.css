@@ -354,8 +354,9 @@ html.can #plain .play{display:block}
 #plain .about{margin:0;line-height:1.5}
 #plain .why{margin:20px 2px 4px;padding:15px 18px 13px;background:#FBFCFD;box-shadow:0 0 0 1.5px var(--ink),3px 4px 0 1.5px rgba(20,17,15,.22);font:700 19px/1.36 var(--hand);transform:rotate(-.7deg)}
 #plain .links{display:flex;flex-wrap:wrap;gap:9px;margin:0}
-#plain .links a{display:inline-flex;align-items:center;min-height:44px;padding:4px 15px 1px;color:var(--ink);font-weight:700;text-decoration:none;background:#FBFCFD;border-radius:22px;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.25)}
+#plain .links a,#plain .more a{display:inline-flex;align-items:center;min-height:44px;padding:4px 15px 1px;color:var(--ink);font-weight:700;text-decoration:none;background:#FBFCFD;border-radius:22px;box-shadow:0 0 0 1.5px var(--ink),2px 3px 0 1.5px rgba(20,17,15,.25)}
 #plain .links a[data-mail],#plain .links a.addr{background:var(--gold)}
+#plain .more{margin:16px 0 0}
 /* the Watch strip */
 #plain .reel{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 10px}
 #plain .reel li{min-width:0;grid-column:span 2}
@@ -465,4 +466,5 @@ html.can #plain .play{display:block}
   #plain .links{gap:3pt 10pt}
   #plain .links a{min-height:0;padding:0;box-shadow:none;background:none!important;font-size:9.5pt}
   #plain .links a[href^="http"]::after{content:" (" attr(href) ")";font-weight:400;font-size:8pt}
+  #plain .more{display:none}
 }
