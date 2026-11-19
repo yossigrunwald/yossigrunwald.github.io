@@ -64,19 +64,6 @@ Edit the CSS variables in `style.css`:
 }
 ```
 
-### Updating Social Links
-
-Find the social links section in `index.html` and update the href attributes:
-
-```html
-<a href="https://instagram.com/yourusername" aria-label="Instagram">
-  <i class="fab fa-instagram"></i>
-</a>
-<a href="https://linkedin.com/in/yourusername" aria-label="LinkedIn">
-  <i class="fab fa-linkedin"></i>
-</a>
-```
-
 ### Changing Fonts
 
 The website uses Inter font by default. To change it, update the font import in `index.html` and the font-family in `style.css`.
@@ -98,7 +85,3 @@ The website uses Inter font by default. To change it, update the font import in 
 ## Deployment
 
 This website is designed for GitHub Pages. Simply push your changes to the repository and they will be live at `yossigrunwald.com`.
-
-## Contact
-
-For any questions or issues, contact: grunwaldyossi@gmail.com
